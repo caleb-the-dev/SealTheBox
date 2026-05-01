@@ -10,10 +10,13 @@ func _load_csv() -> void:
     if not file:
         push_error("AbilityLibrary: cannot open res://data/abilities.csv")
         return
-    var headers = file.get_csv_line()  # skip header row
+    file.get_csv_line()  # skip header row
     while not file.eof_reached():
         var row = file.get_csv_line()
         if row.size() < 7 or row[0].strip_edges().is_empty():
+            continue
+        if not row[4].is_valid_int() or not row[5].is_valid_int():
+            push_warning("AbilityLibrary: skipping malformed row (non-integer cost/cooldown): %s" % row[0])
             continue
         var data = AbilityData.new()
         data.id = row[0].strip_edges()
@@ -24,8 +27,8 @@ func _load_csv() -> void:
         if traits_raw != "":
             for t in traits_raw.split(",", false):
                 data.traits.append(t.strip_edges())
-        data.cooldown = int(row[4])
-        data.ap_cost = int(row[5])
+        data.cooldown = row[4].to_int()
+        data.ap_cost = row[5].to_int()
         data.description = row[6].strip_edges()
         _abilities[data.id] = data
     file.close()
