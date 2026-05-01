@@ -1,0 +1,28 @@
+Term,Category,Description
+Repeatable,Ability Trait,Ability can be used more than once in a round
+Preroll,Ability Trait,Ability must be used before dice are rolled
+Non-Final,Ability Trait,Ability can not be used while there is only one tab left
+Cooldown X,Ability Trait,"Once used, ability can not be played for another X turns"
+Expended,Ability Trait,"Once used, ability can not be used for the remainder of the session"
+Lost,Ability Trait,"Once used, ability is removed and can not be used for the remainder of the run"
+AP,Core,Action Points: A player's currency for taking action to win a match
+Dice,Core,Rolled in order to put down tabs. 
+Ability,Core,Provide effects and additional choices that assist the player
+Tab,Core,In the box. Shows a number. Must be put down to progress towards winning the match
+Dice Pool,Core,The quantity of dice available to roll in a round
+HP,Core,"Hit points: Once HP reaches 0, the run ends"
+Greater X,Dice Trait,Add X to the die result
+Weaker X,Dice Trait,Subtract X from the die result
+x2,Dice Trait,Multiply the die result by 2
+Temporary X,Dice Trait,"Can roll the die X times. Once met, can not use the die again during the match"
+Reroll X,Dice Trait,Can reroll the die X times. Must take the latest roll
+SessionReward,Relic Trait,Affects the rewards present after a match
+FirstRound,Relic Trait,Affects only the first round of a match
+Diabolic,Type,"Associated with greater dice roll outcomes, higher max hp"
+Cosmic,Type,"Associated with lower dice roll outcomes, healing"
+Natural,Type,"Associated with rerolls, extra dice"
+Mundane,Type,No particular associations
+Match,Game Loop,"Where the core game happens - ""Advanced Shut the Box"""
+Run,Game Loop,A series of matches and events concurrent with eachother. 
+Events,Game Loop,"An array of different situations that affect the player's build and usually provide a choice. (Shop, Choice Vingette, etc.)"
+Relic,Core,"Constantly considered during a run, and modify preexisting game mechanics to spice up gameplay"

@@ -1,0 +1,15 @@
+grow,Type,Traits,Implemented,Description
+Relic,Ethereal,,TRUE,All ethereal dice have +1 reroll
+Relic,Mundane,,TRUE,All d4s have +1 reroll
+Relic,Mundane,,TRUE,"When dice roll sum is 13, can put down lowest or highest tab"
+Relic,Mundane,,TRUE,"When dice roll sum is 7, gain 1 AP"
+Relic,Mundane,,TRUE,"When rolling only d6s, each d6 gain +1 reroll"
+Relic,Diabloic,,TRUE,Gain +1 max hp
+Relic,Cosmic,,TRUE,Gain +1 dice pool
+Relic,Cosmic,SessionReward,TRUE,always include heal 1 HP option
+Relic,Cosmic,SessionReward,TRUE,always include 1 extra dice option
+Relic,Ethereal,FirstRound,TRUE,"Recieve random ethereal dice first, up to the max dice pool"
+Relic,Ethereal,,TRUE,"Recieve 1 ability, +1 AP, dice pool -1"
+Relic,Diabloic,FirstRound,TRUE,Recieve one temporary diabolic d12
+,,,FALSE,
+,,,FALSE,

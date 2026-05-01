@@ -1,0 +1,15 @@
+Flavor Name,Type,Traits,Cooldown,AP Cost,Implemented,Description
+Card,Mundane,,0,1,TRUE,Roll 1 mundane d4
+Card,Mundane,,0,2,TRUE,Apply lesser 1 or greater 1 to any die
+Card,Ethereal,Repeatable,0,1,TRUE,Reroll any die
+Card,Ethereal,Preroll,1,0,TRUE,Give up X ethereal dice for +X AP
+Card,Cosmic,,0,1,TRUE,Apply lesser 1 to any die
+Card,Cosmic,,0,1,TRUE,Flip a cosmic coin (1d2)
+Card,Cosmic,Preroll,0,1,TRUE,Apply lesser 2 to any 1 cosmic die
+Card,Diabloic,,0,2,TRUE,Roll 1 diabolic d20
+Card,Diabloic,,1,2,TRUE,Apply greater 2 to any 1 diabloic die
+Card,Diabloic,Preroll,1,1,TRUE,Apply x2 to any 1 diabloic die
+Card,Diabloic,,0,1,TRUE,Apply greater 1 to any 1 diabloic die
+Card,Diabloic,Non-Final,0,2,TRUE,Put down the highest tab
+,,,,,FALSE,
+,,,,,FALSE,

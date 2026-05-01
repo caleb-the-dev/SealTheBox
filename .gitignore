@@ -1,0 +1,15 @@
+# Godot generated files
+.godot/
+*.import
+*.translation
+*.uid
+
+# Export / build
+export/
+*.exe
+*.pck
+*.apk
+
+# OS cruft
+.DS_Store
+Thumbs.db
