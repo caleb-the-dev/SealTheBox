@@ -14,7 +14,10 @@ func reset_match() -> void:
 	hp = 5
 	ap = 3
 	round = 0
+	round_limit = 4
+	win_threshold = 13
 	tabs = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+	dice_hand = []
 	_setup_dice_pool()
 	_setup_ability_hand()
 
@@ -35,6 +38,6 @@ func _setup_ability_hand() -> void:
 	for id in ["reroll_die", "greater_1", "lesser_1"]:
 		var ability = AbilityLibrary.get_ability(id)
 		if ability:
-			ability_hand.append(ability)
+			ability_hand.append(ability.duplicate())
 		else:
 			push_error("GameState: ability not found: %s" % id)

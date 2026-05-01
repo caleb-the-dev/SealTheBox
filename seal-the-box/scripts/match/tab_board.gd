@@ -24,7 +24,7 @@ func check_win(threshold: int) -> bool:
 func check_critical_win() -> bool:
     return _remaining.is_empty()
 
-func can_seal(dice_values: Array[int], tab: int) -> bool:
+func can_seal(dice_values: Array, tab: int) -> bool:
     if not tab in _remaining:
         return false
     var total: int = 0
