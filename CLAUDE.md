@@ -75,7 +75,7 @@ seal-the-box/
 
 **Dice traits:** Greater X / Weaker X (add/subtract), x2, Temporary X, Reroll X
 **Ability traits:** Repeatable, Preroll, Non-Final, Cooldown X, Expended, Lost
-**Types:** Diabolic (high rolls, max HP), Cosmic (low rolls, healing), Natural (rerolls, extra dice), Mundane (baseline)
+**Types:** Diabolic (high rolls, max HP), Cosmic (low rolls, healing), Ethereal (rerolls, flexible manipulation), Mundane (baseline)
 
 ## Vertical Slice Discipline — READ THIS FIRST
 
