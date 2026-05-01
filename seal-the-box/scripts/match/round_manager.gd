@@ -60,6 +60,8 @@ func attempt_seal(dice: Array, tab: int) -> bool:
 	return true
 
 func use_ability(ability: AbilityData, target_die: Die) -> bool:
+	if _match_over:
+		return false
 	if _current_phase == "roll":
 		status_updated.emit("Use abilities after rolling dice.")
 		return false
