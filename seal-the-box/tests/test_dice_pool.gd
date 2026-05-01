@@ -60,9 +60,9 @@ func _test_discard_and_reshuffle() -> void:
     assert(hand2.size() == 3, "After reshuffle, draw 3 again")
 
 func _test_ap_spend() -> void:
-    # GameState is an autoload that depends on AbilityLibrary (also an autoload).
-    # In headless --script mode, autoloads are not initialized, so we test
-    # spend_ap logic using a local helper that mirrors the same logic.
+    # GameState autoloads are not initialized in headless --script mode.
+    # This test exercises the spend_ap LOGIC using a local mirror.
+    # GameState.spend_ap itself is verified manually in the Task 10 smoke check.
     var helper = _APHelper.new()
     helper.ap = 3
     assert(helper.spend_ap(1), "Should spend 1 AP from 3")
