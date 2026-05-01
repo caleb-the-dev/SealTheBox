@@ -11,14 +11,18 @@ signal status_updated(text: String)
 var _tab_board: TabBoard
 var _dice_pool: DicePool
 var _current_phase: String = ""
+var _match_over: bool = false
 
 func _ready() -> void:
 	_tab_board = TabBoard.new()
 	_dice_pool = DicePool.new()
 
 func start_match() -> void:
+	_match_over = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
+	# Shallow duplicate — Die objects are shared intentionally so mutations
+	# (rolling, modifiers) are visible via GameState.dice_hand references.
 	_dice_pool.setup(GameState.dice_pool.duplicate())
 	start_round()
 
@@ -31,15 +35,21 @@ func start_round() -> void:
 	status_updated.emit("Round %d of %d — select dice to roll (1 AP each)" % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
+	var partial := false
 	for die in dice:
 		if not GameState.spend_ap(1):
-			status_updated.emit("Not enough AP to roll all selected dice!")
+			partial = true
 			break
 		_dice_pool.roll_die(die)
 	_set_phase("act")
-	status_updated.emit("Round %d — seal tabs or use abilities" % GameState.round)
+	if partial:
+		status_updated.emit("Out of AP — rolled what you could. Seal tabs or use abilities.")
+	else:
+		status_updated.emit("Round %d — seal tabs or use abilities" % GameState.round)
 
 func attempt_seal(dice: Array, tab: int) -> bool:
+	if _match_over:
+		return false
 	var values: Array[int] = []
 	for d in dice:
 		values.append(d.value)
@@ -52,6 +62,9 @@ func attempt_seal(dice: Array, tab: int) -> bool:
 	return true
 
 func use_ability(ability: AbilityData, target_die: Die) -> bool:
+	if _current_phase == "roll":
+		status_updated.emit("Use abilities after rolling dice.")
+		return false
 	if not GameState.spend_ap(ability.ap_cost):
 		status_updated.emit("Not enough AP for %s!" % ability.flavor_name)
 		return false
@@ -69,12 +82,15 @@ func use_ability(ability: AbilityData, target_die: Die) -> bool:
 	return true
 
 func end_round() -> void:
+	if _match_over:
+		return
 	_dice_pool.discard_hand()
 	GameState.dice_hand = []
 	if GameState.round > GameState.round_limit:
 		GameState.hp -= 1
 		status_updated.emit("Round limit exceeded! HP: %d" % GameState.hp)
 		if GameState.hp <= 0:
+			_match_over = true
 			match_lost.emit()
 			return
 	round_ended.emit(GameState.round)
@@ -82,8 +98,10 @@ func end_round() -> void:
 
 func _check_win() -> void:
 	if _tab_board.check_critical_win():
+		_match_over = true
 		match_won.emit(true)
 	elif _tab_board.check_win(GameState.win_threshold):
+		_match_over = true
 		match_won.emit(false)
 
 func _set_phase(phase: String) -> void:
