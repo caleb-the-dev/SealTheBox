@@ -5,6 +5,7 @@ var _round_manager: RoundManager
 var _selected_dice: Array = []
 var _selected_ability: AbilityData = null
 var _targeting_die: bool = false
+var _match_ended: bool = false
 
 # ── ui references ───────────────────────────────────────────────────────────
 var _hp_label: Label
@@ -235,6 +236,7 @@ func _refresh_ui() -> void:
 	_ap_label.text = "AP: %d" % GameState.ap
 	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
 	_refresh_dice_display()
+	_refresh_dice_highlight()
 	_refresh_ability_display()
 
 func _refresh_dice_display() -> void:
@@ -277,6 +279,9 @@ func _update_sum_status() -> void:
 	_status_label.text = "Selected dice sum: %d" % total
 
 func _show_end_dialog(message: String) -> void:
+	if _match_ended:
+		return
+	_match_ended = true
 	_end_round_button.disabled = true
 	_roll_button.disabled = true
 	for btn in _tab_buttons + _dice_buttons + _ability_buttons:

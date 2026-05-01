@@ -13,11 +13,9 @@ var _dice_pool: DicePool
 var _current_phase: String = ""
 var _match_over: bool = false
 
-func _ready() -> void:
+func start_match() -> void:
 	_tab_board = TabBoard.new()
 	_dice_pool = DicePool.new()
-
-func start_match() -> void:
 	_match_over = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
