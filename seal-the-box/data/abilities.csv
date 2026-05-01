@@ -1,0 +1,13 @@
+id,flavor_name,type,traits,cooldown,ap_cost,description
+reroll_die,Ethereal Card,Ethereal,Repeatable,0,1,Reroll any die
+greater_1,Mundane Card,Mundane,,0,1,Apply greater 1 to any die
+lesser_1,Cosmic Card,Cosmic,,0,1,Apply lesser 1 to any die
+roll_d4,Mundane Card,Mundane,,0,1,Roll 1 mundane d4
+lesser_greater_1,Mundane Card,Mundane,,0,2,Apply lesser 1 or greater 1 to any die
+cosmic_coin,Cosmic Card,Cosmic,,0,1,Flip a cosmic coin (1d2)
+lesser_2_cosmic,Cosmic Card,Cosmic,Preroll,0,1,Apply lesser 2 to any 1 cosmic die
+roll_d20,Diabolic Card,Diabolic,,0,2,Roll 1 diabolic d20
+greater_2_diabolic,Diabolic Card,Diabolic,,1,2,Apply greater 2 to any 1 diabolic die
+x2_diabolic,Diabolic Card,Diabolic,Preroll,1,1,Apply x2 to any 1 diabolic die
+greater_1_diabolic,Diabolic Card,Diabolic,,0,1,Apply greater 1 to any 1 diabolic die
+put_down_highest,Diabolic Card,Diabolic,Non-Final,0,2,Put down the highest tab
