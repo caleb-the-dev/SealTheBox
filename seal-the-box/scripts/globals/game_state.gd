@@ -10,15 +10,18 @@ var dice_pool: Array = []   # Array of Die
 var dice_hand: Array = []   # Array of Die (currently drawn)
 var ability_hand: Array = []  # Array of AbilityData
 
-func reset_match() -> void:
+func reset_run() -> void:
 	hp = 5
+	_setup_dice_pool()
+	reset_match()
+
+func reset_match() -> void:
 	ap = 3
 	round = 0
 	round_limit = 4
 	win_threshold = 13
 	tabs = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 	dice_hand = []
-	_setup_dice_pool()
 	_setup_ability_hand()
 
 func spend_ap(amount: int) -> bool:
@@ -31,12 +34,14 @@ func _setup_dice_pool() -> void:
 	dice_pool = []
 	for i in 3:
 		dice_pool.append(Die.new(6))
+	dice_pool.append(Die.new(4))
 	dice_pool.append(Die.new(8))
 
 func _setup_ability_hand() -> void:
 	ability_hand = []
+	var lib = get_node("/root/AbilityLibrary")
 	for id in ["reroll_die", "greater_1", "lesser_1"]:
-		var ability = AbilityLibrary.get_ability(id)
+		var ability = lib.get_ability(id)
 		if ability:
 			ability_hand.append(ability.duplicate())
 		else:
