@@ -339,6 +339,84 @@ func _setup_ui() -> void:
 	root.add_child(reward_overlay)
 	_reward_overlay = reward_overlay
 
+	# ── Run-win overlay ────────────────────────────────────────────────────────
+	var win_overlay = Control.new()
+	win_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	win_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	win_overlay.visible = false
+	var win_bg = ColorRect.new()
+	win_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	win_bg.color = Color(0.0, 0.0, 0.0, 0.78)
+	win_overlay.add_child(win_bg)
+
+	var win_center = VBoxContainer.new()
+	win_center.anchor_left = 0.2
+	win_center.anchor_right = 0.8
+	win_center.anchor_top = 0.3
+	win_center.anchor_bottom = 0.75
+	win_center.add_theme_constant_override("separation", 20)
+	win_overlay.add_child(win_center)
+
+	var win_title = Label.new()
+	win_title.text = "Run Complete!\nYou Sealed the Box!"
+	win_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	win_title.add_theme_font_size_override("font_size", 30)
+	win_center.add_child(win_title)
+
+	_run_win_detail_label = Label.new()
+	_run_win_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_run_win_detail_label.add_theme_font_size_override("font_size", 20)
+	win_center.add_child(_run_win_detail_label)
+
+	var win_play_btn = Button.new()
+	win_play_btn.text = "Play Again"
+	win_play_btn.custom_minimum_size = Vector2(160, 52)
+	win_play_btn.add_theme_font_size_override("font_size", 18)
+	win_play_btn.pressed.connect(_on_play_again_pressed)
+	win_center.add_child(win_play_btn)
+
+	root.add_child(win_overlay)
+	_run_win_overlay = win_overlay
+
+	# ── Run-over overlay ───────────────────────────────────────────────────────
+	var over_overlay = Control.new()
+	over_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	over_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	over_overlay.visible = false
+	var over_bg = ColorRect.new()
+	over_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	over_bg.color = Color(0.0, 0.0, 0.0, 0.78)
+	over_overlay.add_child(over_bg)
+
+	var over_center = VBoxContainer.new()
+	over_center.anchor_left = 0.2
+	over_center.anchor_right = 0.8
+	over_center.anchor_top = 0.3
+	over_center.anchor_bottom = 0.75
+	over_center.add_theme_constant_override("separation", 20)
+	over_overlay.add_child(over_center)
+
+	var over_title = Label.new()
+	over_title.text = "Run Over"
+	over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	over_title.add_theme_font_size_override("font_size", 30)
+	over_center.add_child(over_title)
+
+	_run_over_detail_label = Label.new()
+	_run_over_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_run_over_detail_label.add_theme_font_size_override("font_size", 20)
+	over_center.add_child(_run_over_detail_label)
+
+	var over_play_btn = Button.new()
+	over_play_btn.text = "Play Again"
+	over_play_btn.custom_minimum_size = Vector2(160, 52)
+	over_play_btn.add_theme_font_size_override("font_size", 18)
+	over_play_btn.pressed.connect(_on_play_again_pressed)
+	over_center.add_child(over_play_btn)
+
+	root.add_child(over_overlay)
+	_run_over_overlay = over_overlay
+
 # ── signal wiring ────────────────────────────────────────────────────────────
 func _connect_signals() -> void:
 	_round_manager.phase_changed.connect(_on_phase_changed)
@@ -419,11 +497,16 @@ func _on_reward_die_picked(index: int) -> void:
 	_reward_overlay.visible = false
 	_run_manager.advance_to_next_match(_current_reward_faces[index])
 
-func _on_run_won(_match_number: int, _hp: int) -> void:
-	pass  # implemented in Task 5
+func _on_run_won(match_number: int, hp: int) -> void:
+	_run_win_detail_label.text = "Match: %d / %d  |  Final HP: %d" % [match_number, RunManager.RUN_LENGTH, hp]
+	_run_win_overlay.visible = true
 
-func _on_run_over(_match_number: int) -> void:
-	pass  # implemented in Task 5
+func _on_run_over(match_number: int) -> void:
+	_run_over_detail_label.text = "Defeated on Match: %d / %d  |  HP: 0" % [match_number, RunManager.RUN_LENGTH]
+	_run_over_overlay.visible = true
+
+func _on_play_again_pressed() -> void:
+	_run_manager.start_run()
 
 func _on_tabs_sealed(_tabs: Array) -> void:
 	_selected_tabs = []
