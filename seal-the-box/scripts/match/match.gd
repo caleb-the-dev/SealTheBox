@@ -36,6 +36,10 @@ var _run_over_detail_label: Label
 func _ready() -> void:
 	_setup_3d()
 	_setup_ui()
+	if not Engine.has_singleton("AbilityLibrary"):
+		Engine.register_singleton("AbilityLibrary", AbilityLibrary)
+	if not Engine.has_singleton("GameState"):
+		Engine.register_singleton("GameState", GameState)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
