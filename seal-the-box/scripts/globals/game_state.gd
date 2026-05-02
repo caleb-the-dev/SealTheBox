@@ -22,6 +22,9 @@ func reset_match() -> void:
 	win_threshold = 13
 	tabs = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 	dice_hand = []
+	for die in dice_pool:
+		die.value = 0
+		die.rolled = false
 	_setup_ability_hand()
 
 func spend_ap(amount: int) -> bool:
