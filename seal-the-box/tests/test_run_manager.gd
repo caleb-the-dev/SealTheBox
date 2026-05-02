@@ -6,6 +6,7 @@ func _init() -> void:
 	lib.name = "AbilityLibrary"
 	get_root().add_child(lib)
 	lib._ready()
+	Engine.register_singleton("AbilityLibrary", lib)
 
 	var gs = load("res://scripts/globals/game_state.gd").new()
 	gs.name = "GameState"
@@ -39,7 +40,9 @@ func _test_reset_match_preserves_hp(gs: Node) -> void:
 
 func _test_reset_match_preserves_dice_pool(gs: Node) -> void:
 	gs.reset_run()
-	gs.dice_pool.append(Die.new(12))
+	var extra = Die.new(12)
+	gs.dice_pool.append(extra)
 	var pool_size = gs.dice_pool.size()
 	gs.reset_match()
-	assert(gs.dice_pool.size() == pool_size, "reset_match should not clear dice_pool, got %d" % gs.dice_pool.size())
+	assert(gs.dice_pool.size() == pool_size, "reset_match should not change dice_pool size, got %d" % gs.dice_pool.size())
+	assert(extra in gs.dice_pool, "reset_match should not remove the extra die from dice_pool")

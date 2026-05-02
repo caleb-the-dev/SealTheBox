@@ -39,7 +39,7 @@ func _setup_dice_pool() -> void:
 
 func _setup_ability_hand() -> void:
 	ability_hand = []
-	var lib = get_node("/root/AbilityLibrary")
+	var lib = Engine.get_singleton("AbilityLibrary")
 	for id in ["reroll_die", "greater_1", "lesser_1"]:
 		var ability = lib.get_ability(id)
 		if ability:
