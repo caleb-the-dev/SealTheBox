@@ -294,6 +294,51 @@ func _setup_ui() -> void:
 	_discard_label.add_theme_font_size_override("font_size", 28)
 	discard_col.add_child(_discard_label)
 
+	# ── Reward overlay (hidden until match 1 or 2 ends in a win) ──────────────
+	var reward_overlay = Control.new()
+	reward_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	reward_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	reward_overlay.visible = false
+	var reward_bg = ColorRect.new()
+	reward_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	reward_bg.color = Color(0.0, 0.0, 0.0, 0.78)
+	reward_overlay.add_child(reward_bg)
+
+	var reward_center = VBoxContainer.new()
+	reward_center.anchor_left = 0.2
+	reward_center.anchor_right = 0.8
+	reward_center.anchor_top = 0.3
+	reward_center.anchor_bottom = 0.75
+	reward_center.add_theme_constant_override("separation", 20)
+	reward_overlay.add_child(reward_center)
+
+	_reward_title_label = Label.new()
+	_reward_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_reward_title_label.add_theme_font_size_override("font_size", 24)
+	reward_center.add_child(_reward_title_label)
+
+	var reward_subtitle = Label.new()
+	reward_subtitle.text = "Pick one die to permanently add to your pool:"
+	reward_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	reward_center.add_child(reward_subtitle)
+
+	var reward_btn_row = HBoxContainer.new()
+	reward_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	reward_btn_row.add_theme_constant_override("separation", 20)
+	reward_center.add_child(reward_btn_row)
+
+	_reward_buttons = []
+	for i in 3:
+		var rbtn = Button.new()
+		rbtn.custom_minimum_size = Vector2(110, 70)
+		rbtn.add_theme_font_size_override("font_size", 22)
+		rbtn.pressed.connect(_on_reward_die_picked.bind(i))
+		reward_btn_row.add_child(rbtn)
+		_reward_buttons.append(rbtn)
+
+	root.add_child(reward_overlay)
+	_reward_overlay = reward_overlay
+
 # ── signal wiring ────────────────────────────────────────────────────────────
 func _connect_signals() -> void:
 	_round_manager.phase_changed.connect(_on_phase_changed)
@@ -363,8 +408,16 @@ func _on_next_match_ready() -> void:
 		btn.disabled = false
 	_round_manager.start_match()
 
-func _on_show_reward(_dice_faces: Array) -> void:
-	pass  # implemented in Task 4
+func _on_show_reward(dice_faces: Array) -> void:
+	_current_reward_faces = dice_faces
+	_reward_title_label.text = "Match %d Complete — Pick a Reward Die" % _run_manager.match_number
+	for i in 3:
+		_reward_buttons[i].text = "d%d" % dice_faces[i]
+	_reward_overlay.visible = true
+
+func _on_reward_die_picked(index: int) -> void:
+	_reward_overlay.visible = false
+	_run_manager.advance_to_next_match(_current_reward_faces[index])
 
 func _on_run_won(_match_number: int, _hp: int) -> void:
 	pass  # implemented in Task 5
