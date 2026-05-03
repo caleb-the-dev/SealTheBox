@@ -25,6 +25,7 @@ var _discard_label: Label
 var _current_phase: String = ""
 var _match_label: Label
 var _box_label: Label
+var _threshold_label: Label
 var _tab_row: HBoxContainer
 var _reward_overlay: Control
 var _reward_title_label: Label
@@ -120,6 +121,10 @@ func _setup_ui() -> void:
 	_box_label = Label.new()
 	_box_label.add_theme_font_size_override("font_size", 18)
 	top_bar.add_child(_box_label)
+
+	_threshold_label = Label.new()
+	_threshold_label.add_theme_font_size_override("font_size", 16)
+	top_bar.add_child(_threshold_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -646,8 +651,10 @@ func _refresh_ui() -> void:
 	_match_label.text = "Match: %d / %d" % [_run_manager.match_number, RunManager.RUN_LENGTH]
 	if GameState.current_box:
 		_box_label.text = "Box: %s" % GameState.current_box.name
+		_threshold_label.text = "Win: ≥%d pts" % GameState.win_threshold
 	else:
 		_box_label.text = ""
+		_threshold_label.text = ""
 	_draw_label.text = str(_round_manager.get_draw_count())
 	_discard_label.text = str(_round_manager.get_discard_count())
 	_refresh_tab_display()
