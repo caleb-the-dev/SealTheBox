@@ -13,3 +13,6 @@ export/
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# Git worktrees
+.worktrees/
