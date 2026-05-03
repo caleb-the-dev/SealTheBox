@@ -671,9 +671,8 @@ func _refresh_ui() -> void:
 		var remaining_sum := 0
 		for t in GameState.tabs:
 			remaining_sum += t
-		var sealed_sum := GameState.current_box.tab_sum() - remaining_sum
-		_sealed_total_label.text = "%d pts" % sealed_sum
-		_threshold_label.text = "≥%d to win" % GameState.win_threshold
+		_sealed_total_label.text = "%d left" % remaining_sum
+		_threshold_label.text = "≤%d to win" % GameState.win_threshold
 	else:
 		_box_label.text = ""
 		_sealed_total_label.text = ""
