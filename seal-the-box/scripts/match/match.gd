@@ -26,6 +26,7 @@ var _current_phase: String = ""
 var _match_label: Label
 var _box_label: Label
 var _threshold_label: Label
+var _sealed_total_label: Label
 var _tab_row: HBoxContainer
 var _reward_overlay: Control
 var _reward_title_label: Label
@@ -122,10 +123,6 @@ func _setup_ui() -> void:
 	_box_label.add_theme_font_size_override("font_size", 18)
 	top_bar.add_child(_box_label)
 
-	_threshold_label = Label.new()
-	_threshold_label.add_theme_font_size_override("font_size", 16)
-	top_bar.add_child(_threshold_label)
-
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
 	tabs_vbox.anchor_left = 0.0
@@ -142,10 +139,30 @@ func _setup_ui() -> void:
 	tabs_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tabs_vbox.add_child(tabs_lbl)
 
+	var tab_area = HBoxContainer.new()
+	tab_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_area.alignment = BoxContainer.ALIGNMENT_CENTER
+	tabs_vbox.add_child(tab_area)
+
+	_sealed_total_label = Label.new()
+	_sealed_total_label.add_theme_font_size_override("font_size", 20)
+	_sealed_total_label.custom_minimum_size = Vector2(110, 0)
+	_sealed_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_sealed_total_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tab_area.add_child(_sealed_total_label)
+
 	_tab_row = HBoxContainer.new()
 	_tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_tab_row.add_theme_constant_override("separation", 8)
-	tabs_vbox.add_child(_tab_row)
+	_tab_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tab_area.add_child(_tab_row)
+
+	_threshold_label = Label.new()
+	_threshold_label.add_theme_font_size_override("font_size", 20)
+	_threshold_label.custom_minimum_size = Vector2(110, 0)
+	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_threshold_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tab_area.add_child(_threshold_label)
 
 	# ── Status / rolled total ───────────────────────────────────────────────
 	_status_label = Label.new()
@@ -651,9 +668,15 @@ func _refresh_ui() -> void:
 	_match_label.text = "Match: %d / %d" % [_run_manager.match_number, RunManager.RUN_LENGTH]
 	if GameState.current_box:
 		_box_label.text = "Box: %s" % GameState.current_box.name
-		_threshold_label.text = "Win: ≥%d pts" % GameState.win_threshold
+		var remaining_sum := 0
+		for t in GameState.tabs:
+			remaining_sum += t
+		var sealed_sum := GameState.current_box.tab_sum() - remaining_sum
+		_sealed_total_label.text = "%d pts" % sealed_sum
+		_threshold_label.text = "≥%d to win" % GameState.win_threshold
 	else:
 		_box_label.text = ""
+		_sealed_total_label.text = ""
 		_threshold_label.text = ""
 	_draw_label.text = str(_round_manager.get_draw_count())
 	_discard_label.text = str(_round_manager.get_discard_count())
