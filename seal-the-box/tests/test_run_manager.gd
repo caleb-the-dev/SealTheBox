@@ -170,6 +170,7 @@ func _test_ability_hand_persists_across_matches() -> void:
 	rm.handle_match_won(false)
 	assert(gs.ability_hand.size() == 2, "ability hand should still have 2 after advancing to match 2, got %d" % gs.ability_hand.size())
 
+	gs.ability_hand = []  # reset so subsequent tests get a fresh hand
 	rm.queue_free()
 
 func _test_ability_offer_swap_updates_hand() -> void:
