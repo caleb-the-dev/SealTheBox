@@ -2,6 +2,9 @@ id,flavor_name,type,traits,cooldown,ap_cost,description
 reroll_die,Reroll,Ethereal,Repeatable,0,0,Reroll any one die — discard its current value and roll it again within its face range.
 greater_1,Empower,Mundane,,0,0,Add 1 to any rolled die's value. Cannot exceed the die's maximum face.
 lesser_1,Weaken,Cosmic,,0,0,Subtract 1 from any rolled die's value. Cannot go below 1.
+greater_2,Empower II,Mundane,,0,0,Add 2 to any rolled die's value. Cannot exceed the die's maximum face.
+lesser_2,Weaken II,Cosmic,,0,0,Subtract 2 from any rolled die's value. Cannot go below 1.
+reroll_all,Reroll All,Ethereal,,0,0,Reroll every die in hand — each die discards its current value and rolls again.
 roll_d4,Mundane Card,Mundane,,0,1,Roll 1 mundane d4
 lesser_greater_1,Mundane Card,Mundane,,0,2,Apply lesser 1 or greater 1 to any die
 cosmic_coin,Cosmic Card,Cosmic,,0,1,Flip a cosmic coin (1d2)

@@ -112,3 +112,4 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Godot-generated files (`.godot/`, `*.import`, shader caches) belong in `.gitignore`.
 - Commit after completing each meaningful slice or logical chunk of work.
 - Work on a feature branch when doing multi-step feature work; merge to master locally at session end.
+- **No git worktrees.** Always work directly in `C:/Users/caleb/.local/bin/Projects/Seal_the_Box/` on a feature branch. Caleb playtests from this fixed path — worktrees break his workflow.

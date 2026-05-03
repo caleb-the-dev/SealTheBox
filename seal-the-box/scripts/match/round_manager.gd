@@ -74,7 +74,7 @@ func attempt_seal(dice: Array, tabs: Array) -> bool:
 	_check_win()
 	return true
 
-func use_ability(ability: AbilityData, target_die: Die) -> bool:
+func use_ability(ability: AbilityData, target_die) -> bool:
 	if _match_over:
 		return false
 	if _current_phase == "roll":
@@ -87,6 +87,14 @@ func use_ability(ability: AbilityData, target_die: Die) -> bool:
 			_dice_pool.apply_greater(target_die, 1)
 		"lesser_1":
 			_dice_pool.apply_lesser(target_die, 1)
+		"greater_2":
+			_dice_pool.apply_greater(target_die, 2)
+		"lesser_2":
+			_dice_pool.apply_lesser(target_die, 2)
+		"reroll_all":
+			for die in GameState.dice_hand:
+				if die.rolled:
+					_dice_pool.reroll(die)
 		_:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
 			return false
