@@ -80,6 +80,9 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 	if _current_phase == "roll":
 		status_updated.emit("Use abilities after rolling dice.")
 		return false
+	if target_die == null and ability.id != "reroll_all":
+		push_warning("RoundManager: target_die is null for ability: %s" % ability.id)
+		return false
 	match ability.id:
 		"reroll_die":
 			_dice_pool.reroll(target_die)

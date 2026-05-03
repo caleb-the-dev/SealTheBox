@@ -630,11 +630,11 @@ func _on_ability_pressed(index: int) -> void:
 		return
 	var ability = GameState.ability_hand[index]
 	if ability.id == "reroll_all":
-		_round_manager.use_ability(ability, null)
-		_selected_ability = null
-		_targeting_die = false
-		_refresh_ui()
-		_flash_ability_used(index)
+		if _round_manager.use_ability(ability, null):
+			_selected_ability = null
+			_targeting_die = false
+			_refresh_ui()
+			_flash_ability_used(index)
 		return
 	_selected_ability = ability
 	_targeting_die = true
