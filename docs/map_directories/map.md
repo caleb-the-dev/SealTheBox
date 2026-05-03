@@ -9,7 +9,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 ## Meta
 | Field | Value |
 |-------|-------|
-| Last groomed | 2026-05-01 |
+| Last groomed | 2026-05-02 |
 | Sessions since groom | 0 |
 | Groom trigger | 10 sessions |
 
@@ -19,16 +19,70 @@ A living index of every system in the codebase. Each bucket file documents one s
 
 | System | File | Status |
 |--------|------|--------|
-| Game State (autoload) | [game_state.md](game_state.md) | Planned |
-| Ability Library (autoload) | [ability_library.md](ability_library.md) | Planned |
-| Tab Board | [tab_board.md](tab_board.md) | Planned |
-| Dice Pool | [dice_pool.md](dice_pool.md) | Planned |
-| Round Manager | [round_manager.md](round_manager.md) | Planned |
-| HUD (UI) | [hud.md](hud.md) | Planned |
+| Game State (autoload) | [game_state.md](game_state.md) | Active |
+| Ability Library (autoload) | [ability_library.md](ability_library.md) | Active |
+| Box Library (autoload) | [box_library.md](box_library.md) | Active |
+| Box Definition (Resource) | [box_definition.md](box_definition.md) | Active |
+| Run Manager | [run_manager.md](run_manager.md) | Active |
+| Tab Board | [tab_board.md](tab_board.md) | Active |
+| Dice Pool | [dice_pool.md](dice_pool.md) | Active |
+| Round Manager | [round_manager.md](round_manager.md) | Active |
+| Match Scene + HUD | [match_scene.md](match_scene.md) | Active |
+| HUD detail | [hud.md](hud.md) | Active |
 | Ability Hand (UI) | [ability_hand.md](ability_hand.md) | Planned |
 | Dice Hand (UI) | [dice_hand.md](dice_hand.md) | Planned |
 | Tab Display (UI) | [tab_display.md](tab_display.md) | Planned |
-| Match Scene | [match_scene.md](match_scene.md) | Planned |
+
+---
+
+## Key File Locations
+```
+seal-the-box/
+  project.godot
+  data/
+    abilities.csv          # ability definitions (3 abilities: reroll_die, greater_1, lesser_1)
+    boxes.csv              # box definitions (3 boxes: classic, low_evens, high_odds)
+  resources/
+    ability_data.gd        # AbilityData Resource subclass
+    box_definition.gd      # BoxDefinition Resource subclass (class_name BoxDefinition)
+  scripts/
+    globals/
+      ability_library.gd   # Autoload: AbilityLibrary
+      box_library.gd       # Autoload: BoxLibrary (no class_name — conflicts with autoload name)
+      game_state.gd        # Autoload: GameState
+    match/
+      match.gd             # Root scene controller — all UI built here
+      round_manager.gd     # Match-level orchestration
+      tab_board.gd         # Tab sealing logic
+      dice_pool.gd         # Dice draw/roll/discard
+    run/
+      run_manager.gd       # Series sequencing (3 boxes per run)
+  scenes/
+    match/
+      match.tscn           # Main scene (script: match.gd)
+  tests/
+    test_run_manager.gd    # Tests for GameState + RunManager (headless)
+    test_box_definition.gd # Tests for BoxDefinition formulas (headless)
+```
+
+---
+
+## Singleton Access Pattern
+All autoloads must be accessed via `Engine.get_singleton("Name")`. Bare global names work only in scene context and break in headless `--script` tests. In tests, register singletons manually:
+```gdscript
+var lib = load("res://scripts/globals/ability_library.gd").new()
+lib._ready()
+Engine.register_singleton("AbilityLibrary", lib)
+```
+Same pattern for BoxLibrary and GameState.
+
+---
+
+## Session Log
+| Date | Summary |
+|------|---------|
+| 2026-05-02 | Built series-based match structure: BoxDefinition Resource, BoxLibrary autoload, data/boxes.csv with 3 boxes. RunManager redesigned: box sequencing, reward only after final match, handle_reward_picked replaces advance_to_next_match. RoundManager.start_match() accepts BoxDefinition. match.gd: dynamic tab buttons, box label, remaining-sum counter, win threshold label, BoxLibrary singleton registration. Fixed synchronous-signal bug causing match 2 to start on round 2. Fixed win threshold display direction (remaining ≤ N, not sealed ≥ N). Updated test_run_manager.gd; added test_box_definition.gd. |
+| 2026-05-01 | Initial build: full match loop, 3-match run structure, reward screen, win/over overlays, all UI in code. |
 
 ---
 

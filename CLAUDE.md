@@ -55,11 +55,13 @@ seal-the-box/
 **Data flow:** CSVs are parsed once at startup by Library autoloads (e.g., `AbilityLibrary`, `RelicLibrary`) into typed Resource objects. Game logic reads from these libraries; it never re-parses CSVs at runtime.
 
 **Globals / Autoloads:**
-- `GameState` — current run state (HP, relics, AP, deck, dice pool)
+- `GameState` — current run state (HP, AP, round, tabs, dice pool, ability hand, current box)
 - `AbilityLibrary` — all ability definitions indexed by id
-- `RelicLibrary` — all relic definitions indexed by id
+- `BoxLibrary` — all box definitions indexed by id; get_ordered() returns CSV row order
 
-**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player spends AP on ability cards → player assigns dice to put down tabs → check win/lose. Tabs are a simple 1–9 integer set; a tab is "sealed" when a valid dice combination equals it.
+**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player uses free one-time abilities → player assigns dice to seal tabs → check win/lose. A **run** is 3 sequential matches across 3 different boxes (tab sets), each with its own tabs/round_limit/win_threshold loaded from BoxDefinition.
+
+**Win condition:** `TabBoard.check_win(threshold)` — remaining tab sum ≤ threshold (not sealed sum ≥ threshold).
 
 ## Game Vocabulary (from design docs)
 
@@ -89,8 +91,24 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - **Scope creep signals:** adding new game modes, meta-progression layers, UI polish, or "just one more relic type" before the core match loop is playtested. Flag these immediately.
 - **Push back explicitly.** If Caleb proposes something that adds scope before the current slice is validated, say so directly: "That's a great idea — let's put it on the backlog and come back after we playtest the current slice."
 
+## Current Build State
+
+**Working (committed to master):**
+- Full single-match loop playable end-to-end
+- 3-match series structure: Classic → Low Evens → High Odds boxes in sequence
+- BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv
+- Abilities (Reroll, Empower, Weaken) are free one-time use, persist across the entire series
+- Dice reward fires only after winning the final match; player picks 1 of 3 random dice
+- GameState: hp=6, starting pool=3d6+1d4+1d8, ability_hand=[reroll_die, greater_1, lesser_1]
+- UI: top bar (Round/HP/Match/Box), tab area with remaining-sum counter + win threshold, dice hand, abilities, reward/win/over overlays — all built in code in match.gd
+- Tests: test_run_manager.gd + test_box_definition.gd pass headless
+
+**Next planned feature:**
+- Ability pool (6 abilities) + pre-series selection screen (player picks 3 before each run)
+
 ## Git & GitHub
 
 - Remote: `https://github.com/caleb-the-dev/SealTheBox.git`
 - Godot-generated files (`.godot/`, `*.import`, shader caches) belong in `.gitignore`.
 - Commit after completing each meaningful slice or logical chunk of work.
+- Work on a feature branch when doing multi-step feature work; merge to master locally at session end.
