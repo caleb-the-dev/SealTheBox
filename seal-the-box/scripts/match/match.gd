@@ -39,6 +39,7 @@ var _ability_offer_overlay: Control
 var _offer_ability_name_label: Label
 var _offer_ability_desc_label: Label
 var _offer_swap_buttons: Array[Button] = []
+var _dev_overlay: Control
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -56,6 +57,11 @@ func _ready() -> void:
 	add_child(_run_manager)
 	_connect_signals()
 	_run_manager.start_run()
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_T:
+			_on_dev_toggle_pressed()
 
 # ── 3D environment ──────────────────────────────────────────────────────────
 func _setup_3d() -> void:
@@ -513,6 +519,67 @@ func _setup_ui() -> void:
 	root.add_child(offer_overlay)
 	_ability_offer_overlay = offer_overlay
 
+	# ── Dev toggle button (top-right corner) ──────────────────────────────────
+	var dev_toggle = Button.new()
+	dev_toggle.text = "DEV"
+	dev_toggle.anchor_left = 1.0
+	dev_toggle.anchor_right = 1.0
+	dev_toggle.anchor_top = 0.0
+	dev_toggle.anchor_bottom = 0.0
+	dev_toggle.offset_left = -62
+	dev_toggle.offset_right = -4
+	dev_toggle.offset_top = 10
+	dev_toggle.offset_bottom = 42
+	dev_toggle.pressed.connect(_on_dev_toggle_pressed)
+	root.add_child(dev_toggle)
+
+	# ── Dev overlay ────────────────────────────────────────────────────────────
+	var dev_overlay = Control.new()
+	dev_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_overlay.visible = false
+	var dev_bg = ColorRect.new()
+	dev_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_bg.color = Color(0, 0, 0, 0.6)
+	dev_overlay.add_child(dev_bg)
+
+	var dev_panel = VBoxContainer.new()
+	dev_panel.anchor_left = 0.35
+	dev_panel.anchor_right = 0.65
+	dev_panel.anchor_top = 0.3
+	dev_panel.anchor_bottom = 0.72
+	dev_panel.add_theme_constant_override("separation", 14)
+	dev_overlay.add_child(dev_panel)
+
+	var dev_title = Label.new()
+	dev_title.text = "— DEV MENU —"
+	dev_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_title.add_theme_font_size_override("font_size", 22)
+	dev_panel.add_child(dev_title)
+
+	var dev_win_match_btn = Button.new()
+	dev_win_match_btn.text = "Win Current Match"
+	dev_win_match_btn.custom_minimum_size = Vector2(0, 56)
+	dev_win_match_btn.add_theme_font_size_override("font_size", 17)
+	dev_win_match_btn.pressed.connect(_on_dev_win_match_pressed)
+	dev_panel.add_child(dev_win_match_btn)
+
+	var dev_win_series_btn = Button.new()
+	dev_win_series_btn.text = "Win Entire Series"
+	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
+	dev_win_series_btn.add_theme_font_size_override("font_size", 17)
+	dev_win_series_btn.pressed.connect(_on_dev_win_series_pressed)
+	dev_panel.add_child(dev_win_series_btn)
+
+	var dev_close_btn = Button.new()
+	dev_close_btn.text = "Close  [T]"
+	dev_close_btn.custom_minimum_size = Vector2(0, 44)
+	dev_close_btn.pressed.connect(_on_dev_toggle_pressed)
+	dev_panel.add_child(dev_close_btn)
+
+	root.add_child(dev_overlay)
+	_dev_overlay = dev_overlay
+
 # ── signal wiring ────────────────────────────────────────────────────────────
 func _connect_signals() -> void:
 	_round_manager.phase_changed.connect(_on_phase_changed)
@@ -629,6 +696,21 @@ func _on_offer_swap_pressed(index: int) -> void:
 func _on_offer_skip_pressed() -> void:
 	_ability_offer_overlay.visible = false
 	_run_manager.handle_ability_offer_result(-1)
+
+func _on_dev_toggle_pressed() -> void:
+	_dev_overlay.visible = not _dev_overlay.visible
+
+func _on_dev_win_match_pressed() -> void:
+	_dev_overlay.visible = false
+	if not _match_ended:
+		_round_manager.dev_win_match()
+
+func _on_dev_win_series_pressed() -> void:
+	_dev_overlay.visible = false
+	var safety := 0
+	while not _match_ended and safety < 10:
+		safety += 1
+		_round_manager.dev_win_match()
 
 func _on_play_again_pressed() -> void:
 	_run_manager.start_run()

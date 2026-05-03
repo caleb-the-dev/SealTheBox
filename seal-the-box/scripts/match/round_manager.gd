@@ -131,6 +131,12 @@ func get_draw_count() -> int:
 func get_discard_count() -> int:
 	return _dice_pool.get_discard_count() if _dice_pool else 0
 
+func dev_win_match() -> void:
+	if _match_over:
+		return
+	_match_over = true
+	match_won.emit(false)
+
 func _set_phase(phase: String) -> void:
 	_current_phase = phase
 	phase_changed.emit(phase)

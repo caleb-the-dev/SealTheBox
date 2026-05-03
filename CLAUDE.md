@@ -103,13 +103,22 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - UI: top bar (Round/HP/Match/Box), tab area with remaining-sum counter + win threshold, dice hand, abilities, reward/win/over overlays — all built in code in match.gd
 - Tests: test_run_manager.gd + test_box_definition.gd pass headless
 
-**Next planned feature:**
-- Ability pool (6 abilities) + pre-series selection screen (player picks 3 before each run)
+**On branch `feature/ability-swap` (playtesting):**
+- 3 new abilities: Empower II (greater_2), Weaken II (lesser_2), Reroll All (reroll_all)
+- After final match + dice reward, player is offered 1 random new ability; swap with one of their 3 or skip
 
 ## Git & GitHub
 
 - Remote: `https://github.com/caleb-the-dev/SealTheBox.git`
 - Godot-generated files (`.godot/`, `*.import`, shader caches) belong in `.gitignore`.
-- Commit after completing each meaningful slice or logical chunk of work.
-- Work on a feature branch when doing multi-step feature work; merge to master locally at session end.
 - **No git worktrees.** Always work directly in `C:/Users/caleb/.local/bin/Projects/Seal_the_Box/` on a feature branch. Caleb playtests from this fixed path — worktrees break his workflow.
+
+### Feature branch workflow (follow this every time)
+
+1. **Start:** `git checkout master && git checkout -b feature/<name>` — always branch from master
+2. **Build:** implement the feature with commits on the branch
+3. **QA handoff:** when implementation is done, give Caleb a checklist of what to test (bugs + playability) — he playtests from the same fixed path
+4. **Approval:** once Caleb says it's good, wrap up:
+   - `git checkout master && git merge feature/<name> && git branch -d feature/<name>`
+   - `git push origin master`
+5. **Update CLAUDE.md:** move the branch entry into "Working" and clear "Next planned feature"
