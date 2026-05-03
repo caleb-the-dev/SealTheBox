@@ -28,6 +28,8 @@ func _init() -> void:
 	_test_ability_hand_persists_across_matches()
 	_test_run_manager_match_lost()
 	_test_reward_dice_unique()
+	_test_ability_offer_swap_updates_hand()
+	_test_ability_offer_skip_leaves_hand_unchanged()
 	print("All RunManager tests passed!")
 	quit()
 
@@ -124,9 +126,11 @@ func _test_run_manager_final_match_win_then_reward() -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	var reward_faces_log: Array = []
+	var offer_log: Array = []
 	var run_won_log: Array = []
 	rm.next_match_ready.connect(func(_box): pass)
 	rm.show_reward.connect(func(faces): reward_faces_log.append(faces.duplicate()))
+	rm.show_ability_offer.connect(func(a): offer_log.append(a))
 	rm.run_won.connect(func(mn, hp): run_won_log.append({"match": mn, "hp": hp}))
 
 	rm.start_run()
@@ -141,7 +145,11 @@ func _test_run_manager_final_match_win_then_reward() -> void:
 	var faces = reward_faces_log[0]
 	assert(faces.size() == 3, "should offer 3 reward dice, got %d" % faces.size())
 	rm.handle_reward_picked(faces[0])
-	assert(run_won_log.size() == 1, "handle_reward_picked should emit run_won")
+	assert(offer_log.size() == 1, "show_ability_offer should fire once after reward pick")
+	assert(run_won_log.size() == 0, "run_won should NOT fire before offer resolved")
+
+	rm.handle_ability_offer_result(-1)  # skip the offer
+	assert(run_won_log.size() == 1, "run_won should fire after offer resolved")
 	assert(run_won_log[0]["match"] == 3, "run_won should report match 3, got %d" % run_won_log[0]["match"])
 
 	rm.queue_free()
@@ -161,5 +169,70 @@ func _test_ability_hand_persists_across_matches() -> void:
 
 	rm.handle_match_won(false)
 	assert(gs.ability_hand.size() == 2, "ability hand should still have 2 after advancing to match 2, got %d" % gs.ability_hand.size())
+
+	rm.queue_free()
+
+func _test_ability_offer_swap_updates_hand() -> void:
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	var offer_log: Array = []
+	var run_won_log: Array = []
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_reward.connect(func(_f): pass)
+	rm.show_ability_offer.connect(func(a): offer_log.append(a))
+	rm.run_won.connect(func(mn, hp): run_won_log.append({"match": mn, "hp": hp}))
+
+	rm.start_run()
+	rm.handle_match_won(false)  # match 1
+	rm.handle_match_won(false)  # match 2
+	rm.handle_match_won(true)   # match 3 -> show_reward
+
+	var gs = Engine.get_singleton("GameState")
+	var original_hand = gs.ability_hand.duplicate()
+
+	rm.handle_reward_picked(6)  # pick a d6
+
+	assert(offer_log.size() == 1, "show_ability_offer should fire after reward pick")
+	assert(run_won_log.is_empty(), "run_won should NOT fire before offer resolved")
+
+	var offered = offer_log[0]
+	rm.handle_ability_offer_result(0)  # swap slot 0
+
+	assert(run_won_log.size() == 1, "run_won should fire after offer resolved")
+	assert(gs.ability_hand[0] == offered, "slot 0 should now hold the offered ability")
+	assert(gs.ability_hand[1] == original_hand[1], "slot 1 should be unchanged")
+	assert(gs.ability_hand[2] == original_hand[2], "slot 2 should be unchanged")
+
+	rm.queue_free()
+
+func _test_ability_offer_skip_leaves_hand_unchanged() -> void:
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	var offer_log: Array = []
+	var run_won_log: Array = []
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_reward.connect(func(_f): pass)
+	rm.show_ability_offer.connect(func(a): offer_log.append(a))
+	rm.run_won.connect(func(mn, hp): run_won_log.append({"match": mn, "hp": hp}))
+
+	rm.start_run()
+	rm.handle_match_won(false)  # match 1
+	rm.handle_match_won(false)  # match 2
+	rm.handle_match_won(true)   # match 3 -> show_reward
+
+	var gs = Engine.get_singleton("GameState")
+	var original_hand = gs.ability_hand.duplicate()
+
+	rm.handle_reward_picked(6)
+
+	assert(offer_log.size() == 1, "show_ability_offer should fire")
+	assert(run_won_log.is_empty(), "run_won should not fire before offer resolved")
+
+	rm.handle_ability_offer_result(-1)  # skip
+
+	assert(run_won_log.size() == 1, "run_won should fire after skip")
+	assert(gs.ability_hand[0] == original_hand[0], "slot 0 should be unchanged")
+	assert(gs.ability_hand[1] == original_hand[1], "slot 1 should be unchanged")
+	assert(gs.ability_hand[2] == original_hand[2], "slot 2 should be unchanged")
 
 	rm.queue_free()
