@@ -79,6 +79,10 @@ seal-the-box/
 **Ability traits:** Repeatable, Preroll, Non-Final, Cooldown X, Expended, Lost
 **Types:** Diabolic (high rolls, max HP), Cosmic (low rolls, healing), Ethereal (rerolls, flexible manipulation), Mundane (baseline)
 
+## Prototyping UI Rules
+
+- **All overlay backgrounds must be fully opaque** (`Color(0, 0, 0, 1.0)`). No semi-transparency on any overlay during prototyping — it makes text hard to read against the 3D scene behind it.
+
 ## Vertical Slice Discipline — READ THIS FIRST
 
 > **Do not add features before playtesting proves they are fun.**

@@ -337,7 +337,7 @@ func _setup_ui() -> void:
 	reward_overlay.visible = false
 	var reward_bg = ColorRect.new()
 	reward_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	reward_bg.color = Color(0.0, 0.0, 0.0, 0.78)
+	reward_bg.color = Color(0.0, 0.0, 0.0, 1.0)
 	reward_overlay.add_child(reward_bg)
 
 	var reward_center = VBoxContainer.new()
@@ -382,7 +382,7 @@ func _setup_ui() -> void:
 	win_overlay.visible = false
 	var win_bg = ColorRect.new()
 	win_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	win_bg.color = Color(0.0, 0.0, 0.0, 0.78)
+	win_bg.color = Color(0.0, 0.0, 0.0, 1.0)
 	win_overlay.add_child(win_bg)
 
 	var win_center = VBoxContainer.new()
@@ -421,7 +421,7 @@ func _setup_ui() -> void:
 	over_overlay.visible = false
 	var over_bg = ColorRect.new()
 	over_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	over_bg.color = Color(0.0, 0.0, 0.0, 0.78)
+	over_bg.color = Color(0.0, 0.0, 0.0, 1.0)
 	over_overlay.add_child(over_bg)
 
 	var over_center = VBoxContainer.new()
@@ -540,7 +540,7 @@ func _setup_ui() -> void:
 	dev_overlay.visible = false
 	var dev_bg = ColorRect.new()
 	dev_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dev_bg.color = Color(0, 0, 0, 0.6)
+	dev_bg.color = Color(0, 0, 0, 1.0)
 	dev_overlay.add_child(dev_bg)
 
 	var dev_panel = VBoxContainer.new()
