@@ -49,6 +49,7 @@ func handle_ability_offer_result(swap_index: int) -> void:
 		gs.ability_hand[swap_index] = _current_offered_ability
 	gs.reset_run_end()
 	run_won.emit(match_number, gs.hp)
+	_current_offered_ability = null
 
 func _pick_reward_dice(count: int) -> Array:
 	var pool: Array = REWARD_DIE_FACES.duplicate()
