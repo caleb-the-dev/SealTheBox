@@ -5,7 +5,7 @@ signal phase_changed(phase: String)
 signal round_ended(round_num: int)
 signal match_won(critical: bool)
 signal match_lost()
-signal tab_sealed(value: int)
+signal tabs_sealed(tabs: Array)
 signal status_updated(text: String)
 
 var _tab_board: TabBoard
@@ -27,10 +27,19 @@ func start_match() -> void:
 func start_round() -> void:
 	GameState.round += 1
 	GameState.ap = 3
+	if GameState.round > GameState.round_limit:
+		GameState.hp -= 1
+		if GameState.hp <= 0:
+			_match_over = true
+			match_lost.emit()
+			return
 	var hand = _dice_pool.draw_hand()
 	GameState.dice_hand = hand
 	_set_phase("roll")
-	status_updated.emit("Round %d of %d — select dice to roll (1 AP each)" % [GameState.round, GameState.round_limit])
+	if GameState.round > GameState.round_limit:
+		status_updated.emit("Overtime — Round %d / %d — Lost 1 HP (%d remaining). Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit, GameState.hp])
+	else:
+		status_updated.emit("Round %d / %d — Roll Phase: select dice to roll (1 AP each)" % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
 	var partial := false
@@ -39,23 +48,27 @@ func commit_roll(dice: Array) -> void:
 			partial = true
 			break
 		_dice_pool.roll_die(die)
+	var total := 0
+	for die in GameState.dice_hand:
+		if die.rolled:
+			total += die.value
 	_set_phase("act")
 	if partial:
-		status_updated.emit("Out of AP — rolled what you could. Seal tabs or use abilities.")
+		status_updated.emit("Seal Phase — Out of AP. Total: %d — select tabs to seal." % total)
 	else:
-		status_updated.emit("Round %d — seal tabs or use abilities" % GameState.round)
+		status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 
-func attempt_seal(dice: Array, tab: int) -> bool:
+func attempt_seal(dice: Array, tabs: Array) -> bool:
 	if _match_over:
 		return false
-	var values: Array[int] = []
+	var dice_total := 0
 	for d in dice:
-		values.append(d.value)
-	if not _tab_board.can_seal(values, tab):
+		dice_total += d.value
+	if not _tab_board.can_seal_multi(dice_total, tabs):
 		return false
-	_tab_board.seal_tab(tab)
+	_tab_board.seal_tabs(tabs)
 	GameState.tabs = _tab_board.get_remaining()
-	tab_sealed.emit(tab)
+	tabs_sealed.emit(tabs)
 	_check_win()
 	return true
 
@@ -64,9 +77,6 @@ func use_ability(ability: AbilityData, target_die: Die) -> bool:
 		return false
 	if _current_phase == "roll":
 		status_updated.emit("Use abilities after rolling dice.")
-		return false
-	if not GameState.spend_ap(ability.ap_cost):
-		status_updated.emit("Not enough AP for %s!" % ability.flavor_name)
 		return false
 	match ability.id:
 		"reroll_die":
@@ -77,8 +87,13 @@ func use_ability(ability: AbilityData, target_die: Die) -> bool:
 			_dice_pool.apply_lesser(target_die, 1)
 		_:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
-			GameState.ap += ability.ap_cost  # refund
 			return false
+	GameState.ability_hand.erase(ability)
+	var total := 0
+	for die in GameState.dice_hand:
+		if die.rolled:
+			total += die.value
+	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 	return true
 
 func end_round() -> void:
@@ -86,13 +101,6 @@ func end_round() -> void:
 		return
 	_dice_pool.discard_hand()
 	GameState.dice_hand = []
-	if GameState.round > GameState.round_limit:
-		GameState.hp -= 1
-		status_updated.emit("Round limit exceeded! HP: %d" % GameState.hp)
-		if GameState.hp <= 0:
-			_match_over = true
-			match_lost.emit()
-			return
 	round_ended.emit(GameState.round)
 	start_round()
 
@@ -103,6 +111,12 @@ func _check_win() -> void:
 	elif _tab_board.check_win(GameState.win_threshold):
 		_match_over = true
 		match_won.emit(false)
+
+func get_draw_count() -> int:
+	return _dice_pool.get_draw_count() if _dice_pool else 0
+
+func get_discard_count() -> int:
+	return _dice_pool.get_discard_count() if _dice_pool else 0
 
 func _set_phase(phase: String) -> void:
 	_current_phase = phase

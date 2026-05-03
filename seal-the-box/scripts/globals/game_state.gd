@@ -1,9 +1,9 @@
 extends Node
 
-var hp: int = 5
+var hp: int = 6
 var ap: int = 3
 var round: int = 0
-var round_limit: int = 4
+var round_limit: int = 3
 var win_threshold: int = 13
 var tabs: Array[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 var dice_pool: Array = []   # Array of Die
@@ -11,14 +11,14 @@ var dice_hand: Array = []   # Array of Die (currently drawn)
 var ability_hand: Array = []  # Array of AbilityData
 
 func reset_run() -> void:
-	hp = 5
+	hp = 6
 	_setup_dice_pool()
 	reset_match()
 
 func reset_match() -> void:
 	ap = 3
 	round = 0
-	round_limit = 4
+	round_limit = 3
 	win_threshold = 13
 	tabs = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 	dice_hand = []

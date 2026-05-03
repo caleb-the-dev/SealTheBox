@@ -48,6 +48,12 @@ func discard_hand() -> void:
 func get_hand() -> Array:
     return _hand
 
+func get_draw_count() -> int:
+    return _pool.size()
+
+func get_discard_count() -> int:
+    return _discard.size()
+
 func _reshuffle() -> void:
     _pool.append_array(_discard)
     _discard = []

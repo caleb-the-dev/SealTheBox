@@ -27,7 +27,7 @@ func _init() -> void:
 func _test_reset_run_sets_hp(gs: Node) -> void:
 	gs.hp = 1
 	gs.reset_run()
-	assert(gs.hp == 5, "reset_run should restore HP to 5, got %d" % gs.hp)
+	assert(gs.hp == 6, "reset_run should restore HP to 6, got %d" % gs.hp)
 
 func _test_reset_run_sets_starting_dice_pool(gs: Node) -> void:
 	gs.dice_pool = []
@@ -62,7 +62,7 @@ func _test_run_manager_start_run() -> void:
 	assert(rm.match_number == 1, "match_number should be 1 after start_run, got %d" % rm.match_number)
 	assert(counts["next_match"] == 1, "start_run should emit next_match_ready once, got %d" % counts["next_match"])
 	var gs = Engine.get_singleton("GameState")
-	assert(gs.hp == 5, "start_run should reset HP to 5, got %d" % gs.hp)
+	assert(gs.hp == 6, "start_run should reset HP to 6, got %d" % gs.hp)
 	rm.queue_free()
 
 func _test_run_manager_match_progression() -> void:

@@ -9,6 +9,10 @@ func reset(tab_range: Array[int]) -> void:
 func seal_tab(value: int) -> void:
     _remaining.erase(value)
 
+func seal_tabs(tabs: Array) -> void:
+    for t in tabs:
+        _remaining.erase(t)
+
 func get_remaining() -> Array[int]:
     return _remaining.duplicate()
 
@@ -24,10 +28,10 @@ func check_win(threshold: int) -> bool:
 func check_critical_win() -> bool:
     return _remaining.is_empty()
 
-func can_seal(dice_values: Array, tab: int) -> bool:
-    if not tab in _remaining:
-        return false
-    var total: int = 0
-    for v in dice_values:
-        total += v
-    return total == tab
+func can_seal_multi(dice_total: int, tabs: Array) -> bool:
+    var tab_sum: int = 0
+    for t in tabs:
+        if not t in _remaining:
+            return false
+        tab_sum += t
+    return tab_sum == dice_total

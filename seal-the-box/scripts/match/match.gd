@@ -604,9 +604,6 @@ func _on_ability_pressed(index: int) -> void:
 	if index >= GameState.ability_hand.size():
 		return
 	var ability = GameState.ability_hand[index]
-	if GameState.ap < ability.ap_cost:
-		_status_label.text = "Not enough AP for %s." % ability.flavor_name
-		return
 	_selected_ability = ability
 	_targeting_die = true
 	_status_label.text = "%s — click a die to target it." % ability.description
@@ -693,8 +690,8 @@ func _refresh_ability_display() -> void:
 		if i < hand.size():
 			var a = hand[i]
 			if btn is TooltipButton:
-				(btn as TooltipButton).update_info(a.flavor_name, a.description, a.ap_cost)
-			btn.disabled = (GameState.ap < a.ap_cost)
+				(btn as TooltipButton).update_info(a.flavor_name, a.description)
+			btn.disabled = false
 		else:
 			if btn is TooltipButton:
 				(btn as TooltipButton).clear_info()

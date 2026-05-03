@@ -3,9 +3,10 @@ extends SceneTree
 func _init() -> void:
     _test_initial_state()
     _test_seal_tab()
+    _test_seal_tabs_multi()
     _test_win_condition()
     _test_critical_win()
-    _test_can_seal()
+    _test_can_seal_multi()
     print("TabBoard tests passed!")
     quit()
 
@@ -22,6 +23,15 @@ func _test_seal_tab() -> void:
     assert(not 5 in board.get_remaining(), "Tab 5 should be sealed")
     assert(board.get_sum() == 40, "Sum after sealing 5 should be 40, got %d" % board.get_sum())
     assert(board.get_remaining().size() == 8, "Should have 8 tabs remaining")
+
+func _test_seal_tabs_multi() -> void:
+    var board = TabBoard.new()
+    board.reset([1, 2, 3, 4, 5, 6, 7, 8, 9])
+    board.seal_tabs([9, 2])
+    assert(not 9 in board.get_remaining(), "Tab 9 should be sealed")
+    assert(not 2 in board.get_remaining(), "Tab 2 should be sealed")
+    assert(board.get_sum() == 34, "Sum after sealing 9+2 should be 34, got %d" % board.get_sum())
+    assert(board.get_remaining().size() == 7, "Should have 7 tabs remaining")
 
 func _test_win_condition() -> void:
     var board = TabBoard.new()
@@ -44,19 +54,20 @@ func _test_win_condition() -> void:
 func _test_critical_win() -> void:
     var board = TabBoard.new()
     board.reset([1, 2, 3])
-    board.seal_tab(1)
-    board.seal_tab(2)
-    board.seal_tab(3)
+    board.seal_tabs([1, 2, 3])
     assert(board.check_critical_win(), "All tabs sealed = critical win")
     assert(board.check_win(0), "Critical win also satisfies threshold 0")
 
-func _test_can_seal() -> void:
+func _test_can_seal_multi() -> void:
     var board = TabBoard.new()
     board.reset([1, 2, 3, 4, 5, 6, 7, 8, 9])
-    assert(board.can_seal([5], 5), "Single die 5 seals tab 5")
-    assert(board.can_seal([3, 2], 5), "3+2=5 seals tab 5")
-    assert(board.can_seal([1, 2, 3], 6), "1+2+3=6 seals tab 6")
-    assert(not board.can_seal([3, 1], 5), "3+1=4 does not seal tab 5")
-    assert(not board.can_seal([3, 2], 10), "Tab 10 not in range")
+    assert(board.can_seal_multi(5, [5]), "Dice total 5 seals tab 5 alone")
+    assert(board.can_seal_multi(5, [3, 2]), "Dice total 5 seals tabs 3+2")
+    assert(board.can_seal_multi(6, [1, 2, 3]), "Dice total 6 seals tabs 1+2+3")
+    assert(board.can_seal_multi(11, [9, 2]), "Dice total 11 seals tabs 9+2")
+    assert(board.can_seal_multi(11, [8, 2, 1]), "Dice total 11 seals tabs 8+2+1")
+    assert(not board.can_seal_multi(5, [3, 1]), "3+1=4 does not match dice total 5")
+    assert(not board.can_seal_multi(10, [10]), "Tab 10 not in range")
     board.seal_tab(5)
-    assert(not board.can_seal([5], 5), "Cannot seal already-sealed tab 5")
+    assert(not board.can_seal_multi(5, [5]), "Cannot seal already-sealed tab 5")
+    assert(not board.can_seal_multi(8, [5, 3]), "Cannot seal combo containing already-sealed tab 5")
