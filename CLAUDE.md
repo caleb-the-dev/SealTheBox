@@ -101,15 +101,13 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Full single-match loop playable end-to-end
 - 3-match series structure: Classic → Low Evens → High Odds boxes in sequence
 - BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv
-- Abilities (Reroll, Empower, Weaken) are free one-time use, persist across the entire series
+- Abilities (Reroll, Empower, Weaken, Empower II, Weaken II, Reroll All) are free one-time use, persist across the entire series
 - Dice reward fires only after winning the final match; player picks 1 of 3 random dice
+- After dice reward, player is offered 1 random ability they don't have; swap with one of their 3 or skip. Ability hand persists across runs.
 - GameState: hp=6, starting pool=3d6+1d4+1d8, ability_hand=[reroll_die, greater_1, lesser_1]
-- UI: top bar (Round/HP/Match/Box), tab area with remaining-sum counter + win threshold, dice hand, abilities, reward/win/over overlays — all built in code in match.gd
-- Tests: test_run_manager.gd + test_box_definition.gd pass headless
-
-**On branch `feature/ability-swap` (playtesting):**
-- 3 new abilities: Empower II (greater_2), Weaken II (lesser_2), Reroll All (reroll_all)
-- After final match + dice reward, player is offered 1 random new ability; swap with one of their 3 or skip
+- Dev menu (T key or DEV button): "Win Current Match" and "Win Entire Series" shortcuts for playtesting
+- UI: top bar (Round/HP/Match/Box), tab area with remaining-sum counter + win threshold, dice hand, abilities, reward/ability-offer/win/over overlays — all built in code in match.gd
+- Tests: test_run_manager.gd (11 tests) + test_box_definition.gd pass headless
 
 ## Git & GitHub
 
