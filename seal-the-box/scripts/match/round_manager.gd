@@ -13,14 +13,16 @@ var _dice_pool: DicePool
 var _current_phase: String = ""
 var _match_over: bool = false
 
-func start_match() -> void:
+func start_match(box: BoxDefinition) -> void:
+	GameState.current_box = box
+	GameState.win_threshold = box.win_threshold
+	GameState.round_limit = box.round_limit
+	GameState.tabs = box.tabs.duplicate()
 	_tab_board = TabBoard.new()
 	_dice_pool = DicePool.new()
 	_match_over = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
-	# Shallow duplicate — Die objects are shared intentionally so mutations
-	# (rolling, modifiers) are visible via GameState.dice_hand references.
 	_dice_pool.setup(GameState.dice_pool.duplicate())
 	start_round()
 

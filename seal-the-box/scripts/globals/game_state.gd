@@ -9,29 +9,30 @@ var tabs: Array[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 var dice_pool: Array = []   # Array of Die
 var dice_hand: Array = []   # Array of Die (currently drawn)
 var ability_hand: Array = []  # Array of AbilityData
+var current_box: BoxDefinition = null
 
 func reset_run() -> void:
 	hp = 6
 	_setup_dice_pool()
 	reset_match()
+	_setup_ability_hand()
 
 func reset_match() -> void:
 	ap = 3
 	round = 0
-	round_limit = 3
-	win_threshold = 13
-	tabs = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 	dice_hand = []
 	for die in dice_pool:
 		die.value = 0
 		die.rolled = false
-	_setup_ability_hand()
 
 func spend_ap(amount: int) -> bool:
 	if ap < amount:
 		return false
 	ap -= amount
 	return true
+
+func reset_run_end() -> void:
+	reset_match()
 
 func _setup_dice_pool() -> void:
 	dice_pool = []

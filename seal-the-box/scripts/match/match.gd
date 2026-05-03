@@ -24,6 +24,8 @@ var _draw_label: Label
 var _discard_label: Label
 var _current_phase: String = ""
 var _match_label: Label
+var _box_label: Label
+var _tab_row: HBoxContainer
 var _reward_overlay: Control
 var _reward_title_label: Label
 var _reward_buttons: Array[Button] = []
@@ -40,6 +42,8 @@ func _ready() -> void:
 		Engine.register_singleton("AbilityLibrary", AbilityLibrary)
 	if not Engine.has_singleton("GameState"):
 		Engine.register_singleton("GameState", GameState)
+	if not Engine.has_singleton("BoxLibrary"):
+		Engine.register_singleton("BoxLibrary", BoxLibrary)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
@@ -113,6 +117,10 @@ func _setup_ui() -> void:
 	_match_label.add_theme_font_size_override("font_size", 20)
 	top_bar.add_child(_match_label)
 
+	_box_label = Label.new()
+	_box_label.add_theme_font_size_override("font_size", 18)
+	top_bar.add_child(_box_label)
+
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
 	tabs_vbox.anchor_left = 0.0
@@ -129,18 +137,10 @@ func _setup_ui() -> void:
 	tabs_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tabs_vbox.add_child(tabs_lbl)
 
-	var tab_row = HBoxContainer.new()
-	tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	tab_row.add_theme_constant_override("separation", 8)
-	tabs_vbox.add_child(tab_row)
-
-	for i in range(1, 10):
-		var btn = Button.new()
-		btn.text = str(i)
-		btn.custom_minimum_size = Vector2(62, 88)
-		btn.pressed.connect(_on_tab_pressed.bind(i))
-		tab_row.add_child(btn)
-		_tab_buttons.append(btn)
+	_tab_row = HBoxContainer.new()
+	_tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_tab_row.add_theme_constant_override("separation", 8)
+	tabs_vbox.add_child(_tab_row)
 
 	# ── Status / rolled total ───────────────────────────────────────────────
 	_status_label = Label.new()
@@ -472,7 +472,7 @@ func _on_match_lost() -> void:
 		btn.disabled = true
 	_run_manager.handle_match_lost()
 
-func _on_next_match_ready() -> void:
+func _on_next_match_ready(box: BoxDefinition) -> void:
 	_match_ended = false
 	_selected_dice = []
 	_selected_tabs = []
@@ -486,9 +486,12 @@ func _on_next_match_ready() -> void:
 		_run_over_overlay.visible = false
 	_action_button.disabled = false
 	_roll_all_button.disabled = false
-	for btn in _tab_buttons + _dice_buttons + _ability_buttons:
+	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
-	_round_manager.start_match()
+	_round_manager.start_match(box)
+	_rebuild_tab_buttons()
+	for btn in _tab_buttons:
+		btn.disabled = false
 
 func _on_show_reward(dice_faces: Array) -> void:
 	_current_reward_faces = dice_faces
@@ -499,7 +502,7 @@ func _on_show_reward(dice_faces: Array) -> void:
 
 func _on_reward_die_picked(index: int) -> void:
 	_reward_overlay.visible = false
-	_run_manager.advance_to_next_match(_current_reward_faces[index])
+	_run_manager.handle_reward_picked(_current_reward_faces[index])
 
 func _on_run_won(match_number: int, hp: int) -> void:
 	_run_win_detail_label.text = "Match: %d / %d  |  Final HP: %d" % [match_number, RunManager.RUN_LENGTH, hp]
@@ -636,6 +639,10 @@ func _refresh_ui() -> void:
 	_ap_label.text = "AP: %d" % GameState.ap
 	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
 	_match_label.text = "Match: %d / %d" % [_run_manager.match_number, RunManager.RUN_LENGTH]
+	if GameState.current_box:
+		_box_label.text = "Box: %s" % GameState.current_box.name
+	else:
+		_box_label.text = ""
 	_draw_label.text = str(_round_manager.get_draw_count())
 	_discard_label.text = str(_round_manager.get_discard_count())
 	_refresh_tab_display()
@@ -643,15 +650,27 @@ func _refresh_ui() -> void:
 	_refresh_dice_highlight()
 	_refresh_ability_display()
 
+func _rebuild_tab_buttons() -> void:
+	for child in _tab_row.get_children():
+		child.queue_free()
+	_tab_buttons.clear()
+	for tab_val in GameState.tabs:
+		var btn = Button.new()
+		btn.text = str(tab_val)
+		btn.custom_minimum_size = Vector2(62, 88)
+		btn.pressed.connect(_on_tab_pressed.bind(tab_val))
+		_tab_row.add_child(btn)
+		_tab_buttons.append(btn)
+
 func _refresh_tab_display() -> void:
 	var remaining = GameState.tabs
-	for i in range(1, 10):
-		var btn = _tab_buttons[i - 1]
-		var sealed = not (i in remaining)
+	for btn in _tab_buttons:
+		var tab_val = btn.text.to_int()
+		var sealed = not (tab_val in remaining)
 		if sealed:
 			btn.disabled = true
 			btn.modulate = Color(0.4, 0.4, 0.4)
-		elif i in _selected_tabs:
+		elif tab_val in _selected_tabs:
 			btn.disabled = false
 			btn.modulate = Color(1.5, 1.5, 0.3)
 		else:
