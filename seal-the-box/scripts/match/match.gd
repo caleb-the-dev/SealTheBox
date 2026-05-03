@@ -623,10 +623,15 @@ func _on_end_round_pressed() -> void:
 		if tab_sum != rolled_total:
 			_status_label.text = "Selected tabs sum to %d but rolled total is %d — adjust your selection." % [tab_sum, rolled_total]
 			return
+		var match_before := _run_manager.match_number
 		if not _round_manager.attempt_seal(rolled, _selected_tabs.duplicate()):
 			_status_label.text = "Can't seal — invalid combination."
 			_selected_tabs = []
 			_refresh_tab_display()
+			return
+		# attempt_seal fires match_won synchronously, which may start the next match
+		# before we return here — skip end_round() in that case
+		if _run_manager.match_number != match_before or _match_ended:
 			return
 	_selected_dice = []
 	_selected_ability = null
