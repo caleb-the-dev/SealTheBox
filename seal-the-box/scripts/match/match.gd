@@ -35,6 +35,10 @@ var _run_win_overlay: Control
 var _run_win_detail_label: Label
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
+var _ability_offer_overlay: Control
+var _offer_ability_name_label: Label
+var _offer_ability_desc_label: Label
+var _offer_swap_buttons: Array[Button] = []
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -443,6 +447,72 @@ func _setup_ui() -> void:
 	root.add_child(over_overlay)
 	_run_over_overlay = over_overlay
 
+	# ── Ability offer overlay ──────────────────────────────────────────────────
+	var offer_overlay = Control.new()
+	offer_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	offer_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	offer_overlay.visible = false
+	var offer_bg = ColorRect.new()
+	offer_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	offer_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	offer_overlay.add_child(offer_bg)
+
+	var offer_center = VBoxContainer.new()
+	offer_center.anchor_left = 0.15
+	offer_center.anchor_right = 0.85
+	offer_center.anchor_top = 0.15
+	offer_center.anchor_bottom = 0.9
+	offer_center.add_theme_constant_override("separation", 20)
+	offer_overlay.add_child(offer_center)
+
+	var offer_title = Label.new()
+	offer_title.text = "New Ability Available"
+	offer_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	offer_title.add_theme_font_size_override("font_size", 28)
+	offer_center.add_child(offer_title)
+
+	_offer_ability_name_label = Label.new()
+	_offer_ability_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_offer_ability_name_label.add_theme_font_size_override("font_size", 22)
+	offer_center.add_child(_offer_ability_name_label)
+
+	_offer_ability_desc_label = Label.new()
+	_offer_ability_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_offer_ability_desc_label.add_theme_font_size_override("font_size", 16)
+	_offer_ability_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	offer_center.add_child(_offer_ability_desc_label)
+
+	var swap_title = Label.new()
+	swap_title.text = "Swap with one of your current abilities (or skip):"
+	swap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	swap_title.add_theme_font_size_override("font_size", 16)
+	offer_center.add_child(swap_title)
+
+	var swap_btn_row = HBoxContainer.new()
+	swap_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	swap_btn_row.add_theme_constant_override("separation", 16)
+	offer_center.add_child(swap_btn_row)
+
+	_offer_swap_buttons = []
+	for i in 3:
+		var sbtn = Button.new()
+		sbtn.custom_minimum_size = Vector2(0, 80)
+		sbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sbtn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sbtn.pressed.connect(_on_offer_swap_pressed.bind(i))
+		swap_btn_row.add_child(sbtn)
+		_offer_swap_buttons.append(sbtn)
+
+	var skip_btn = Button.new()
+	skip_btn.text = "Skip — Keep My Abilities"
+	skip_btn.custom_minimum_size = Vector2(220, 52)
+	skip_btn.add_theme_font_size_override("font_size", 16)
+	skip_btn.pressed.connect(_on_offer_skip_pressed)
+	offer_center.add_child(skip_btn)
+
+	root.add_child(offer_overlay)
+	_ability_offer_overlay = offer_overlay
+
 # ── signal wiring ────────────────────────────────────────────────────────────
 func _connect_signals() -> void:
 	_round_manager.phase_changed.connect(_on_phase_changed)
@@ -455,6 +525,7 @@ func _connect_signals() -> void:
 	_run_manager.show_reward.connect(_on_show_reward)
 	_run_manager.run_won.connect(_on_run_won)
 	_run_manager.run_over.connect(_on_run_over)
+	_run_manager.show_ability_offer.connect(_on_show_ability_offer)
 
 # ── signal handlers ──────────────────────────────────────────────────────────
 func _on_phase_changed(phase: String) -> void:
@@ -506,6 +577,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_run_win_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
+	if _ability_offer_overlay:
+		_ability_offer_overlay.visible = false
 	_action_button.disabled = false
 	_roll_all_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
@@ -533,6 +606,29 @@ func _on_run_won(match_number: int, hp: int) -> void:
 func _on_run_over(match_number: int) -> void:
 	_run_over_detail_label.text = "Defeated on Match: %d / %d  |  HP: 0" % [match_number, RunManager.RUN_LENGTH]
 	_run_over_overlay.visible = true
+
+func _on_show_ability_offer(offered: AbilityData) -> void:
+	_offer_ability_name_label.text = offered.flavor_name
+	_offer_ability_desc_label.text = offered.description
+	var hand = GameState.ability_hand
+	for i in _offer_swap_buttons.size():
+		var btn = _offer_swap_buttons[i]
+		if i < hand.size():
+			var a = hand[i]
+			btn.text = "%s\n%s" % [a.flavor_name, a.description]
+			btn.disabled = false
+		else:
+			btn.text = "—"
+			btn.disabled = true
+	_ability_offer_overlay.visible = true
+
+func _on_offer_swap_pressed(index: int) -> void:
+	_ability_offer_overlay.visible = false
+	_run_manager.handle_ability_offer_result(index)
+
+func _on_offer_skip_pressed() -> void:
+	_ability_offer_overlay.visible = false
+	_run_manager.handle_ability_offer_result(-1)
 
 func _on_play_again_pressed() -> void:
 	_run_manager.start_run()
