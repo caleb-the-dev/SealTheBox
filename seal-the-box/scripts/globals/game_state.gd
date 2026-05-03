@@ -15,7 +15,8 @@ func reset_run() -> void:
 	hp = 6
 	_setup_dice_pool()
 	reset_match()
-	_setup_ability_hand()
+	if ability_hand.is_empty():
+		_setup_ability_hand()
 
 func reset_match() -> void:
 	ap = 3
