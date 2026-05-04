@@ -543,6 +543,13 @@ func _setup_ui() -> void:
 	dev_win_series_btn.pressed.connect(_on_dev_win_series_pressed)
 	dev_panel.add_child(dev_win_series_btn)
 
+	var dev_restart_btn = Button.new()
+	dev_restart_btn.text = "Restart Run"
+	dev_restart_btn.custom_minimum_size = Vector2(0, 56)
+	dev_restart_btn.add_theme_font_size_override("font_size", 17)
+	dev_restart_btn.pressed.connect(_on_dev_restart_pressed)
+	dev_panel.add_child(dev_restart_btn)
+
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
 	dev_close_btn.custom_minimum_size = Vector2(0, 44)
@@ -789,6 +796,10 @@ func _on_dev_give_power(power: PowerData) -> void:
 func _on_dev_power_back_pressed() -> void:
 	_dev_power_overlay.visible = false
 	_dev_overlay.visible = true
+
+func _on_dev_restart_pressed() -> void:
+	_dev_overlay.visible = false
+	_run_manager.start_run()
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false
