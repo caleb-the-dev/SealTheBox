@@ -26,6 +26,7 @@ var _current_phase: String = ""
 var _match_label: Label
 var _box_label: Label
 var _threshold_label: Label
+var _continue_button: Button
 var _sealed_total_label: Label
 var _tab_row: HBoxContainer
 var _reward_overlay: Control
@@ -165,12 +166,21 @@ func _setup_ui() -> void:
 	_tab_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	tab_area.add_child(_tab_row)
 
+	var thresh_col = VBoxContainer.new()
+	thresh_col.custom_minimum_size = Vector2(140, 0)
+	thresh_col.alignment = BoxContainer.ALIGNMENT_CENTER
+	tab_area.add_child(thresh_col)
+
 	_threshold_label = Label.new()
 	_threshold_label.add_theme_font_size_override("font_size", 20)
-	_threshold_label.custom_minimum_size = Vector2(110, 0)
-	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_threshold_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	tab_area.add_child(_threshold_label)
+	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	thresh_col.add_child(_threshold_label)
+
+	_continue_button = Button.new()
+	_continue_button.text = "Continue →"
+	_continue_button.visible = false
+	_continue_button.pressed.connect(_on_continue_pressed)
+	thresh_col.add_child(_continue_button)
 
 	# ── Status / rolled total ───────────────────────────────────────────────
 	_status_label = Label.new()
@@ -547,6 +557,7 @@ func _connect_signals() -> void:
 	_round_manager.match_lost.connect(_on_match_lost)
 	_round_manager.tabs_sealed.connect(_on_tabs_sealed)
 	_round_manager.status_updated.connect(_on_status_updated)
+	_round_manager.threshold_reached.connect(_on_threshold_reached)
 	_run_manager.next_match_ready.connect(_on_next_match_ready)
 	_run_manager.show_reward.connect(_on_show_reward)
 	_run_manager.run_over.connect(_on_run_over)
@@ -576,6 +587,7 @@ func _on_match_won(critical: bool) -> void:
 	_match_ended = true
 	_action_button.disabled = true
 	_roll_all_button.disabled = true
+	_continue_button.visible = false
 	for btn in _tab_buttons + _dice_buttons + _ability_buttons:
 		btn.disabled = true
 	_run_manager.handle_match_won(critical)
@@ -586,9 +598,24 @@ func _on_match_lost() -> void:
 	_match_ended = true
 	_action_button.disabled = true
 	_roll_all_button.disabled = true
+	_continue_button.visible = false
 	for btn in _tab_buttons + _dice_buttons + _ability_buttons:
 		btn.disabled = true
 	_run_manager.handle_match_lost()
+
+func _on_threshold_reached() -> void:
+	_continue_button.visible = true
+	_continue_button.scale = Vector2.ONE
+	_continue_button.modulate = Color.WHITE
+	_continue_button.pivot_offset = _continue_button.size / 2.0
+	var tween = create_tween()
+	tween.tween_property(_continue_button, "scale", Vector2(1.3, 1.3), 0.2)
+	tween.parallel().tween_property(_continue_button, "modulate", Color(2.0, 1.8, 0.4), 0.2)
+	tween.tween_property(_continue_button, "scale", Vector2(1.0, 1.0), 0.2)
+	tween.parallel().tween_property(_continue_button, "modulate", Color.WHITE, 0.2)
+
+func _on_continue_pressed() -> void:
+	_round_manager.accept_threshold_win()
 
 func _on_next_match_ready(box: BoxDefinition) -> void:
 	_match_ended = false
@@ -596,6 +623,9 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_selected_tabs = []
 	_selected_ability = null
 	_targeting_die = false
+	_continue_button.visible = false
+	_continue_button.scale = Vector2.ONE
+	_continue_button.modulate = Color.WHITE
 	if _reward_overlay:
 		_reward_overlay.visible = false
 	if _run_over_overlay:
