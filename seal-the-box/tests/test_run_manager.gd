@@ -22,16 +22,21 @@ func _init() -> void:
 	_test_reset_run_sets_starting_dice_pool(gs)
 	_test_reset_match_preserves_hp(gs)
 	_test_reset_match_preserves_dice_pool(gs)
-	_test_run_manager_start_run()
-	_test_run_manager_threshold_win_advances_without_reward()
-	_test_run_manager_critical_win_triggers_reward()
-	_test_ability_hand_persists_across_matches()
+	_test_initial_hand_layout(gs)
+	_test_run_manager_start_run(gs)
 	_test_run_manager_match_lost()
 	_test_reward_dice_unique()
-	_test_ability_offer_swap_updates_hand()
-	_test_ability_offer_skip_leaves_hand_unchanged()
+	_test_threshold_win_triggers_rotation(gs)
+	_test_critical_win_triggers_reward_then_rotation(gs)
+	_test_rotation_after_match_1(gs)
+	_test_rotation_after_match_3(gs)
+	_test_rotation_discards_slot_0_regardless_of_charges(gs)
+	_test_charges_decrement(gs)
+	_test_exhausted_ability_blocked(gs)
 	print("All RunManager tests passed!")
 	quit()
+
+# ── preserved tests ──────────────────────────────────────────────────────────
 
 func _test_reset_run_sets_hp(gs: Node) -> void:
 	gs.hp = 1
@@ -61,7 +66,7 @@ func _test_reset_match_preserves_dice_pool(gs: Node) -> void:
 	assert(gs.dice_pool.size() == pool_size, "reset_match should not change dice_pool size, got %d" % gs.dice_pool.size())
 	assert(extra in gs.dice_pool, "reset_match should not remove the extra die from dice_pool")
 
-func _test_run_manager_start_run() -> void:
+func _test_run_manager_start_run(gs: Node) -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	var counts = {"next_match": 0}
@@ -70,10 +75,8 @@ func _test_run_manager_start_run() -> void:
 	rm.start_run()
 	assert(rm.match_number == 1, "match_number should be 1 after start_run, got %d" % rm.match_number)
 	assert(counts["next_match"] == 1, "start_run should emit next_match_ready once, got %d" % counts["next_match"])
-	var gs = Engine.get_singleton("GameState")
 	assert(gs.hp == 6, "start_run should reset HP to 6, got %d" % gs.hp)
 	rm.queue_free()
-
 
 func _test_run_manager_match_lost() -> void:
 	var rm = RunManager.new()
@@ -102,135 +105,179 @@ func _test_reward_dice_unique() -> void:
 			assert(face in RunManager.REWARD_DIE_FACES, "face %d not in reward pool" % face)
 	rm.queue_free()
 
-func _test_run_manager_threshold_win_advances_without_reward() -> void:
+# ── new ability-hand tests ────────────────────────────────────────────────────
+
+func _test_initial_hand_layout(gs: Node) -> void:
+	gs.reset_run()
+	assert(gs.ability_hand.size() == 3, "ability_hand should have 3 slots, got %d" % gs.ability_hand.size())
+	assert(gs.ability_hand[0] == null, "slot 0 should be null initially")
+	assert(gs.ability_hand[1] == null, "slot 1 should be null initially")
+	assert(gs.ability_hand[2] != null, "slot 2 should have the starter ability")
+
+func _test_threshold_win_triggers_rotation(gs: Node) -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	var reward_count = [0]
-	var next_match_boxes: Array = []
-	rm.next_match_ready.connect(func(box): next_match_boxes.append(box))
+	var rotation_count = [0]
+	var next_match_log: Array = []
+	rm.next_match_ready.connect(func(box): next_match_log.append(box))
 	rm.show_reward.connect(func(_f): reward_count[0] += 1)
+	rm.show_rotation_offer.connect(func(opts):
+		rotation_count[0] += 1
+		rm.handle_rotation_pick(opts[0])
+	)
 
 	rm.start_run()
-	assert(next_match_boxes.size() == 1, "start_run should emit next_match_ready once")
-	assert(next_match_boxes[0] != null, "emitted box should not be null")
+	assert(next_match_log.size() == 1, "start_run should emit next_match_ready once")
 
 	rm.handle_match_won(false)
-	assert(reward_count[0] == 0, "threshold win should NOT emit show_reward, got %d" % reward_count[0])
-	assert(next_match_boxes.size() == 2, "threshold win should emit next_match_ready for next match")
-	assert(next_match_boxes[1] != null, "next match box should not be null")
+	assert(reward_count[0] == 0, "threshold win should NOT emit show_reward")
+	assert(rotation_count[0] == 1, "threshold win should emit show_rotation_offer once")
+	assert(next_match_log.size() == 2, "after rotation pick, next_match_ready should fire")
 	assert(rm.match_number == 2, "match_number should be 2, got %d" % rm.match_number)
-
 	rm.queue_free()
 
-func _test_run_manager_critical_win_triggers_reward() -> void:
+func _test_critical_win_triggers_reward_then_rotation(gs: Node) -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	var reward_faces_log: Array = []
-	var offer_log: Array = []
+	var rotation_count = [0]
 	var next_match_log: Array = []
 	rm.next_match_ready.connect(func(box): next_match_log.append(box))
 	rm.show_reward.connect(func(faces): reward_faces_log.append(faces.duplicate()))
-	rm.show_ability_offer.connect(func(a): offer_log.append(a))
+	rm.show_rotation_offer.connect(func(opts):
+		rotation_count[0] += 1
+		rm.handle_rotation_pick(opts[0])
+	)
 
-	rm.start_run()  # next_match_log: 1
-	rm.handle_match_won(false)    # threshold — no reward; next_match_log: 2
-	assert(reward_faces_log.size() == 0, "threshold win must NOT emit show_reward")
-	rm.handle_match_won(false)    # threshold — no reward; next_match_log: 3
-	assert(reward_faces_log.size() == 0, "threshold win must NOT emit show_reward")
-	rm.handle_match_won(true)     # critical — show_reward fires, NOT next_match_ready yet
+	rm.start_run()                    # next_match_log: 1
+	rm.handle_match_won(true)         # show_reward fires; rotation NOT yet
 	assert(reward_faces_log.size() == 1, "critical win should emit show_reward once")
-	assert(next_match_log.size() == 3, "next_match_ready should NOT fire until after reward+offer resolved")
+	assert(rotation_count[0] == 0, "rotation offer should not fire until reward is picked")
+	assert(next_match_log.size() == 1, "next_match_ready should NOT fire before rotation resolved")
 
 	var faces = reward_faces_log[0]
 	assert(faces.size() == 3, "should offer 3 reward dice, got %d" % faces.size())
 	rm.handle_reward_picked(faces[0])
-	assert(offer_log.size() == 1, "show_ability_offer should fire once after reward pick")
-	assert(next_match_log.size() == 3, "next_match_ready should NOT fire before offer resolved")
-
-	rm.handle_ability_offer_result(-1)  # skip the offer
-	assert(next_match_log.size() == 4, "next_match_ready should fire after offer resolved, got %d" % next_match_log.size())
-	assert(rm.match_number == 4, "match_number should be 4 after 3 wins, got %d" % rm.match_number)
-
+	assert(rotation_count[0] == 1, "show_rotation_offer should fire after reward pick")
+	assert(next_match_log.size() == 2, "next_match_ready should fire after rotation pick, got %d" % next_match_log.size())
+	assert(rm.match_number == 2, "match_number should be 2, got %d" % rm.match_number)
 	rm.queue_free()
 
-func _test_ability_hand_persists_across_matches() -> void:
+func _test_rotation_after_match_1(gs: Node) -> void:
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	rm.start_run()
+	var starter = gs.ability_hand[2]
+	assert(starter != null, "starter ability should be in slot 2")
+
+	rm.handle_match_won(false)
+
+	assert(gs.ability_hand[0] == null, "slot 0 should still be null after match 1 rotation")
+	assert(gs.ability_hand[1] == starter, "slot 1 should hold the starter (shifted from slot 2)")
+	assert(gs.ability_hand[2] != null, "slot 2 should hold the newly picked ability")
+	rm.queue_free()
+
+func _test_rotation_after_match_3(gs: Node) -> void:
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	rm.start_run()
+	var starter = gs.ability_hand[2]
+
+	rm.handle_match_won(false)  # match 1: null→slot0, starter→slot1, pick_A→slot2
+	var pick_A = gs.ability_hand[2]
+
+	rm.handle_match_won(false)  # match 2: starter→slot0, pick_A→slot1, pick_B→slot2
+
+	assert(gs.ability_hand[0] == starter, "slot 0 should hold starter after match 2 rotation")
+
+	rm.handle_match_won(false)  # match 3: starter discarded, pick_A→slot0, pick_B→slot1, pick_C→slot2
+
+	assert(gs.ability_hand[0] != starter, "slot 0 should NOT hold starter after match 3 (starter was discarded)")
+	assert(gs.ability_hand[0] == pick_A, "slot 0 should hold pick_A (shifted up from slot 1)")
+	assert(gs.ability_hand[2] != null, "slot 2 should have a fresh pick")
+	rm.queue_free()
+
+func _test_rotation_discards_slot_0_regardless_of_charges(gs: Node) -> void:
+	gs.reset_run()
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	rm.next_match_ready.connect(func(_box): pass)
 
-	rm.start_run()
-	var gs = Engine.get_singleton("GameState")
-	assert(gs.ability_hand.size() == 3, "should start with 3 abilities, got %d" % gs.ability_hand.size())
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability_slot0 = lib.get_ability("reroll_all").duplicate()
+	ability_slot0.charges = 1  # has charges — should still be discarded
+	var ability_slot1 = lib.get_ability("greater_1").duplicate()
+	var ability_slot2 = lib.get_ability("lesser_1").duplicate()
+	gs.ability_hand = [ability_slot0, ability_slot1, ability_slot2]
+	rm.match_number = 1
+	rm._boxes = Engine.get_singleton("BoxLibrary").get_ordered()
 
-	var used = gs.ability_hand[0]
-	gs.ability_hand.erase(used)
-	assert(gs.ability_hand.size() == 2, "ability hand should have 2 after using one")
+	var picked_log: Array = []
+	rm.show_rotation_offer.connect(func(opts):
+		picked_log.append(opts[0])
+		rm.handle_rotation_pick(opts[0])
+	)
 
 	rm.handle_match_won(false)
-	assert(gs.ability_hand.size() == 2, "ability hand should still have 2 after advancing to next match, got %d" % gs.ability_hand.size())
 
-	gs.ability_hand = []  # reset so subsequent tests get a fresh hand
+	assert(picked_log.size() == 1, "rotation offer should have fired once, got %d" % picked_log.size())
+	var picked_option = picked_log[0]
+	assert(gs.ability_hand[0] == ability_slot1, "slot 0 should now hold what was in slot 1")
+	assert(gs.ability_hand[1] == ability_slot2, "slot 1 should now hold what was in slot 2")
+	assert(gs.ability_hand[2] == picked_option, "slot 2 should hold the newly picked ability")
+	assert(not ability_slot0 in gs.ability_hand, "old slot 0 should be gone (discarded despite having charges)")
 	rm.queue_free()
 
-func _test_ability_offer_swap_updates_hand() -> void:
-	var rm = RunManager.new()
-	get_root().add_child(rm)
-	var offer_log: Array = []
-	var next_match_log: Array = []
-	rm.next_match_ready.connect(func(box): next_match_log.append(box))
-	rm.show_reward.connect(func(_f): pass)
-	rm.show_ability_offer.connect(func(a): offer_log.append(a))
+func _test_charges_decrement(gs: Node) -> void:
+	gs.reset_run()
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability = lib.get_ability("greater_1").duplicate()
+	assert(ability.charges == 3, "greater_1 should start with 3 charges, got %d" % ability.charges)
+	assert(ability.max_charges == 3, "greater_1 max_charges should be 3, got %d" % ability.max_charges)
+	gs.ability_hand = [null, null, ability]
 
-	rm.start_run()                  # next_match_log: 1
-	rm.handle_match_won(false)      # next_match_log: 2
-	rm.handle_match_won(false)      # next_match_log: 3
-	rm.handle_match_won(true)       # show_reward fires; next_match_log still 3
+	var round_mgr = RoundManager.new()
+	get_root().add_child(round_mgr)
+	var box_lib = Engine.get_singleton("BoxLibrary")
+	round_mgr.start_match(box_lib.get_ordered()[0])
+	# Enter act phase by rolling one die
+	round_mgr.commit_roll([gs.dice_hand[0]])
 
-	var gs = Engine.get_singleton("GameState")
-	var original_hand = gs.ability_hand.duplicate()
+	var result1 = round_mgr.use_ability(ability, gs.dice_hand[0])
+	assert(result1 == true, "first use should succeed")
+	assert(ability.charges == 2, "charges should be 2 after first use, got %d" % ability.charges)
 
-	rm.handle_reward_picked(6)  # pick a d6
+	var result2 = round_mgr.use_ability(ability, gs.dice_hand[0])
+	assert(result2 == true, "second use should succeed")
+	assert(ability.charges == 1, "charges should be 1 after second use, got %d" % ability.charges)
 
-	assert(offer_log.size() == 1, "show_ability_offer should fire after reward pick")
-	assert(next_match_log.size() == 3, "next_match_ready should NOT fire before offer resolved")
+	var result3 = round_mgr.use_ability(ability, gs.dice_hand[0])
+	assert(result3 == true, "third use should succeed")
+	assert(ability.charges == 0, "charges should be 0 after third use, got %d" % ability.charges)
 
-	var offered = offer_log[0]
-	rm.handle_ability_offer_result(0)  # swap slot 0
+	round_mgr.queue_free()
 
-	assert(next_match_log.size() == 4, "next_match_ready should fire after offer resolved, got %d" % next_match_log.size())
-	assert(gs.ability_hand[0] == offered, "slot 0 should now hold the offered ability")
-	assert(gs.ability_hand[1] == original_hand[1], "slot 1 should be unchanged")
-	assert(gs.ability_hand[2] == original_hand[2], "slot 2 should be unchanged")
+func _test_exhausted_ability_blocked(gs: Node) -> void:
+	gs.reset_run()
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability = lib.get_ability("greater_1").duplicate()
+	ability.charges = 0
+	gs.ability_hand = [null, null, ability]
 
-	rm.queue_free()
+	var round_mgr = RoundManager.new()
+	get_root().add_child(round_mgr)
+	var box_lib = Engine.get_singleton("BoxLibrary")
+	round_mgr.start_match(box_lib.get_ordered()[0])
+	round_mgr.commit_roll([gs.dice_hand[0]])
 
-func _test_ability_offer_skip_leaves_hand_unchanged() -> void:
-	var rm = RunManager.new()
-	get_root().add_child(rm)
-	var offer_log: Array = []
-	var next_match_log: Array = []
-	rm.next_match_ready.connect(func(box): next_match_log.append(box))
-	rm.show_reward.connect(func(_f): pass)
-	rm.show_ability_offer.connect(func(a): offer_log.append(a))
-
-	rm.start_run()                  # next_match_log: 1
-	rm.handle_match_won(false)      # next_match_log: 2
-	rm.handle_match_won(false)      # next_match_log: 3
-	rm.handle_match_won(true)       # show_reward fires; next_match_log still 3
-
-	var gs = Engine.get_singleton("GameState")
-	var original_hand = gs.ability_hand.duplicate()
-
-	rm.handle_reward_picked(6)
-
-	assert(offer_log.size() == 1, "show_ability_offer should fire")
-	assert(next_match_log.size() == 3, "next_match_ready should not fire before offer resolved")
-
-	rm.handle_ability_offer_result(-1)  # skip
-
-	assert(next_match_log.size() == 4, "next_match_ready should fire after skip, got %d" % next_match_log.size())
-	assert(gs.ability_hand[0] == original_hand[0], "slot 0 should be unchanged")
-	assert(gs.ability_hand[1] == original_hand[1], "slot 1 should be unchanged")
-	assert(gs.ability_hand[2] == original_hand[2], "slot 2 should be unchanged")
-
-	rm.queue_free()
+	var result = round_mgr.use_ability(ability, gs.dice_hand[0])
+	assert(result == false, "use_ability should return false for 0-charge ability")
+	assert(ability.charges == 0, "charges should remain 0 after failed use")
+	round_mgr.queue_free()

@@ -15,6 +15,11 @@ var _current_phase: String = ""
 var _match_over: bool = false
 var _threshold_notified: bool = false
 
+# Shadow the autoload name so --script headless tests (which register the
+# singleton manually) can compile this file without autoloads running.
+var GameState: Node:
+	get: return Engine.get_singleton("GameState")
+
 func start_match(box: BoxDefinition) -> void:
 	GameState.current_box = box
 	GameState.win_threshold = box.win_threshold
