@@ -742,8 +742,10 @@ func _refresh_powers_panel() -> void:
 		var pill = TooltipButton.new()
 		pill.custom_minimum_size = Vector2(0, 44)
 		pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if pill is TooltipButton:
-			(pill as TooltipButton).update_info(power.name, power.description)
+		pill.text = power.name
+		pill.tooltip_text = power.name
+		pill._tooltip_title = power.name
+		pill._tooltip_body = power.description
 		_powers_vbox.add_child(pill)
 
 func _on_show_rotation_offer(options: Array) -> void:
