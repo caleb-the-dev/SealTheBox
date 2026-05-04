@@ -6,7 +6,7 @@
 ## Working Title
 **Seal the Box**
 
-A roguelike puzzle game built around the Shut the Box dice mechanic, layered with ability cards, typed dice, relics, and run progression.
+A roguelike puzzle game built around the Shut the Box dice mechanic, layered with ability cards, typed dice, powers, and run progression.
 
 ---
 
@@ -18,7 +18,7 @@ A roguelike puzzle game built around the Shut the Box dice mechanic, layered wit
 ---
 
 ## Core Fantasy
-Roll your dice, play your cards, and seal the box — round by round, match by match. Build a run of typed dice and relics that synergize into a strategy powerful enough to shut every box you face.
+Roll your dice, play your cards, and seal the box — round by round, match by match. Build a run of typed dice and powers that synergize into a strategy powerful enough to shut every box you face.
 
 ---
 
@@ -92,11 +92,11 @@ Ability cards are played by spending AP. Each card has a type, optional traits, 
 
 ---
 
-## Relic System
+## Power System
 
-Relics are persistent run modifiers acquired between matches. They modify core game mechanics throughout the run.
+Powers are persistent run modifiers acquired between matches. They modify core game mechanics throughout the run.
 
-**Relic traits:**
+**Power traits:**
 | Trait | Meaning |
 |-------|---------|
 | SessionReward | Affects the rewards offered after a match |
@@ -106,13 +106,13 @@ Relics are persistent run modifiers acquired between matches. They modify core g
 
 ## Run Structure
 
-1. Player starts a run with a randomly generated dice pool (2d4, 3d6, 1d8 — types random) and starting abilities/relics based on dice type majority.
+1. Player starts a run with a randomly generated dice pool (2d4, 3d6, 1d8 — types random) and starting abilities/powers based on dice type majority.
 2. Play a match → win → collect rewards (choose a new die from 3 random options; GP awarded).
-3. Shut the box → also collect a relic.
+3. Shut the box → also collect a power.
 4. Repeat with progressively harder tab ranges.
 5. HP reaches 0 → run over.
 
-**Starting setup:** most-common dice type → 1 ability + 1 relic; second-most-common → 1 ability.
+**Starting setup:** most-common dice type → 1 ability + 1 power; second-most-common → 1 ability.
 
 **GP formula:** `(threshold − remaining_sum) × (15 − threshold)` (flush ranges only)
 
@@ -123,7 +123,7 @@ Relics are persistent run modifiers acquired between matches. They modify core g
 - Players start with 5 HP.
 - Losing a round (exceeding the round limit) costs 1 HP per extra round.
 - HP reaching 0 ends the run.
-- Some relics and events can heal HP or increase max HP.
+- Some powers and events can heal HP or increase max HP.
 
 ---
 

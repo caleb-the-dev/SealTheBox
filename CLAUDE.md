@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working in this
 
 ## Project Overview
 
-**Seal the Box** is a roguelike puzzle game built in Godot 4. Core loop: roll dice → spend AP to play ability cards → put down numbered tabs (1–9, Shut the Box style). Win a match by sealing all tabs; survive a run of matches with relics, events, and rewards between fights.
+**Seal the Box** is a roguelike puzzle game built in Godot 4. Core loop: roll dice → spend AP to play ability cards → put down numbered tabs (1–9, Shut the Box style). Win a match by sealing all tabs; survive a run of matches with powers, events, and rewards between fights.
 
 Data lives in CSVs under `seal-the-box/data/`. Game logic lives in GDScript. The Godot project root is `seal-the-box/`.
 
@@ -38,10 +38,10 @@ Set as `$GODOT` or use the full path. All headless commands reference `seal-the-
 ```
 seal-the-box/
   project.godot
-  data/                  # CSV files loaded at runtime (abilities, relics, etc.)
-  resources/             # .gd Resource subclasses (AbilityData, RelicData, etc.)
+  data/                  # CSV files loaded at runtime (abilities, powers, etc.)
+  resources/             # .gd Resource subclasses (AbilityData, PowerData, etc.)
   scripts/
-    globals/             # Autoload singletons (GameState, AbilityLibrary, RelicLibrary)
+    globals/             # Autoload singletons (GameState, AbilityLibrary, PowerLibrary)
     match/               # Match loop logic (TabBoard, DicePool, RoundManager)
     run/                 # Run-level logic (RunManager, EventManager, RewardManager)
     ui/                  # UI controllers (HUD, AbilityHand, TabDisplay)
@@ -52,7 +52,7 @@ seal-the-box/
   tests/                 # Headless test scenes/scripts
 ```
 
-**Data flow:** CSVs are parsed once at startup by Library autoloads (e.g., `AbilityLibrary`, `RelicLibrary`) into typed Resource objects. Game logic reads from these libraries; it never re-parses CSVs at runtime.
+**Data flow:** CSVs are parsed once at startup by Library autoloads (e.g., `AbilityLibrary`, `PowerLibrary`) into typed Resource objects. Game logic reads from these libraries; it never re-parses CSVs at runtime.
 
 **Globals / Autoloads:**
 - `GameState` — current run state (HP, AP, round, tabs, dice pool, ability hand, current box)
@@ -72,7 +72,7 @@ seal-the-box/
 | AP | Action Points — currency for ability cards |
 | Match | One Shut-the-Box game (core loop) |
 | Run | Series of matches + events |
-| Relic | Persistent run modifier |
+| Power | Persistent run modifier |
 | Event | Between-match situation (Shop, Vignette, etc.) |
 
 **Dice traits:** Greater X / Weaker X (add/subtract), x2, Temporary X, Reroll X
@@ -91,8 +91,8 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 
 - **One vertical slice at a time.** Build it, test it, decide what's fun. Only then plan the next.
 - **No new features mid-slice.** If a good idea surfaces, note it in a comment or tell Caleb — don't build it.
-- **Data-first for variations.** New dice types, abilities, and relics go in CSVs first. Don't hard-code content.
-- **Scope creep signals:** adding new game modes, meta-progression layers, UI polish, or "just one more relic type" before the core match loop is playtested. Flag these immediately.
+- **Data-first for variations.** New dice types, abilities, and powers go in CSVs first. Don't hard-code content.
+- **Scope creep signals:** adding new game modes, meta-progression layers, UI polish, or "just one more power type" before the core match loop is playtested. Flag these immediately.
 - **Push back explicitly.** If Caleb proposes something that adds scope before the current slice is validated, say so directly: "That's a great idea — let's put it on the backlog and come back after we playtest the current slice."
 
 ## Current Build State

@@ -16,7 +16,7 @@
 - AbilityLibrary parses abilities.csv at startup; starting hand is hardcoded IDs from that library
 
 ### Out of Scope (Backlog)
-- Run layer, rewards, GP, relic on shut, random starting pool generation, dice/ability type system, events, shop, art/polish
+- Run layer, rewards, GP, power on shut, random starting pool generation, dice/ability type system, events, shop, art/polish
 
 ---
 
