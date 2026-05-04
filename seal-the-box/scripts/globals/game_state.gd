@@ -11,9 +11,13 @@ var dice_pool: Array = []   # Array of Die
 var dice_hand: Array = []   # Array of Die (currently drawn)
 var ability_hand: Array = [null, null, null]  # fixed 3-slot array; null = empty
 var current_box: BoxDefinition = null
+var owned_powers: Array = []
+var pending_threshold_bonus: int = 0
 
 func reset_run() -> void:
 	hp = 6
+	owned_powers = []
+	pending_threshold_bonus = 0
 	_setup_dice_pool()
 	reset_match()
 	_setup_ability_hand()

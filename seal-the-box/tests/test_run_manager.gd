@@ -33,6 +33,8 @@ func _init() -> void:
 	_test_rotation_discards_slot_0_regardless_of_charges(gs)
 	_test_charges_decrement(gs)
 	_test_exhausted_ability_blocked(gs)
+	_test_owned_powers_persists_across_reset_match(gs)
+	_test_owned_powers_cleared_by_reset_run(gs)
 	print("All RunManager tests passed!")
 	quit()
 
@@ -266,6 +268,18 @@ func _test_charges_decrement(gs: Node) -> void:
 	assert(ability.charges == 0, "charges should be 0 after third use, got %d" % ability.charges)
 
 	round_mgr.queue_free()
+
+func _test_owned_powers_persists_across_reset_match(gs: Node) -> void:
+	gs.reset_run()
+	var fake_power = {"id": "test_power"}
+	gs.owned_powers.append(fake_power)
+	gs.reset_match()
+	assert(gs.owned_powers.size() == 1, "reset_match should preserve owned_powers, got %d" % gs.owned_powers.size())
+
+func _test_owned_powers_cleared_by_reset_run(gs: Node) -> void:
+	gs.owned_powers = [{"id": "test_power"}, {"id": "another"}]
+	gs.reset_run()
+	assert(gs.owned_powers.size() == 0, "reset_run should clear owned_powers, got %d" % gs.owned_powers.size())
 
 func _test_exhausted_ability_blocked(gs: Node) -> void:
 	gs.reset_run()
