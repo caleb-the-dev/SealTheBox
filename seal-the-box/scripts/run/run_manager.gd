@@ -4,7 +4,10 @@ extends Node
 signal next_match_ready(box: BoxDefinition)
 signal show_power_offer(power: PowerData)
 signal show_rotation_offer(options: Array)
+signal show_die_swap(offered_dice: Array)
 signal run_over(match_number: int)
+
+const DIE_SWAP_FACES: Array[int] = [2, 4, 8, 10, 12]
 
 var match_number: int = 1
 var _boxes: Array = []
@@ -48,6 +51,22 @@ func handle_rotation_pick(chosen: AbilityData) -> void:
 	gs.ability_hand[2] = chosen
 	_pending_rotation_options = []
 	gs.reset_run_end()
+	if (match_number - 1) % 5 == 0:
+		var offered: Array = []
+		for f in DIE_SWAP_FACES:
+			offered.append(Die.new(f))
+		show_die_swap.emit(offered)
+	else:
+		_start_next_match()
+
+func handle_die_swap_confirm(offered_die: Die, pool_die: Die) -> void:
+	var gs = Engine.get_singleton("GameState")
+	var idx = gs.dice_pool.find(pool_die)
+	if idx >= 0:
+		gs.dice_pool[idx] = offered_die
+	_start_next_match()
+
+func handle_die_swap_skip() -> void:
 	_start_next_match()
 
 func dev_skip_rotation() -> void:
