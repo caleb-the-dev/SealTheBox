@@ -38,6 +38,7 @@ var _rotation_overlay: Control
 var _rotation_buttons: Array[Button] = []
 var _current_rotation_options: Array = []
 var _dev_overlay: Control
+var _powers_vbox: VBoxContainer
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -535,6 +536,32 @@ func _setup_ui() -> void:
 	root.add_child(dev_overlay)
 	_dev_overlay = dev_overlay
 
+	# ── Powers side panel (right side, always visible) ────────────────────────
+	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
+	powers_panel.anchor_left = 1.0
+	powers_panel.anchor_right = 1.0
+	powers_panel.anchor_top = 0.0
+	powers_panel.anchor_bottom = 1.0
+	powers_panel.offset_left = -175
+	powers_panel.offset_right = -6
+	powers_panel.offset_top = 60
+	powers_panel.offset_bottom = -310
+	root.add_child(powers_panel)
+
+	var powers_outer = VBoxContainer.new()
+	powers_outer.add_theme_constant_override("separation", 8)
+	powers_panel.add_child(powers_outer)
+
+	var powers_title = Label.new()
+	powers_title.text = "── POWERS ──"
+	powers_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	powers_title.add_theme_font_size_override("font_size", 13)
+	powers_outer.add_child(powers_title)
+
+	_powers_vbox = VBoxContainer.new()
+	_powers_vbox.add_theme_constant_override("separation", 6)
+	powers_outer.add_child(_powers_vbox)
+
 # ── signal wiring ────────────────────────────────────────────────────────────
 func _connect_signals() -> void:
 	_round_manager.phase_changed.connect(_on_phase_changed)
@@ -625,6 +652,7 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_rebuild_tab_buttons()
 	for btn in _tab_buttons:
 		btn.disabled = false
+	_refresh_powers_panel()
 
 func _on_run_over(match_number: int) -> void:
 	_run_over_detail_label.text = "Defeated on Match %d  |  HP: 0" % match_number
@@ -646,7 +674,17 @@ func _on_power_offer_skipped() -> void:
 	_run_manager.handle_power_offer_skipped()
 
 func _refresh_powers_panel() -> void:
-	pass
+	if not _powers_vbox:
+		return
+	for child in _powers_vbox.get_children():
+		child.queue_free()
+	for power in GameState.owned_powers:
+		var pill = TooltipButton.new()
+		pill.custom_minimum_size = Vector2(0, 44)
+		pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if pill is TooltipButton:
+			(pill as TooltipButton).update_info(power.name, power.description)
+		_powers_vbox.add_child(pill)
 
 func _on_show_rotation_offer(options: Array) -> void:
 	_current_rotation_options = options
