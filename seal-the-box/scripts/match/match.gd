@@ -19,7 +19,7 @@ var _dice_buttons: Array[Button] = []
 var _dice_face_labels: Array[Label] = []
 var _ability_buttons: Array[Button] = []
 var _action_button: Button
-var _roll_all_button: Button
+var _roll_hint_label: Label
 var _draw_label: Label
 var _discard_label: Label
 var _current_phase: String = ""
@@ -195,7 +195,7 @@ func _setup_ui() -> void:
 	_status_label.add_theme_font_size_override("font_size", 20)
 	root.add_child(_status_label)
 
-	# ── Bottom: [DRAW circle] [Dice + Abilities oval] [DISCARD circle] ──────
+	# ── Bottom: [Dice panel (2/3) + Abilities panel (1/3)] ──────────────────
 	var bottom = HBoxContainer.new()
 	bottom.anchor_left = 0.0
 	bottom.anchor_right = 1.0
@@ -204,57 +204,63 @@ func _setup_ui() -> void:
 	bottom.offset_top = -288
 	bottom.offset_bottom = -20
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 20)
 	root.add_child(bottom)
 
-	# Draw pile circle
-	var draw_panel = _make_rounded_panel(50, DARK, 14, 12)
-	bottom.add_child(draw_panel)
-	var draw_col = VBoxContainer.new()
-	draw_col.add_theme_constant_override("separation", 2)
-	draw_col.custom_minimum_size = Vector2(64, 0)
-	draw_panel.add_child(draw_col)
-	var draw_title = Label.new()
-	draw_title.text = "DRAW"
-	draw_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	draw_col.add_child(draw_title)
-	_draw_label = Label.new()
-	_draw_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_draw_label.add_theme_font_size_override("font_size", 28)
-	draw_col.add_child(_draw_label)
+	const INNER_DARK = Color(0.12, 0.12, 0.12, 0.95)
 
-	# Dice + Abilities inside a shared oval panel
 	var content_panel = _make_rounded_panel(28, DARK, 14, 14)
 	content_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(content_panel)
 
-	# Outer vbox so the action button can span the full panel width
 	var outer_vbox = VBoxContainer.new()
 	outer_vbox.add_theme_constant_override("separation", 8)
 	outer_vbox.custom_minimum_size = Vector2(520, 0)
 	content_panel.add_child(outer_vbox)
 
-	var content_hbox = HBoxContainer.new()
-	content_hbox.add_theme_constant_override("separation", 12)
-	content_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	outer_vbox.add_child(content_hbox)
+	var main_hbox = HBoxContainer.new()
+	main_hbox.add_theme_constant_override("separation", 8)
+	main_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer_vbox.add_child(main_hbox)
 
-	# Dice column — takes the majority of horizontal space
-	var dice_col = VBoxContainer.new()
-	dice_col.add_theme_constant_override("separation", 8)
-	dice_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dice_col.size_flags_stretch_ratio = 2.0
-	content_hbox.add_child(dice_col)
+	# Dice panel (left ~2/3) — header with draw/discard counts, dice buttons, roll control
+	var dice_panel = _make_rounded_panel(12, INNER_DARK, 10, 8)
+	dice_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dice_panel.size_flags_stretch_ratio = 2.0
+	main_hbox.add_child(dice_panel)
 
-	var dice_lbl = Label.new()
-	dice_lbl.text = "── DICE HAND ──"
-	dice_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dice_col.add_child(dice_lbl)
+	var dice_vbox = VBoxContainer.new()
+	dice_vbox.add_theme_constant_override("separation", 6)
+	dice_panel.add_child(dice_vbox)
 
+	# Header row: [draw count]  ── DICE HAND ──  [discard count]
+	var dice_header = HBoxContainer.new()
+	dice_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dice_vbox.add_child(dice_header)
+
+	_draw_label = Label.new()
+	_draw_label.add_theme_font_size_override("font_size", 14)
+	_draw_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	_draw_label.custom_minimum_size = Vector2(28, 0)
+	dice_header.add_child(_draw_label)
+
+	var dice_title_lbl = Label.new()
+	dice_title_lbl.text = "── DICE HAND ──"
+	dice_title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dice_title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dice_header.add_child(dice_title_lbl)
+
+	_discard_label = Label.new()
+	_discard_label.add_theme_font_size_override("font_size", 14)
+	_discard_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_discard_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	_discard_label.custom_minimum_size = Vector2(28, 0)
+	dice_header.add_child(_discard_label)
+
+	# Dice buttons
 	var dice_row = HBoxContainer.new()
 	dice_row.add_theme_constant_override("separation", 8)
 	dice_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dice_col.add_child(dice_row)
+	dice_vbox.add_child(dice_row)
 
 	for i in 3:
 		var btn = Button.new()
@@ -282,58 +288,42 @@ func _setup_ui() -> void:
 		btn.add_child(face_lbl)
 		_dice_face_labels.append(face_lbl)
 
-	# Abilities column — narrower, right of dice
-	var ability_col = VBoxContainer.new()
-	ability_col.add_theme_constant_override("separation", 8)
-	ability_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ability_col.size_flags_stretch_ratio = 1.0
-	content_hbox.add_child(ability_col)
+	# Roll hint label + single action button (inside dice panel, below dice)
+	_roll_hint_label = Label.new()
+	_roll_hint_label.text = "Select dice to roll"
+	_roll_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_roll_hint_label.add_theme_font_size_override("font_size", 13)
+	_roll_hint_label.modulate = Color(0.75, 0.75, 0.75)
+	dice_vbox.add_child(_roll_hint_label)
+
+	_action_button = Button.new()
+	_action_button.text = "Roll Dice (All)"
+	_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_action_button.pressed.connect(_on_action_pressed)
+	dice_vbox.add_child(_action_button)
+
+	# Abilities panel (right ~1/3)
+	var ability_panel = _make_rounded_panel(12, INNER_DARK, 10, 8)
+	ability_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ability_panel.size_flags_stretch_ratio = 1.0
+	main_hbox.add_child(ability_panel)
+
+	var ability_vbox = VBoxContainer.new()
+	ability_vbox.add_theme_constant_override("separation", 8)
+	ability_panel.add_child(ability_vbox)
 
 	var ability_lbl = Label.new()
 	ability_lbl.text = "── ABILITIES ──"
 	ability_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ability_col.add_child(ability_lbl)
+	ability_vbox.add_child(ability_lbl)
 
 	for i in 3:
 		var btn = TooltipButton.new()
 		btn.custom_minimum_size = Vector2(0, 60)
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.pressed.connect(_on_ability_pressed.bind(i))
-		ability_col.add_child(btn)
+		ability_vbox.add_child(btn)
 		_ability_buttons.append(btn)
-
-	# Bottom button row — spans full width
-	var btn_row = HBoxContainer.new()
-	btn_row.add_theme_constant_override("separation", 8)
-	outer_vbox.add_child(btn_row)
-
-	_roll_all_button = Button.new()
-	_roll_all_button.text = "Roll All"
-	_roll_all_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_roll_all_button.pressed.connect(_on_roll_all_pressed)
-	btn_row.add_child(_roll_all_button)
-
-	_action_button = Button.new()
-	_action_button.text = "Roll Selected"
-	_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_action_button.pressed.connect(_on_action_pressed)
-	btn_row.add_child(_action_button)
-
-	# Discard pile circle
-	var discard_panel = _make_rounded_panel(50, DARK, 14, 12)
-	bottom.add_child(discard_panel)
-	var discard_col = VBoxContainer.new()
-	discard_col.add_theme_constant_override("separation", 2)
-	discard_col.custom_minimum_size = Vector2(64, 0)
-	discard_panel.add_child(discard_col)
-	var discard_title = Label.new()
-	discard_title.text = "DISCARD"
-	discard_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	discard_col.add_child(discard_title)
-	_discard_label = Label.new()
-	_discard_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_discard_label.add_theme_font_size_override("font_size", 28)
-	discard_col.add_child(_discard_label)
 
 	# ── Reward overlay (hidden until match 1 or 2 ends in a win) ──────────────
 	var reward_overlay = Control.new()
@@ -547,12 +537,12 @@ func _connect_signals() -> void:
 func _on_phase_changed(phase: String) -> void:
 	_current_phase = phase
 	if phase == "roll":
-		_action_button.text = "Roll Selected"
-		_roll_all_button.disabled = false
+		_roll_hint_label.visible = true
+		_update_roll_button_text()
 		_continue_button.disabled = false
 	else:
+		_roll_hint_label.visible = false
 		_action_button.text = "Commit & End Round"
-		_roll_all_button.disabled = true
 		_continue_button.disabled = true
 	_refresh_ui()
 
@@ -568,7 +558,6 @@ func _on_match_won(critical: bool) -> void:
 		return
 	_match_ended = true
 	_action_button.disabled = true
-	_roll_all_button.disabled = true
 	_continue_button.visible = false
 	for btn in _tab_buttons + _dice_buttons + _ability_buttons:
 		btn.disabled = true
@@ -579,7 +568,6 @@ func _on_match_lost() -> void:
 		return
 	_match_ended = true
 	_action_button.disabled = true
-	_roll_all_button.disabled = true
 	_continue_button.visible = false
 	for btn in _tab_buttons + _dice_buttons + _ability_buttons:
 		btn.disabled = true
@@ -615,7 +603,6 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	if _rotation_overlay:
 		_rotation_overlay.visible = false
 	_action_button.disabled = false
-	_roll_all_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
 	_round_manager.start_match(box)
@@ -703,6 +690,7 @@ func _on_die_pressed(index: int) -> void:
 	else:
 		_selected_dice.append(die)
 	_refresh_dice_highlight()
+	_update_roll_button_text()
 
 func _on_tab_pressed(tab_value: int) -> void:
 	var rolled = GameState.dice_hand.filter(func(d): return d.rolled)
@@ -736,25 +724,16 @@ func _on_tab_pressed(tab_value: int) -> void:
 
 func _on_action_pressed() -> void:
 	if _current_phase == "roll":
-		_on_roll_pressed()
+		var to_roll = _selected_dice.filter(func(d): return not d.rolled)
+		if to_roll.is_empty():
+			to_roll = GameState.dice_hand.filter(func(d): return not d.rolled)
+		if to_roll.is_empty():
+			_status_label.text = "All dice are already rolled."
+			return
+		_round_manager.commit_roll(to_roll)
+		_selected_dice = []
 	else:
 		_on_end_round_pressed()
-
-func _on_roll_all_pressed() -> void:
-	var to_roll = GameState.dice_hand.filter(func(d): return not d.rolled)
-	if to_roll.is_empty():
-		_status_label.text = "All dice are already rolled."
-		return
-	_round_manager.commit_roll(to_roll)
-	_selected_dice = []
-
-func _on_roll_pressed() -> void:
-	var to_roll = _selected_dice.filter(func(d): return not d.rolled)
-	if to_roll.is_empty():
-		_status_label.text = "Select unrolled dice to roll."
-		return
-	_round_manager.commit_roll(to_roll)
-	_selected_dice = []
 
 func _on_ability_pressed(index: int) -> void:
 	var hand = GameState.ability_hand
@@ -818,8 +797,12 @@ func _refresh_ui() -> void:
 		_box_label.text = ""
 		_sealed_total_label.text = ""
 		_threshold_label.text = ""
-	_draw_label.text = str(_round_manager.get_draw_count())
-	_discard_label.text = str(_round_manager.get_discard_count())
+	var draw_count := _round_manager.get_draw_count()
+	var discard_count := _round_manager.get_discard_count()
+	_draw_label.text = str(draw_count)
+	_draw_label.tooltip_text = "Draw pile: %d remaining" % draw_count
+	_discard_label.text = str(discard_count)
+	_discard_label.tooltip_text = "Discard pile: %d remaining" % discard_count
 	_refresh_tab_display()
 	_refresh_dice_display()
 	_refresh_dice_highlight()
@@ -923,3 +906,12 @@ func _flash_ability_used(idx: int) -> void:
 	btn.modulate = Color(0.3, 1.2, 0.3)
 	await get_tree().create_timer(0.35).timeout
 	_refresh_ability_display()
+
+func _update_roll_button_text() -> void:
+	if _current_phase != "roll":
+		return
+	var unrolled_selected = _selected_dice.filter(func(d): return not d.rolled)
+	if unrolled_selected.is_empty():
+		_action_button.text = "Roll Dice (All)"
+	else:
+		_action_button.text = "Roll Dice (%d)" % unrolled_selected.size()
