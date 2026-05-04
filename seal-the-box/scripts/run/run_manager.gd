@@ -6,7 +6,7 @@ signal show_reward(dice_faces: Array)
 signal show_ability_offer(offered_ability: AbilityData)
 signal run_over(match_number: int)
 
-const REWARD_DIE_FACES = [2, 3, 4, 5, 6, 7, 8, 10, 12]
+const REWARD_DIE_FACES = [2, 4, 6, 8, 10, 12]
 const ABILITY_POOL_IDS: Array = ["reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all"]
 
 var match_number: int = 1
