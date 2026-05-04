@@ -46,10 +46,10 @@ func _test_reset_run_sets_hp(gs: Node) -> void:
 func _test_reset_run_sets_starting_dice_pool(gs: Node) -> void:
 	gs.dice_pool = []
 	gs.reset_run()
-	assert(gs.dice_pool.size() == 5, "starting pool should be 5 dice, got %d" % gs.dice_pool.size())
+	assert(gs.dice_pool.size() == 7, "starting pool should be 7 dice, got %d" % gs.dice_pool.size())
 	var faces = gs.dice_pool.map(func(d): return d.faces)
 	faces.sort()
-	assert(faces == [4, 6, 6, 6, 8], "starting pool should be 1d4+3d6+1d8, got %s" % str(faces))
+	assert(faces == [4, 6, 6, 6, 6, 8, 8], "starting pool should be 1d4+4d6+2d8, got %s" % str(faces))
 
 func _test_reset_match_preserves_hp(gs: Node) -> void:
 	gs.reset_run()

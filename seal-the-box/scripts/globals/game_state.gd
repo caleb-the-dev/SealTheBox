@@ -30,9 +30,10 @@ func reset_run_end() -> void:
 
 func _setup_dice_pool() -> void:
 	dice_pool = []
-	for i in 3:
-		dice_pool.append(Die.new(6))
 	dice_pool.append(Die.new(4))
+	for i in 4:
+		dice_pool.append(Die.new(6))
+	dice_pool.append(Die.new(8))
 	dice_pool.append(Die.new(8))
 
 func _setup_ability_hand() -> void:
