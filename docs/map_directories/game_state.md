@@ -5,7 +5,7 @@
 `scripts/globals/game_state.gd` (Autoload: `GameState`)
 
 ## Responsibility
-Own all mutable state: HP, AP, tabs, dice pool, ability hand, round number, round limit, win threshold, current box.
+Own all mutable state: HP, tabs, dice pool, ability hand, round number, round limit, win threshold, current box.
 Does NOT own game logic — it stores data, never drives phase transitions.
 
 ## Constants
@@ -20,7 +20,6 @@ const ABILITY_POOL_IDS: Array[String] = [
 ## Public Fields
 ```gdscript
 var hp: int = 6
-var ap: int = 3
 var round: int = 0
 var round_limit: int = 3          # set per match by RoundManager.start_match(box)
 var win_threshold: int = 13       # set per match by RoundManager.start_match(box)
@@ -43,15 +42,13 @@ func reset_run() -> void
     # Does NOT set tabs/round_limit/win_threshold — those come from start_match(box).
 
 func reset_match() -> void
-    # Resets ap=3, round=0, dice_hand=[]. Resets all dice in pool to value=0/rolled=false.
+    # Resets round=0, dice_hand=[]. Resets all dice in pool to value=0/rolled=false.
     # Does NOT touch tabs, round_limit, win_threshold, ability_hand, or dice_pool size.
 
 func reset_run_end() -> void
     # Calls reset_match(). Called by RunManager after rotation pick before starting next match.
     # Does NOT reset ability_hand or dice_pool — rotation already handled the hand shift.
 
-func spend_ap(amount: int) -> bool
-    # Deducts AP if sufficient. Returns false (and does not deduct) if ap < amount.
 ```
 
 ## Private Methods
@@ -80,6 +77,7 @@ func _setup_ability_hand() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Removed ap variable and spend_ap(). Rolling dice is now free. |
 | 2026-05-04 | Added ABILITY_POOL_IDS const (6 ability ids). Restructured ability_hand from variable Array to fixed 3-slot [null, null, null]. _setup_ability_hand() now picks ONE random ability into slot 2 only (slots 0,1 = null). reset_run() always calls _setup_ability_hand() unconditionally. Added null guard on AbilityLibrary singleton. |
 | 2026-05-02 | Added `current_box: BoxDefinition`. Removed hardcoded tabs/round_limit/win_threshold from reset_match(). Moved _setup_ability_hand() out of reset_match() — now called only in reset_run(). Added reset_run_end(). |
 | 2026-05-01 | Initial implementation. |

@@ -5,7 +5,7 @@
 Built in `scripts/match/match.gd` within `_setup_ui()`.
 
 ## Responsibility
-Display round counter, HP, match progress, active box name, remaining-sum counter, win threshold, AP, draw/discard counts, and a narrative status line. All labels are updated by `_refresh_ui()` after any state change.
+Display round counter, HP, match progress, active box name, remaining-sum counter, win threshold, draw/discard counts, and a narrative status line. All labels are updated by `_refresh_ui()` after any state change.
 
 ## UI Elements (top to bottom)
 
@@ -27,7 +27,6 @@ Display round counter, HP, match progress, active box name, remaining-sum counte
 
 ### Middle
 - `_status_label` — narrative text (phase instructions, seal feedback, rolled total)
-- AP badge — "AP: X" (`_ap_label`)
 
 ### Bottom Bar
 - Draw pile count (`_draw_label`)
@@ -51,6 +50,7 @@ Display round counter, HP, match progress, active box name, remaining-sum counte
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Removed AP badge (_ap_label) from HUD. |
 | 2026-05-04 | Match label changed from "Match: X / 3" to "Match: X". Added _continue_button below threshold label; animates once on threshold breach. Threshold label and continue button now live in a shared VBoxContainer (thresh_col). |
 | 2026-05-02 | Added remaining-sum label and threshold label flanking the tab row. Moved threshold out of top bar. Tab buttons are now dynamically rebuilt per match. |
 | 2026-05-01 | Initial implementation. All HUD built in match.gd._setup_ui(). |

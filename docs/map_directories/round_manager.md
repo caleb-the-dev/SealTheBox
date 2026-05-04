@@ -30,7 +30,7 @@ func start_round() -> void
     # Draws a hand, sets phase to "roll".
 
 func commit_roll(dice: Array) -> void
-    # Spends 1 AP per die, rolls each. Transitions phase to "act".
+    # Rolls each provided die. Transitions phase to "act".
 
 func attempt_seal(dice: Array, tabs: Array) -> bool
     # Validates dice sum == tab sum and all tabs are unsealed. Seals tabs,
@@ -73,7 +73,7 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ```
 
 ## Dependencies
-- `GameState` — reads/writes hp, ap, round, round_limit, win_threshold, tabs, dice_hand, ability_hand, current_box
+- `GameState` — reads/writes hp, round, round_limit, win_threshold, tabs, dice_hand, ability_hand, current_box
 - `TabBoard` — seals tabs, checks win condition, validates combinations
 - `DicePool` — draws hand, rolls dice, applies modifiers, discards hand
 
@@ -89,6 +89,7 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Removed AP initialization from start_round() and AP spending from commit_roll(). Rolling is now free. |
 | 2026-05-04 | use_ability() now decrements ability.charges instead of erasing from ability_hand. Added charges <= 0 guard (second check, before phase check). Added computed GameState property for headless --script test compatibility. |
 | 2026-05-04 | Threshold win no longer auto-ends match. Added threshold_reached signal (fires once per match). Added accept_threshold_win() for player-initiated threshold exit. Added _threshold_notified internal flag. |
 | 2026-05-02 | start_match() now accepts BoxDefinition and sets GameState box fields before reset. |

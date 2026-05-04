@@ -23,7 +23,6 @@ var flavor_name: String
 var type: String            # Diabolic, Cosmic, Ethereal, Mundane
 var traits: Array[String]
 var cooldown: int
-var ap_cost: int
 var description: String
 var charges: int            # remaining charges on this instance (decremented on use)
 var max_charges: int        # base charge count from CSV; set once at load, never mutated at runtime
@@ -54,5 +53,6 @@ None — loaded before any other system via Autoload order.
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Removed ap_cost field from AbilityData and abilities.csv. |
 | 2026-05-04 | Added `charges` (col 8) and `max_charges` fields to AbilityData. Library parses row[7] with safe fallback to 1; clamps to max(1, value). All 15 CSV rows updated with charge values. |
 | 2026-05-01 | Initial implementation. |

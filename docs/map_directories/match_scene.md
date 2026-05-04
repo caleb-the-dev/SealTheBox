@@ -25,7 +25,6 @@ match.tscn  (Node3D, script: match.gd)
             _threshold_label     — win condition ("≤N to win")
             _continue_button     — "Continue →", hidden until threshold reached; disabled during seal phase
       _status_label              — narrative status / rolled total
-      ap_row                     — AP badge (centered)
       bottom (HBoxContainer)
         draw_panel               — draw pile circle
         content_panel            — dice hand + abilities oval
@@ -117,6 +116,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Removed ap_row (AP badge) from scene tree. |
 | 2026-05-04 | Added die face labels (small "d6" etc. in bottom-right of each die button after rolling). Added rotation overlay replacing old ability-offer overlay. _on_phase_changed now disables Continue during "act" phase and enables on "roll". Ability buttons now show charges [N/M], orange tint on slot 0, grey-out at 0 charges. Signal wiring: show_rotation_offer replaces show_ability_offer. Dev "Win Entire Series" calls dev_skip_rotation() after each win. |
 | 2026-05-04 | Removed run-win overlay and _on_run_won handler. Added _continue_button (threshold exit). Added _on_threshold_reached() with tween animation. Added _on_continue_pressed() → accept_threshold_win(). Match label changed from "Match: X/3" to "Match: X". Reward overlay title changed to "Shut the Box! — Pick a Reward Die". |
 | 2026-05-02 | Added BoxLibrary singleton registration. _on_next_match_ready now accepts BoxDefinition and passes to start_match(box). Added _rebuild_tab_buttons() for variable tab sets. Added _sealed_total_label and _threshold_label flanking tab row. Moved threshold display from top bar to tab area. Fixed end_round guard for winning seal. |
