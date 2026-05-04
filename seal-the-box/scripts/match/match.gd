@@ -569,9 +569,11 @@ func _on_phase_changed(phase: String) -> void:
 	if phase == "roll":
 		_action_button.text = "Roll Selected  (1 AP each)"
 		_roll_all_button.disabled = false
+		_continue_button.disabled = false
 	else:
 		_action_button.text = "Commit & End Round"
 		_roll_all_button.disabled = true
+		_continue_button.disabled = true
 	_refresh_ui()
 
 func _on_round_ended(_round_num: int) -> void:
@@ -912,8 +914,6 @@ func _refresh_ability_display() -> void:
 		var a = hand[i] if i < hand.size() else null
 		if a != null:
 			var name_text = a.flavor_name
-			if i == 0:
-				name_text += " ★"
 			var charges_text = "%d/%d" % [a.charges, a.max_charges]
 			if btn is TooltipButton:
 				(btn as TooltipButton).update_info("%s  [%s]" % [name_text, charges_text], a.description)
