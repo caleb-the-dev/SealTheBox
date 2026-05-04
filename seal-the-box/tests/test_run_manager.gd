@@ -47,6 +47,11 @@ func _init() -> void:
 	_test_power_library_loads_all_powers()
 	_test_critical_win_triggers_power_offer_then_rotation(gs)
 	_test_power_offer_accept_adds_to_owned_powers(gs)
+	_test_box_cycle_five_boxes(gs)
+	_test_die_swap_fires_after_match_5(gs)
+	_test_die_swap_fires_after_match_10(gs)
+	_test_die_swap_confirm_replaces_die(gs)
+	_test_die_swap_skip_preserves_pool(gs)
 	print("All RunManager tests passed!")
 	quit()
 
@@ -322,3 +327,112 @@ func _test_power_library_loads_all_powers() -> void:
 	var power = power_lib.get_power("lighter_box")
 	assert(power != null, "get_power('lighter_box') should return a PowerData")
 	assert(power.name == "Lighter Box", "lighter_box name should be 'Lighter Box', got '%s'" % power.name)
+
+func _test_box_cycle_five_boxes(gs: Node) -> void:
+	gs.reset_run()
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.start_run()
+
+	assert(rm._boxes.size() == 5, "should have 5 boxes, got %d" % rm._boxes.size())
+	assert(rm._boxes[0].id == "classic",    "box 0 should be classic, got %s"    % rm._boxes[0].id)
+	assert(rm._boxes[1].id == "low_evens",  "box 1 should be low_evens, got %s"  % rm._boxes[1].id)
+	assert(rm._boxes[2].id == "high_odds",  "box 2 should be high_odds, got %s"  % rm._boxes[2].id)
+	assert(rm._boxes[3].id == "compressed", "box 3 should be compressed, got %s" % rm._boxes[3].id)
+	assert(rm._boxes[4].id == "stairs",     "box 4 should be stairs, got %s"     % rm._boxes[4].id)
+	rm.queue_free()
+
+func _test_die_swap_fires_after_match_5(gs: Node) -> void:
+	gs.reset_run()
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	var swap_log: Array = []
+	rm.show_die_swap.connect(func(offered):
+		swap_log.append(offered)
+		rm.handle_die_swap_skip()
+	)
+
+	rm.start_run()
+
+	for i in 4:
+		rm.handle_match_won(false)
+	assert(swap_log.size() == 0, "no swap after matches 1-4, got %d" % swap_log.size())
+
+	rm.handle_match_won(false)
+	assert(swap_log.size() == 1, "swap should fire after match 5, got %d" % swap_log.size())
+	assert(swap_log[0].size() == 5, "offer should have 5 dice, got %d" % swap_log[0].size())
+	var faces = swap_log[0].map(func(d): return d.faces)
+	faces.sort()
+	assert(faces == [2, 4, 8, 10, 12], "offer faces should be [2,4,8,10,12], got %s" % str(faces))
+	rm.queue_free()
+
+func _test_die_swap_fires_after_match_10(gs: Node) -> void:
+	gs.reset_run()
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	var swap_count = [0]
+	rm.show_die_swap.connect(func(_offered):
+		swap_count[0] += 1
+		rm.handle_die_swap_skip()
+	)
+
+	rm.start_run()
+	for i in 10:
+		rm.handle_match_won(false)
+
+	assert(swap_count[0] == 2, "swap should fire after matches 5 and 10 only, got %d" % swap_count[0])
+	rm.queue_free()
+
+func _test_die_swap_confirm_replaces_die(gs: Node) -> void:
+	gs.reset_run()
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	var pending_offered: Array = []
+	rm.show_die_swap.connect(func(offered): pending_offered.assign(offered))
+
+	rm.start_run()
+	for i in 5:
+		rm.handle_match_won(false)
+
+	assert(pending_offered.size() == 5, "swap offer should have 5 dice, got %d" % pending_offered.size())
+
+	var offered_die = pending_offered[0]
+	var pool_die = gs.dice_pool[0]
+
+	rm.handle_die_swap_confirm(offered_die, pool_die)
+
+	assert(gs.dice_pool.size() == 7, "pool size should stay 7, got %d" % gs.dice_pool.size())
+	assert(offered_die in gs.dice_pool, "offered die (d%d) should be in pool" % offered_die.faces)
+	assert(not (pool_die in gs.dice_pool), "swapped-out die (d%d) should be gone" % pool_die.faces)
+	rm.queue_free()
+
+func _test_die_swap_skip_preserves_pool(gs: Node) -> void:
+	gs.reset_run()
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+	rm.show_die_swap.connect(func(_offered): pass)
+
+	rm.start_run()
+	for i in 5:
+		rm.handle_match_won(false)
+
+	var pool_before = gs.dice_pool.duplicate()
+
+	rm.handle_die_swap_skip()
+
+	assert(gs.dice_pool.size() == pool_before.size(), "pool size should be unchanged after skip")
+	for i in pool_before.size():
+		assert(pool_before[i] in gs.dice_pool, "die %d (d%d) should still be in pool after skip" % [i, pool_before[i].faces])
+	rm.queue_free()
