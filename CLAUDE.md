@@ -129,6 +129,6 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 2. **Build:** implement the feature with commits on the branch
 3. **QA handoff:** when implementation is done, give Caleb a checklist of what to test (bugs + playability) — he playtests from the same fixed path
 4. **Approval:** once Caleb says it's good, wrap up:
-   - `git checkout master && git merge feature/<name> && git branch -d feature/<name>`
-   - `git push origin master`
+   - Push the branch and open a PR to master: `git push -u origin feature/<name>` then `gh pr create`
+   - After PR is merged on GitHub, delete the local branch: `git checkout master && git pull && git branch -d feature/<name>`
 5. **Update CLAUDE.md:** move the branch entry into "Working" and clear "Next planned feature"
