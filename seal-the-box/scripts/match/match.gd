@@ -757,9 +757,13 @@ func _on_roll_pressed() -> void:
 	_selected_dice = []
 
 func _on_ability_pressed(index: int) -> void:
-	if index >= GameState.ability_hand.size():
+	var hand = GameState.ability_hand
+	if index >= hand.size() or hand[index] == null:
 		return
-	var ability = GameState.ability_hand[index]
+	var ability = hand[index]
+	if ability.charges <= 0:
+		_status_label.text = "%s is exhausted (0 charges)." % ability.flavor_name
+		return
 	if ability.id == "reroll_all":
 		if _round_manager.use_ability(ability, null):
 			_selected_ability = null
@@ -878,17 +882,28 @@ func _refresh_ability_display() -> void:
 	var hand = GameState.ability_hand
 	for i in 3:
 		var btn = _ability_buttons[i]
-		if i < hand.size():
-			var a = hand[i]
+		var a = hand[i] if i < hand.size() else null
+		if a != null:
+			var name_text = a.flavor_name
+			if i == 0:
+				name_text += " ★"
+			var charges_text = "%d/%d" % [a.charges, a.max_charges]
 			if btn is TooltipButton:
-				(btn as TooltipButton).update_info(a.flavor_name, a.description)
-			btn.disabled = false
+				(btn as TooltipButton).update_info("%s  [%s]" % [name_text, charges_text], a.description)
+			if a.charges <= 0:
+				btn.disabled = true
+				btn.modulate = Color(0.45, 0.45, 0.45)
+			elif i == 0:
+				btn.disabled = false
+				btn.modulate = Color(1.0, 0.75, 0.3)
+			else:
+				btn.disabled = false
+				btn.modulate = Color.WHITE
 		else:
 			if btn is TooltipButton:
 				(btn as TooltipButton).clear_info()
-			else:
-				btn.text = "—"
 			btn.disabled = true
+			btn.modulate = Color(0.3, 0.3, 0.3)
 
 func _update_rolled_total() -> void:
 	var total = 0
@@ -901,4 +916,4 @@ func _flash_ability_used(idx: int) -> void:
 	var btn = _ability_buttons[idx]
 	btn.modulate = Color(0.3, 1.2, 0.3)
 	await get_tree().create_timer(0.35).timeout
-	btn.modulate = Color.WHITE
+	_refresh_ability_display()
