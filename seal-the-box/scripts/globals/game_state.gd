@@ -1,6 +1,6 @@
 extends Node
 
-const ABILITY_POOL_IDS: Array = ["reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all"]
+const ABILITY_POOL_IDS: Array[String] = ["reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all"]
 
 var hp: int = 6
 var ap: int = 3
@@ -45,6 +45,9 @@ func _setup_dice_pool() -> void:
 
 func _setup_ability_hand() -> void:
 	var lib = Engine.get_singleton("AbilityLibrary")
+	if not lib:
+		push_error("GameState: AbilityLibrary singleton not available")
+		return
 	var chosen_id = ABILITY_POOL_IDS[randi() % ABILITY_POOL_IDS.size()]
 	var ability = lib.get_ability(chosen_id)
 	ability_hand = [null, null, null]
