@@ -51,6 +51,7 @@ func handle_rotation_pick(chosen: AbilityData) -> void:
 	gs.ability_hand[2] = chosen
 	_pending_rotation_options = []
 	gs.reset_run_end()
+	# match_number is already post-incremented here; condition fires after matches 5, 10, 15, ...
 	if (match_number - 1) % 5 == 0:
 		var offered: Array = []
 		for f in DIE_SWAP_FACES:
