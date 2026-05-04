@@ -24,12 +24,12 @@ Roll your dice, play your cards, and seal the box — round by round, match by m
 
 ## Core Gameplay Loop
 
-**Roll → Spend AP → Seal Tabs → Win Match → (Critical: Collect Rewards) → Next Match**
+**Roll → Seal Tabs → Win Match → (Critical: Collect Rewards) → Next Match**
 
 Each **match** is one game of advanced Shut the Box:
 - Tabs (numbered tiles) sit in the box. The goal is to reduce the sum of remaining tabs below the win threshold.
-- Each round the player draws a hand of 3 dice from their pool, spends AP to roll them, then assigns dice combinations to seal matching tabs.
-- Ability cards (paid with AP) modify dice values, add rerolls, or grant special effects.
+- Each round the player draws a hand of 3 dice from their pool, rolls them, then assigns dice combinations to seal matching tabs.
+- Ability cards modify dice values, add rerolls, or grant special effects.
 - When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — no reward) or keeps pushing to seal all tabs (critical win — reward fires).
 - The run ends only when HP reaches 0.
 
@@ -51,11 +51,9 @@ Each **run** is an infinite loop of matches cycling through boxes (Classic → L
 ## Match Structure
 
 Each round has three phases:
-1. **Roll phase:** Draw 3 dice from your pool. Select which to roll (1 AP each). All drawn dice are discarded at end of round.
-2. **Ability phase:** Spend AP to play ability cards — modify dice values, reroll, etc.
+1. **Roll phase:** Draw 3 dice from your pool. Select which to roll. All drawn dice are discarded at end of round.
+2. **Ability phase:** Play ability cards — modify dice values, reroll, etc.
 3. **Seal phase:** Assign rolled dice whose sum equals an unsealed tab to seal it. Runs concurrently with the ability phase.
-
-Player starts each round with **3 AP**.
 
 ---
 
@@ -78,7 +76,7 @@ Dice have a **face size** (d4, d6, d8, d10, d12) and a **type** (Diabolic, Cosmi
 
 ## Ability System
 
-Ability cards are played by spending AP. Each card has a type, optional traits, cooldown, AP cost, and **charges**.
+Ability cards are played for free. Each card has a type, optional traits, cooldown, and **charges**.
 
 **Charges (implemented):** Each ability has a fixed number of uses (1–3). Charges decrement on use and do NOT reset between matches. When an ability reaches 0 charges it stays in its slot greyed out (dead weight) until rotation discards it. This creates "use it or lose it" pressure.
 
