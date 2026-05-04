@@ -7,6 +7,12 @@ func _init() -> void:
 	lib._ready()
 	Engine.register_singleton("AbilityLibrary", lib)
 
+	var power_lib = load("res://scripts/globals/power_library.gd").new()
+	power_lib.name = "PowerLibrary"
+	get_root().add_child(power_lib)
+	power_lib._ready()
+	Engine.register_singleton("PowerLibrary", power_lib)
+
 	var box_lib = load("res://scripts/globals/box_library.gd").new()
 	box_lib.name = "BoxLibrary"
 	get_root().add_child(box_lib)
@@ -35,6 +41,7 @@ func _init() -> void:
 	_test_exhausted_ability_blocked(gs)
 	_test_owned_powers_persists_across_reset_match(gs)
 	_test_owned_powers_cleared_by_reset_run(gs)
+	_test_power_library_loads_all_powers()
 	print("All RunManager tests passed!")
 	quit()
 
@@ -298,3 +305,18 @@ func _test_exhausted_ability_blocked(gs: Node) -> void:
 	assert(result == false, "use_ability should return false for 0-charge ability")
 	assert(ability.charges == 0, "charges should remain 0 after failed use")
 	round_mgr.queue_free()
+
+func _test_power_library_loads_all_powers() -> void:
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	assert(power_lib != null, "PowerLibrary singleton should be registered")
+	var all_powers = power_lib.get_all()
+	assert(all_powers.size() == 5, "PowerLibrary should have 5 powers, got %d" % all_powers.size())
+	var ids = all_powers.map(func(p): return p.id)
+	assert("lighter_box" in ids, "lighter_box should be in PowerLibrary")
+	assert("eager" in ids, "eager should be in PowerLibrary")
+	assert("tab_9_bounty" in ids, "tab_9_bounty should be in PowerLibrary")
+	assert("bonus_seal" in ids, "bonus_seal should be in PowerLibrary")
+	assert("box_shutter" in ids, "box_shutter should be in PowerLibrary")
+	var power = power_lib.get_power("lighter_box")
+	assert(power != null, "get_power('lighter_box') should return a PowerData")
+	assert(power.name == "Lighter Box", "lighter_box name should be 'Lighter Box', got '%s'" % power.name)
