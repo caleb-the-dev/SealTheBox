@@ -64,6 +64,8 @@ func handle_die_swap_confirm(offered_die: Die, pool_die: Die) -> void:
 	var idx = gs.dice_pool.find(pool_die)
 	if idx >= 0:
 		gs.dice_pool[idx] = offered_die
+	else:
+		push_error("RunManager: handle_die_swap_confirm could not find pool_die in dice_pool")
 	_start_next_match()
 
 func handle_die_swap_skip() -> void:
