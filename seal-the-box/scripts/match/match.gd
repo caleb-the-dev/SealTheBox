@@ -41,6 +41,15 @@ var _dev_overlay: Control
 var _dev_power_overlay: Control
 var _dev_power_list: VBoxContainer
 var _powers_vbox: VBoxContainer
+var _die_swap_overlay: Control
+var _die_swap_offered_buttons: Array[Button] = []
+var _die_swap_pool_row: HBoxContainer
+var _die_swap_pool_buttons: Array[Button] = []
+var _die_swap_confirm_btn: Button
+var _die_swap_offered_dice: Array = []
+var _selected_swap_offered_idx: int = -1
+var _selected_swap_pool_die = null
+var _swap_label: Label
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -137,6 +146,11 @@ func _setup_ui() -> void:
 	_box_label = Label.new()
 	_box_label.add_theme_font_size_override("font_size", 18)
 	top_bar.add_child(_box_label)
+
+	_swap_label = Label.new()
+	_swap_label.add_theme_font_size_override("font_size", 16)
+	_swap_label.modulate = Color(0.8, 0.9, 1.0)
+	top_bar.add_child(_swap_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -596,6 +610,89 @@ func _setup_ui() -> void:
 	root.add_child(dev_power_overlay)
 	_dev_power_overlay = dev_power_overlay
 
+	# ── Die swap overlay ────────────────────────────────────────────────────────
+	var swap_overlay = Control.new()
+	swap_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	swap_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	swap_overlay.visible = false
+	var swap_bg = ColorRect.new()
+	swap_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	swap_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	swap_overlay.add_child(swap_bg)
+
+	var swap_center = VBoxContainer.new()
+	swap_center.anchor_left = 0.1
+	swap_center.anchor_right = 0.9
+	swap_center.anchor_top = 0.05
+	swap_center.anchor_bottom = 0.95
+	swap_center.add_theme_constant_override("separation", 20)
+	swap_overlay.add_child(swap_center)
+
+	var swap_title = Label.new()
+	swap_title.text = "Choose a New Die"
+	swap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	swap_title.add_theme_font_size_override("font_size", 30)
+	swap_center.add_child(swap_title)
+
+	var swap_sub = Label.new()
+	swap_sub.text = "Select a die from the offer, then a die from your pool to replace."
+	swap_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	swap_sub.add_theme_font_size_override("font_size", 16)
+	swap_center.add_child(swap_sub)
+
+	var swap_offer_lbl = Label.new()
+	swap_offer_lbl.text = "── OFFERED DICE ──"
+	swap_offer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	swap_center.add_child(swap_offer_lbl)
+
+	var swap_offer_row = HBoxContainer.new()
+	swap_offer_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	swap_offer_row.add_theme_constant_override("separation", 16)
+	swap_center.add_child(swap_offer_row)
+
+	_die_swap_offered_buttons = []
+	for i in 5:
+		var btn = Button.new()
+		btn.text = "d?"
+		btn.custom_minimum_size = Vector2(90, 90)
+		btn.add_theme_font_size_override("font_size", 22)
+		btn.pressed.connect(_on_die_swap_offered_pressed.bind(i))
+		swap_offer_row.add_child(btn)
+		_die_swap_offered_buttons.append(btn)
+
+	var swap_pool_lbl = Label.new()
+	swap_pool_lbl.text = "── YOUR POOL ──"
+	swap_pool_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	swap_center.add_child(swap_pool_lbl)
+
+	_die_swap_pool_row = HBoxContainer.new()
+	_die_swap_pool_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_die_swap_pool_row.add_theme_constant_override("separation", 12)
+	swap_center.add_child(_die_swap_pool_row)
+
+	var swap_action_row = HBoxContainer.new()
+	swap_action_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	swap_action_row.add_theme_constant_override("separation", 24)
+	swap_center.add_child(swap_action_row)
+
+	_die_swap_confirm_btn = Button.new()
+	_die_swap_confirm_btn.text = "Confirm Swap"
+	_die_swap_confirm_btn.custom_minimum_size = Vector2(160, 60)
+	_die_swap_confirm_btn.add_theme_font_size_override("font_size", 18)
+	_die_swap_confirm_btn.disabled = true
+	_die_swap_confirm_btn.pressed.connect(_on_die_swap_confirm_pressed)
+	swap_action_row.add_child(_die_swap_confirm_btn)
+
+	var swap_skip_btn = Button.new()
+	swap_skip_btn.text = "Skip"
+	swap_skip_btn.custom_minimum_size = Vector2(120, 60)
+	swap_skip_btn.add_theme_font_size_override("font_size", 18)
+	swap_skip_btn.pressed.connect(_on_die_swap_skip_pressed)
+	swap_action_row.add_child(swap_skip_btn)
+
+	root.add_child(swap_overlay)
+	_die_swap_overlay = swap_overlay
+
 	# ── Powers side panel (right side, always visible) ────────────────────────
 	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
 	powers_panel.anchor_left = 1.0
@@ -635,6 +732,7 @@ func _connect_signals() -> void:
 	_run_manager.show_power_offer.connect(_on_show_power_offer)
 	_run_manager.run_over.connect(_on_run_over)
 	_run_manager.show_rotation_offer.connect(_on_show_rotation_offer)
+	_run_manager.show_die_swap.connect(_on_show_die_swap)
 
 # ── signal handlers ──────────────────────────────────────────────────────────
 func _on_phase_changed(phase: String) -> void:
@@ -707,6 +805,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_run_over_overlay.visible = false
 	if _rotation_overlay:
 		_rotation_overlay.visible = false
+	if _die_swap_overlay:
+		_die_swap_overlay.visible = false
 	_action_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
@@ -760,6 +860,51 @@ func _on_show_rotation_offer(options: Array) -> void:
 func _on_rotation_pick_pressed(index: int) -> void:
 	_rotation_overlay.visible = false
 	_run_manager.handle_rotation_pick(_current_rotation_options[index])
+
+func _on_show_die_swap(offered_dice: Array) -> void:
+	_die_swap_offered_dice = offered_dice
+	_selected_swap_offered_idx = -1
+	_selected_swap_pool_die = null
+	for i in _die_swap_offered_buttons.size():
+		_die_swap_offered_buttons[i].text = "d%d" % offered_dice[i].faces
+		_die_swap_offered_buttons[i].modulate = Color.WHITE
+	for child in _die_swap_pool_row.get_children():
+		child.queue_free()
+	_die_swap_pool_buttons = []
+	for i in GameState.dice_pool.size():
+		var die = GameState.dice_pool[i]
+		var btn = Button.new()
+		btn.text = "d%d" % die.faces
+		btn.custom_minimum_size = Vector2(72, 72)
+		btn.add_theme_font_size_override("font_size", 18)
+		btn.pressed.connect(_on_die_swap_pool_pressed.bind(i))
+		_die_swap_pool_row.add_child(btn)
+		_die_swap_pool_buttons.append(btn)
+	_die_swap_confirm_btn.disabled = true
+	_die_swap_overlay.visible = true
+
+func _on_die_swap_offered_pressed(index: int) -> void:
+	_selected_swap_offered_idx = index
+	for i in _die_swap_offered_buttons.size():
+		_die_swap_offered_buttons[i].modulate = Color(1.5, 1.5, 0.3) if i == index else Color.WHITE
+	_update_die_swap_confirm_state()
+
+func _on_die_swap_pool_pressed(index: int) -> void:
+	_selected_swap_pool_die = GameState.dice_pool[index]
+	for i in _die_swap_pool_buttons.size():
+		_die_swap_pool_buttons[i].modulate = Color(1.5, 1.5, 0.3) if i == index else Color.WHITE
+	_update_die_swap_confirm_state()
+
+func _update_die_swap_confirm_state() -> void:
+	_die_swap_confirm_btn.disabled = (_selected_swap_offered_idx < 0 or _selected_swap_pool_die == null)
+
+func _on_die_swap_confirm_pressed() -> void:
+	_die_swap_overlay.visible = false
+	_run_manager.handle_die_swap_confirm(_die_swap_offered_dice[_selected_swap_offered_idx], _selected_swap_pool_die)
+
+func _on_die_swap_skip_pressed() -> void:
+	_die_swap_overlay.visible = false
+	_run_manager.handle_die_swap_skip()
 
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
@@ -943,6 +1088,10 @@ func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
 	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
 	_match_label.text = "Match: %d" % _run_manager.match_number
+	if _swap_label:
+		var mn = _run_manager.match_number
+		var remaining = (5 - (mn % 5)) % 5
+		_swap_label.text = "Swap after this!" if remaining == 0 else "Swap in %d" % remaining
 	if GameState.current_box:
 		_box_label.text = "Box: %s" % GameState.current_box.name
 		var remaining_sum := 0
