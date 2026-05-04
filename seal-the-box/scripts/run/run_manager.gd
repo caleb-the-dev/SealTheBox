@@ -3,15 +3,14 @@ extends Node
 
 signal next_match_ready(box: BoxDefinition)
 signal show_reward(dice_faces: Array)
-signal show_ability_offer(offered_ability: AbilityData)
+signal show_rotation_offer(options: Array)
 signal run_over(match_number: int)
 
 const REWARD_DIE_FACES = [2, 4, 6, 8, 10, 12]
-const ABILITY_POOL_IDS: Array = ["reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all"]
 
 var match_number: int = 1
 var _boxes: Array = []
-var _current_offered_ability: AbilityData = null
+var _pending_rotation_options: Array = []
 
 func start_run() -> void:
 	var box_lib = Engine.get_singleton("BoxLibrary")
@@ -26,7 +25,7 @@ func handle_match_won(critical: bool) -> void:
 	if critical:
 		show_reward.emit(_pick_reward_dice(3))
 	else:
-		_start_next_match()
+		_do_rotation_offer()
 
 func handle_match_lost() -> void:
 	run_over.emit(match_number)
@@ -34,20 +33,20 @@ func handle_match_lost() -> void:
 func handle_reward_picked(chosen_face: int) -> void:
 	var gs = Engine.get_singleton("GameState")
 	gs.dice_pool.append(Die.new(chosen_face))
-	_current_offered_ability = _pick_ability_offer(gs.ability_hand)
-	if _current_offered_ability == null:
-		gs.reset_run_end()
-		_start_next_match()
-		return
-	show_ability_offer.emit(_current_offered_ability)
+	_do_rotation_offer()
 
-func handle_ability_offer_result(swap_index: int) -> void:
+func handle_rotation_pick(chosen: AbilityData) -> void:
 	var gs = Engine.get_singleton("GameState")
-	if swap_index >= 0 and swap_index < gs.ability_hand.size() and _current_offered_ability != null:
-		gs.ability_hand[swap_index] = _current_offered_ability
+	gs.ability_hand[0] = gs.ability_hand[1]
+	gs.ability_hand[1] = gs.ability_hand[2]
+	gs.ability_hand[2] = chosen
+	_pending_rotation_options = []
 	gs.reset_run_end()
-	_current_offered_ability = null
 	_start_next_match()
+
+func dev_skip_rotation() -> void:
+	if _pending_rotation_options.size() > 0:
+		handle_rotation_pick(_pending_rotation_options[0])
 
 func _start_next_match() -> void:
 	var next_box = _boxes[(match_number - 1) % _boxes.size()]
@@ -62,12 +61,13 @@ func _pick_reward_dice(count: int) -> Array:
 		pool.remove_at(idx)
 	return picks
 
-func _pick_ability_offer(current_hand: Array) -> AbilityData:
-	var current_ids = current_hand.map(func(a): return a.id)
-	var available_ids = ABILITY_POOL_IDS.filter(func(id): return not id in current_ids)
-	if available_ids.is_empty():
-		return null
+func _do_rotation_offer() -> void:
+	var gs = Engine.get_singleton("GameState")
 	var lib = Engine.get_singleton("AbilityLibrary")
-	var id = available_ids[randi() % available_ids.size()]
-	var ability = lib.get_ability(id)
-	return ability.duplicate() if ability else null
+	_pending_rotation_options = []
+	for i in 3:
+		var id = gs.ABILITY_POOL_IDS[randi() % gs.ABILITY_POOL_IDS.size()]
+		var ability = lib.get_ability(id)
+		if ability:
+			_pending_rotation_options.append(ability.duplicate())
+	show_rotation_offer.emit(_pending_rotation_options)
