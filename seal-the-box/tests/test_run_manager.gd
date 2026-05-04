@@ -194,13 +194,16 @@ func _test_rotation_after_match_3(gs: Node) -> void:
 	var pick_A = gs.ability_hand[2]
 
 	rm.handle_match_won(false)  # match 2: starter→slot0, pick_A→slot1, pick_B→slot2
+	var pick_B = gs.ability_hand[2]
 
 	assert(gs.ability_hand[0] == starter, "slot 0 should hold starter after match 2 rotation")
 
 	rm.handle_match_won(false)  # match 3: starter discarded, pick_A→slot0, pick_B→slot1, pick_C→slot2
 
 	assert(gs.ability_hand[0] != starter, "slot 0 should NOT hold starter after match 3 (starter was discarded)")
+	# handle_rotation_pick shifts references without duplicating, so identity check is valid
 	assert(gs.ability_hand[0] == pick_A, "slot 0 should hold pick_A (shifted up from slot 1)")
+	assert(gs.ability_hand[1] == pick_B, "slot 1 should hold pick_B (shifted up from slot 2)")
 	assert(gs.ability_hand[2] != null, "slot 2 should have a fresh pick")
 	rm.queue_free()
 
