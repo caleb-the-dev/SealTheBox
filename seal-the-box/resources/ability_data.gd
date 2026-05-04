@@ -8,6 +8,8 @@ extends Resource
 @export var cooldown: int = 0
 @export var ap_cost: int = 1
 @export var description: String = ""
+@export var charges: int = 1
+@export var max_charges: int = 1
 
 func _init() -> void:
-    traits = []
+	traits = []
