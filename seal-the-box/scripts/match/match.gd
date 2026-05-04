@@ -1019,7 +1019,7 @@ func _refresh_dice_highlight() -> void:
 	for i in hand.size():
 		if i < _dice_buttons.size():
 			var die = hand[i]
-			if any_rolled and not die.rolled:
+			if any_rolled and not die.rolled and _current_phase == "act":
 				_dice_buttons[i].modulate = Color(0.4, 0.4, 0.4)
 			elif die in _selected_dice:
 				_dice_buttons[i].modulate = Color(1.5, 1.5, 0.3)
