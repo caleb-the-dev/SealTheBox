@@ -38,6 +38,7 @@ var _rotation_overlay: Control
 var _rotation_buttons: Array[Button] = []
 var _current_rotation_options: Array = []
 var _dev_overlay: Control
+var _dev_power_overlay: Control
 var _powers_vbox: VBoxContainer
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
@@ -527,6 +528,13 @@ func _setup_ui() -> void:
 	dev_shut_box_btn.pressed.connect(_on_dev_shut_box_pressed)
 	dev_panel.add_child(dev_shut_box_btn)
 
+	var dev_give_power_btn = Button.new()
+	dev_give_power_btn.text = "Give Power →"
+	dev_give_power_btn.custom_minimum_size = Vector2(0, 56)
+	dev_give_power_btn.add_theme_font_size_override("font_size", 17)
+	dev_give_power_btn.pressed.connect(_on_dev_give_power_menu_pressed)
+	dev_panel.add_child(dev_give_power_btn)
+
 	var dev_win_series_btn = Button.new()
 	dev_win_series_btn.text = "Win Entire Series"
 	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
@@ -542,6 +550,49 @@ func _setup_ui() -> void:
 
 	root.add_child(dev_overlay)
 	_dev_overlay = dev_overlay
+
+	# ── Dev power picker sub-overlay ─────────────────────────────────────────────
+	var dev_power_overlay = Control.new()
+	dev_power_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_power_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_power_overlay.visible = false
+	var dev_power_bg = ColorRect.new()
+	dev_power_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_power_bg.color = Color(0, 0, 0, 1.0)
+	dev_power_overlay.add_child(dev_power_bg)
+
+	var dev_power_panel = VBoxContainer.new()
+	dev_power_panel.anchor_left = 0.35
+	dev_power_panel.anchor_right = 0.65
+	dev_power_panel.anchor_top = 0.15
+	dev_power_panel.anchor_bottom = 0.9
+	dev_power_panel.add_theme_constant_override("separation", 12)
+	dev_power_overlay.add_child(dev_power_panel)
+
+	var dev_power_title = Label.new()
+	dev_power_title.text = "— GIVE POWER —"
+	dev_power_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_power_title.add_theme_font_size_override("font_size", 22)
+	dev_power_panel.add_child(dev_power_title)
+
+	if Engine.has_singleton("PowerLibrary"):
+		for power in Engine.get_singleton("PowerLibrary").get_all():
+			var pbtn = Button.new()
+			pbtn.text = power.name
+			pbtn.tooltip_text = power.description
+			pbtn.custom_minimum_size = Vector2(0, 52)
+			pbtn.add_theme_font_size_override("font_size", 17)
+			pbtn.pressed.connect(_on_dev_give_power.bind(power))
+			dev_power_panel.add_child(pbtn)
+
+	var dev_power_back_btn = Button.new()
+	dev_power_back_btn.text = "← Back"
+	dev_power_back_btn.custom_minimum_size = Vector2(0, 44)
+	dev_power_back_btn.pressed.connect(_on_dev_power_back_pressed)
+	dev_power_panel.add_child(dev_power_back_btn)
+
+	root.add_child(dev_power_overlay)
+	_dev_power_overlay = dev_power_overlay
 
 	# ── Powers side panel (right side, always visible) ────────────────────────
 	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
@@ -648,6 +699,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_continue_button.modulate = Color.WHITE
 	if _power_offer_overlay:
 		_power_offer_overlay.visible = false
+	if _dev_power_overlay:
+		_dev_power_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
 	if _rotation_overlay:
@@ -716,6 +769,18 @@ func _on_dev_shut_box_pressed() -> void:
 	_dev_overlay.visible = false
 	if not _match_ended:
 		_round_manager.dev_critical_win()
+
+func _on_dev_give_power_menu_pressed() -> void:
+	_dev_overlay.visible = false
+	_dev_power_overlay.visible = true
+
+func _on_dev_give_power(power: PowerData) -> void:
+	GameState.owned_powers.append(power)
+	_refresh_powers_panel()
+
+func _on_dev_power_back_pressed() -> void:
+	_dev_power_overlay.visible = false
+	_dev_overlay.visible = true
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false
