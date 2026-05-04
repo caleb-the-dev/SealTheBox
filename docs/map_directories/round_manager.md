@@ -38,8 +38,10 @@ func attempt_seal(dice: Array, tabs: Array) -> bool
     # Returns false if invalid.
 
 func use_ability(ability: AbilityData, target_die: Die) -> bool
-    # Applies ability effect (reroll_die / greater_1 / lesser_1). Erases ability
-    # from GameState.ability_hand. Returns false if used in roll phase or unknown id.
+    # Guards: returns false if match is over, ability.charges <= 0, or phase is "roll".
+    # Applies ability effect (reroll_die / greater_N / lesser_N / reroll_all).
+    # Decrements ability.charges by 1 on success. Does NOT remove ability from hand.
+    # Returns false if unknown ability id.
 
 func end_round() -> void
     # Discards hand, clears GameState.dice_hand, emits round_ended, calls start_round().
@@ -47,6 +49,9 @@ func end_round() -> void
 func accept_threshold_win() -> void
     # Called by match.gd when player clicks Continue. Sets _match_over = true,
     # emits match_won(false). Safe to call from any phase — no-ops if already over.
+
+func dev_win_match() -> void
+    # Dev shortcut: emits match_won(false) immediately. Always threshold (not critical).
 
 func get_draw_count() -> int
 func get_discard_count() -> int
@@ -59,6 +64,12 @@ func get_discard_count() -> int
 ## Key Internal State
 ```gdscript
 var _threshold_notified: bool   # true once threshold_reached has been emitted this match; reset in start_match()
+
+# Headless test compatibility:
+var GameState: Node: get: return Engine.get_singleton("GameState")
+    # Shadows the autoload name so --script tests (which don't start autoloads) work correctly.
+    # Zero behavior change in normal Godot runtime — the computed property and the autoload
+    # return the same node.
 ```
 
 ## Dependencies
@@ -67,15 +78,18 @@ var _threshold_notified: bool   # true once threshold_reached has been emitted t
 - `DicePool` — draws hand, rolls dice, applies modifiers, discards hand
 
 ## Gotchas
+- **`use_ability` does NOT remove abilities from the hand.** It decrements `ability.charges`. The ability stays in its slot (visible, greyed out at 0 charges) until the rotation discards it. Do NOT call `ability_hand.erase()` after use.
+- **0-charge abilities are blocked early.** The `charges <= 0` check is the second guard in `use_ability` (before the phase check), so exhausted abilities return false regardless of game phase.
 - **`start_match(box)` sets box fields BEFORE calling `reset_match()`** so the fields survive the reset. Change this order and tabs/round_limit will be wiped.
 - **Synchronous signal cascade on critical win:** `attempt_seal` → `_check_win` → `match_won.emit(true)` → match.gd `_on_match_won` → RunManager → `show_reward.emit()` — all inline before `attempt_seal()` returns.
 - **Threshold win is NOT automatic.** `_check_win` emits `threshold_reached` (once) and stops. The match stays live. The player clicks Continue → `accept_threshold_win()` → `match_won.emit(false)`.
 - **`_threshold_notified` must be reset in `start_match()`** or the Continue button will never appear in subsequent matches.
-- Phase only has two states: "roll" and "act". There is no explicit "end" phase — round end is an action, not a state.
+- Phase only has two states: "roll" and "act". There is no explicit "end" phase.
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | use_ability() now decrements ability.charges instead of erasing from ability_hand. Added charges <= 0 guard (second check, before phase check). Added computed GameState property for headless --script test compatibility. |
 | 2026-05-04 | Threshold win no longer auto-ends match. Added threshold_reached signal (fires once per match). Added accept_threshold_win() for player-initiated threshold exit. Added _threshold_notified internal flag. |
 | 2026-05-02 | start_match() now accepts BoxDefinition and sets GameState box fields before reset. |
 | 2026-05-01 | Initial implementation. |

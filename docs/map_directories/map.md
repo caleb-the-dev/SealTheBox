@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 1 |
+| Sessions since groom | 2 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -29,7 +29,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Round Manager | [round_manager.md](round_manager.md) | Active |
 | Match Scene + HUD | [match_scene.md](match_scene.md) | Active |
 | HUD detail | [hud.md](hud.md) | Active |
-| Ability Hand (UI) | [ability_hand.md](ability_hand.md) | Planned |
+| Ability Hand (UI) | [ability_hand.md](ability_hand.md) | Active |
 | Dice Hand (UI) | [dice_hand.md](dice_hand.md) | Planned |
 | Tab Display (UI) | [tab_display.md](tab_display.md) | Planned |
 
@@ -40,7 +40,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 seal-the-box/
   project.godot
   data/
-    abilities.csv          # ability definitions (3 abilities: reroll_die, greater_1, lesser_1)
+    abilities.csv          # ability definitions (15 abilities; 6 in rotation pool with charges 1–3)
     boxes.csv              # box definitions (3 boxes: classic, low_evens, high_odds)
   resources/
     ability_data.gd        # AbilityData Resource subclass
@@ -81,6 +81,7 @@ Same pattern for BoxLibrary and GameState.
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-04 | Ability rotation + charges system. Abilities now have charges (1–3); 3-slot fixed hand rotates after every match (slot 0 discarded, slots shift, player picks 1 of 3 new abilities into slot 3). Run starts with 1 random ability in slot 2. Critical wins: dice reward then rotation. Threshold wins: rotation only. Replaced ability-offer overlay with rotation overlay. Ability buttons show charges [N/M], orange tint on slot 0, grey-out at 0 charges. Die face label ("d6" etc.) appears bottom-right of die buttons after rolling. Continue button disabled during seal phase. Test suite rewritten: 15 tests. |
 | 2026-05-04 | Replaced 3-match run with infinite match loop (boxes cycle: Classic → Low Evens → High Odds → repeat). Threshold wins no longer auto-end the match — a "Continue →" button appears and animates once when threshold is first breached; player decides when to advance. Only critical wins (shut the box) trigger the dice reward + ability offer flow. Removed run-won state and win overlay. Match label simplified to "Match: N". win_threshold moved from computed formula to explicit CSV column (Classic 20, Low Evens 17, High Odds 17). round_limit formula loosened by +1 (all boxes now 4 rounds before overtime). Reward dice pool restricted to standard faces [2,4,6,8,10,12]. |
 | 2026-05-02 | Built series-based match structure: BoxDefinition Resource, BoxLibrary autoload, data/boxes.csv with 3 boxes. RunManager redesigned: box sequencing, reward only after final match, handle_reward_picked replaces advance_to_next_match. RoundManager.start_match() accepts BoxDefinition. match.gd: dynamic tab buttons, box label, remaining-sum counter, win threshold label, BoxLibrary singleton registration. Fixed synchronous-signal bug causing match 2 to start on round 2. Fixed win threshold display direction (remaining ≤ N, not sealed ≥ N). Updated test_run_manager.gd; added test_box_definition.gd. |
 | 2026-05-01 | Initial build: full match loop, 3-match run structure, reward screen, win/over overlays, all UI in code. |

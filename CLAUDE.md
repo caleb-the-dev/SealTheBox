@@ -114,8 +114,8 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Critical win (shut the box): auto-ends match, fires dice reward (pick 1 of 3 from [d2,d4,d6,d8,d10,d12]), then rotation ability pick
 - GameState: hp=6, starting pool=3d6+1d4+1d8, ability_hand=[null, null, random_ability]
 - Dev menu (T key or DEV button): "Win Current Match" and "Win Entire Series" shortcuts for playtesting
-- UI: top bar (Round/HP/Match/Box), tab area with remaining-sum counter + threshold label + Continue button, dice hand, abilities, reward/ability-offer/over overlays — all built in code in match.gd
-- Tests: test_run_manager.gd (11 tests) + test_box_definition.gd pass headless
+- UI: top bar (Round/HP/Match/Box), tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round), dice hand (die face label bottom-right after rolling), abilities (charges shown, orange tint on slot 1, grey-out at 0), rotation overlay, reward overlay, over overlay — all built in code in match.gd
+- Tests: test_run_manager.gd (15 tests) + test_box_definition.gd pass headless
 
 ## Git & GitHub
 

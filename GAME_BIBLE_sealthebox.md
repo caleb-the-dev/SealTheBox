@@ -33,7 +33,7 @@ Each **match** is one game of advanced Shut the Box:
 - When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — no reward) or keeps pushing to seal all tabs (critical win — reward fires).
 - The run ends only when HP reaches 0.
 
-Each **run** is an infinite loop of matches cycling through boxes (Classic → Low Evens → High Odds → repeat). Rewards (new die + ability offer) only fire on critical wins.
+Each **run** is an infinite loop of matches cycling through boxes (Classic → Low Evens → High Odds → repeat). After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins grant a new die (pick 1 of 3) before the rotation.
 
 ---
 
@@ -44,7 +44,7 @@ Each **run** is an infinite loop of matches cycling through boxes (Classic → L
 - **Win threshold**: explicit per-box value in boxes.csv (tuned for playtesting). Current values: Classic 20, Low Evens 17, High Odds 17. Target feel: threshold achievable most rounds; shut the box requires skill or luck.
 - **Round limit**: `ceili(tab_sum / 15) + 1`. Current values: all boxes 4 rounds.
 - Exceeding the round limit costs 1 HP per extra round until the match ends.
-- **Shut the box** = all tabs sealed (sum = 0) → critical win, grants a die reward + ability offer.
+- **Shut the box** = all tabs sealed (sum = 0) → critical win, grants a die reward (pick 1 of 3) + mandatory ability rotation pick.
 
 ---
 
@@ -78,9 +78,13 @@ Dice have a **face size** (d4, d6, d8, d10, d12) and a **type** (Diabolic, Cosmi
 
 ## Ability System
 
-Ability cards are played by spending AP. Each card has a type, optional traits, cooldown, and AP cost.
+Ability cards are played by spending AP. Each card has a type, optional traits, cooldown, AP cost, and **charges**.
 
-**Ability traits:**
+**Charges (implemented):** Each ability has a fixed number of uses (1–3). Charges decrement on use and do NOT reset between matches. When an ability reaches 0 charges it stays in its slot greyed out (dead weight) until rotation discards it. This creates "use it or lose it" pressure.
+
+**Hand structure (implemented):** Fixed 3 slots. Slot 1 = oldest (discards next); Slot 3 = newest (rotation picks land here). Run starts with 1 random ability in slot 3; slots 1 and 2 empty.
+
+**Ability traits (design intent, not all implemented):**
 | Trait | Meaning |
 |-------|---------|
 | Repeatable | Can be used more than once per round |
@@ -120,7 +124,7 @@ Powers are persistent run modifiers acquired between matches. They modify core g
 
 ## HP System
 
-- Players start with 5 HP.
+- Players start with 6 HP.
 - Losing a round (exceeding the round limit) costs 1 HP per extra round.
 - HP reaching 0 ends the run.
 - Some powers and events can heal HP or increase max HP.
