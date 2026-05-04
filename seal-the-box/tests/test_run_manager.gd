@@ -24,6 +24,11 @@ func _init() -> void:
 	get_root().add_child(gs)
 	Engine.register_singleton("GameState", gs)
 
+	var pm = load("res://scripts/run/power_manager.gd").new()
+	pm.name = "PowerManager"
+	get_root().add_child(pm)
+	Engine.register_singleton("PowerManager", pm)
+
 	_test_reset_run_sets_hp(gs)
 	_test_reset_run_sets_starting_dice_pool(gs)
 	_test_reset_match_preserves_hp(gs)
@@ -31,9 +36,7 @@ func _init() -> void:
 	_test_initial_hand_layout(gs)
 	_test_run_manager_start_run(gs)
 	_test_run_manager_match_lost()
-	_test_reward_dice_unique()
 	_test_threshold_win_triggers_rotation(gs)
-	_test_critical_win_triggers_reward_then_rotation(gs)
 	_test_rotation_after_match_1(gs)
 	_test_rotation_after_match_3(gs)
 	_test_rotation_discards_slot_0_regardless_of_charges(gs)
@@ -42,6 +45,8 @@ func _init() -> void:
 	_test_owned_powers_persists_across_reset_match(gs)
 	_test_owned_powers_cleared_by_reset_run(gs)
 	_test_power_library_loads_all_powers()
+	_test_critical_win_triggers_power_offer_then_rotation(gs)
+	_test_power_offer_accept_adds_to_owned_powers(gs)
 	print("All RunManager tests passed!")
 	quit()
 
@@ -100,20 +105,6 @@ func _test_run_manager_match_lost() -> void:
 	assert(run_over_log[0] == 1, "run_over on match 1 should report 1, got %d" % run_over_log[0])
 	rm.queue_free()
 
-func _test_reward_dice_unique() -> void:
-	var rm = RunManager.new()
-	get_root().add_child(rm)
-	rm.next_match_ready.connect(func(_box): pass)
-	for i in 20:
-		var picks = rm._pick_reward_dice(3)
-		assert(picks.size() == 3, "should pick 3 dice, got %d" % picks.size())
-		var seen = {}
-		for face in picks:
-			assert(not face in seen, "duplicate face %d in picks %s" % [face, str(picks)])
-			seen[face] = true
-			assert(face in RunManager.REWARD_DIE_FACES, "face %d not in reward pool" % face)
-	rm.queue_free()
-
 # ── new ability-hand tests ────────────────────────────────────────────────────
 
 func _test_initial_hand_layout(gs: Node) -> void:
@@ -126,11 +117,11 @@ func _test_initial_hand_layout(gs: Node) -> void:
 func _test_threshold_win_triggers_rotation(gs: Node) -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
-	var reward_count = [0]
+	var power_offer_count = [0]
 	var rotation_count = [0]
 	var next_match_log: Array = []
 	rm.next_match_ready.connect(func(box): next_match_log.append(box))
-	rm.show_reward.connect(func(_f): reward_count[0] += 1)
+	rm.show_power_offer.connect(func(_p): power_offer_count[0] += 1)
 	rm.show_rotation_offer.connect(func(opts):
 		rotation_count[0] += 1
 		rm.handle_rotation_pick(opts[0])
@@ -140,37 +131,48 @@ func _test_threshold_win_triggers_rotation(gs: Node) -> void:
 	assert(next_match_log.size() == 1, "start_run should emit next_match_ready once")
 
 	rm.handle_match_won(false)
-	assert(reward_count[0] == 0, "threshold win should NOT emit show_reward")
+	assert(power_offer_count[0] == 0, "threshold win should NOT emit show_power_offer")
 	assert(rotation_count[0] == 1, "threshold win should emit show_rotation_offer once")
 	assert(next_match_log.size() == 2, "after rotation pick, next_match_ready should fire")
 	assert(rm.match_number == 2, "match_number should be 2, got %d" % rm.match_number)
 	rm.queue_free()
 
-func _test_critical_win_triggers_reward_then_rotation(gs: Node) -> void:
+func _test_critical_win_triggers_power_offer_then_rotation(gs: Node) -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
-	var reward_faces_log: Array = []
+	var power_offer_log: Array = []
 	var rotation_count = [0]
 	var next_match_log: Array = []
 	rm.next_match_ready.connect(func(box): next_match_log.append(box))
-	rm.show_reward.connect(func(faces): reward_faces_log.append(faces.duplicate()))
+	rm.show_power_offer.connect(func(power): power_offer_log.append(power))
 	rm.show_rotation_offer.connect(func(opts):
 		rotation_count[0] += 1
 		rm.handle_rotation_pick(opts[0])
 	)
 
-	rm.start_run()                    # next_match_log: 1
-	rm.handle_match_won(true)         # show_reward fires; rotation NOT yet
-	assert(reward_faces_log.size() == 1, "critical win should emit show_reward once")
-	assert(rotation_count[0] == 0, "rotation offer should not fire until reward is picked")
-	assert(next_match_log.size() == 1, "next_match_ready should NOT fire before rotation resolved")
+	rm.start_run()
+	rm.handle_match_won(true)
+	assert(power_offer_log.size() == 1, "critical win should emit show_power_offer once, got %d" % power_offer_log.size())
+	assert(rotation_count[0] == 0, "rotation should not fire until power offer is resolved")
+	assert(next_match_log.size() == 1, "next_match_ready should not fire before offer resolved")
 
-	var faces = reward_faces_log[0]
-	assert(faces.size() == 3, "should offer 3 reward dice, got %d" % faces.size())
-	rm.handle_reward_picked(faces[0])
-	assert(rotation_count[0] == 1, "show_rotation_offer should fire after reward pick")
-	assert(next_match_log.size() == 2, "next_match_ready should fire after rotation pick, got %d" % next_match_log.size())
-	assert(rm.match_number == 2, "match_number should be 2, got %d" % rm.match_number)
+	rm.handle_power_offer_skipped()
+	assert(rotation_count[0] == 1, "rotation should fire after power offer skipped")
+	assert(next_match_log.size() == 2, "next_match_ready should fire after rotation pick")
+	rm.queue_free()
+
+func _test_power_offer_accept_adds_to_owned_powers(gs: Node) -> void:
+	gs.reset_run()
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_power_offer.connect(func(power): rm.call("handle_power_offer_accepted", power))
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	rm.start_run()
+	assert(gs.owned_powers.size() == 0, "owned_powers should be empty before critical win")
+	rm.handle_match_won(true)
+	assert(gs.owned_powers.size() == 1, "accept should add 1 power, got %d" % gs.owned_powers.size())
 	rm.queue_free()
 
 func _test_rotation_after_match_1(gs: Node) -> void:
