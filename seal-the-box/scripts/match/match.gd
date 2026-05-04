@@ -520,6 +520,13 @@ func _setup_ui() -> void:
 	dev_win_match_btn.pressed.connect(_on_dev_win_match_pressed)
 	dev_panel.add_child(dev_win_match_btn)
 
+	var dev_shut_box_btn = Button.new()
+	dev_shut_box_btn.text = "Shut the Box (Critical Win)"
+	dev_shut_box_btn.custom_minimum_size = Vector2(0, 56)
+	dev_shut_box_btn.add_theme_font_size_override("font_size", 17)
+	dev_shut_box_btn.pressed.connect(_on_dev_shut_box_pressed)
+	dev_panel.add_child(dev_shut_box_btn)
+
 	var dev_win_series_btn = Button.new()
 	dev_win_series_btn.text = "Win Entire Series"
 	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
@@ -704,6 +711,11 @@ func _on_dev_win_match_pressed() -> void:
 	_dev_overlay.visible = false
 	if not _match_ended:
 		_round_manager.dev_win_match()
+
+func _on_dev_shut_box_pressed() -> void:
+	_dev_overlay.visible = false
+	if not _match_ended:
+		_round_manager.dev_critical_win()
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false

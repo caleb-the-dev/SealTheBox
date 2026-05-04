@@ -163,6 +163,12 @@ func dev_win_match() -> void:
 	_match_over = true
 	match_won.emit(false)
 
+func dev_critical_win() -> void:
+	if _match_over:
+		return
+	_match_over = true
+	match_won.emit(true)
+
 func _set_phase(phase: String) -> void:
 	_current_phase = phase
 	phase_changed.emit(phase)
