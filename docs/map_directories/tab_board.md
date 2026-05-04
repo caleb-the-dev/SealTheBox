@@ -6,7 +6,7 @@
 
 ## Responsibility
 Track which tabs are sealed/unsealed. Validate seal attempts. Check win conditions.
-Does NOT know about dice or AP — it only knows about tab values.
+Does NOT know about dice — it only knows about tab values.
 
 ## Public API
 ```gdscript

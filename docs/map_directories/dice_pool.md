@@ -7,7 +7,6 @@
 ## Responsibility
 Own the pool (deck) of Die objects, draw a hand of 3 each round, roll selected dice, apply modifiers.
 Pool reshuffles (discards returned to draw) when fewer than 3 dice remain.
-Does NOT own AP logic — caller (RoundManager) checks AP before calling roll.
 
 ## Public API
 ```gdscript
