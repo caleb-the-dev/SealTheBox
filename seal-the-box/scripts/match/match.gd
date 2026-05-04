@@ -34,10 +34,9 @@ var _reward_title_label: Label
 var _reward_buttons: Array[Button] = []
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
-var _ability_offer_overlay: Control
-var _offer_ability_name_label: Label
-var _offer_ability_desc_label: Label
-var _offer_swap_buttons: Array[Button] = []
+var _rotation_overlay: Control
+var _rotation_buttons: Array[Button] = []
+var _current_rotation_options: Array = []
 var _dev_overlay: Control
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
@@ -422,71 +421,54 @@ func _setup_ui() -> void:
 	root.add_child(over_overlay)
 	_run_over_overlay = over_overlay
 
-	# ── Ability offer overlay ──────────────────────────────────────────────────
-	var offer_overlay = Control.new()
-	offer_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	offer_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	offer_overlay.visible = false
-	var offer_bg = ColorRect.new()
-	offer_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	offer_bg.color = Color(0.0, 0.0, 0.0, 1.0)
-	offer_overlay.add_child(offer_bg)
+	# ── Rotation overlay ──────────────────────────────────────────────────────
+	var rot_overlay = Control.new()
+	rot_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rot_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	rot_overlay.visible = false
+	var rot_bg = ColorRect.new()
+	rot_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rot_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	rot_overlay.add_child(rot_bg)
 
-	var offer_center = VBoxContainer.new()
-	offer_center.anchor_left = 0.15
-	offer_center.anchor_right = 0.85
-	offer_center.anchor_top = 0.15
-	offer_center.anchor_bottom = 0.9
-	offer_center.add_theme_constant_override("separation", 20)
-	offer_overlay.add_child(offer_center)
+	var rot_center = VBoxContainer.new()
+	rot_center.anchor_left = 0.1
+	rot_center.anchor_right = 0.9
+	rot_center.anchor_top = 0.1
+	rot_center.anchor_bottom = 0.9
+	rot_center.add_theme_constant_override("separation", 24)
+	rot_overlay.add_child(rot_center)
 
-	var offer_title = Label.new()
-	offer_title.text = "New Ability Available"
-	offer_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	offer_title.add_theme_font_size_override("font_size", 28)
-	offer_center.add_child(offer_title)
+	var rot_title = Label.new()
+	rot_title.text = "Pick an Ability"
+	rot_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rot_title.add_theme_font_size_override("font_size", 32)
+	rot_center.add_child(rot_title)
 
-	_offer_ability_name_label = Label.new()
-	_offer_ability_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_offer_ability_name_label.add_theme_font_size_override("font_size", 22)
-	offer_center.add_child(_offer_ability_name_label)
+	var rot_subtitle = Label.new()
+	rot_subtitle.text = "Fills Slot 3 — Slot 1 will be discarded after this pick"
+	rot_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rot_subtitle.add_theme_font_size_override("font_size", 16)
+	rot_center.add_child(rot_subtitle)
 
-	_offer_ability_desc_label = Label.new()
-	_offer_ability_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_offer_ability_desc_label.add_theme_font_size_override("font_size", 16)
-	_offer_ability_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	offer_center.add_child(_offer_ability_desc_label)
+	var rot_btn_row = HBoxContainer.new()
+	rot_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	rot_btn_row.add_theme_constant_override("separation", 24)
+	rot_btn_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rot_center.add_child(rot_btn_row)
 
-	var swap_title = Label.new()
-	swap_title.text = "Swap with one of your current abilities (or skip):"
-	swap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	swap_title.add_theme_font_size_override("font_size", 16)
-	offer_center.add_child(swap_title)
-
-	var swap_btn_row = HBoxContainer.new()
-	swap_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	swap_btn_row.add_theme_constant_override("separation", 16)
-	offer_center.add_child(swap_btn_row)
-
-	_offer_swap_buttons = []
+	_rotation_buttons = []
 	for i in 3:
-		var sbtn = Button.new()
-		sbtn.custom_minimum_size = Vector2(0, 80)
-		sbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sbtn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		sbtn.pressed.connect(_on_offer_swap_pressed.bind(i))
-		swap_btn_row.add_child(sbtn)
-		_offer_swap_buttons.append(sbtn)
+		var rbtn = Button.new()
+		rbtn.custom_minimum_size = Vector2(200, 140)
+		rbtn.add_theme_font_size_override("font_size", 15)
+		rbtn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rbtn.pressed.connect(_on_rotation_pick_pressed.bind(i))
+		rot_btn_row.add_child(rbtn)
+		_rotation_buttons.append(rbtn)
 
-	var skip_btn = Button.new()
-	skip_btn.text = "Skip — Keep My Abilities"
-	skip_btn.custom_minimum_size = Vector2(220, 52)
-	skip_btn.add_theme_font_size_override("font_size", 16)
-	skip_btn.pressed.connect(_on_offer_skip_pressed)
-	offer_center.add_child(skip_btn)
-
-	root.add_child(offer_overlay)
-	_ability_offer_overlay = offer_overlay
+	root.add_child(rot_overlay)
+	_rotation_overlay = rot_overlay
 
 	# ── Dev toggle button (top-right corner) ──────────────────────────────────
 	var dev_toggle = Button.new()
@@ -561,7 +543,7 @@ func _connect_signals() -> void:
 	_run_manager.next_match_ready.connect(_on_next_match_ready)
 	_run_manager.show_reward.connect(_on_show_reward)
 	_run_manager.run_over.connect(_on_run_over)
-	_run_manager.show_ability_offer.connect(_on_show_ability_offer)
+	_run_manager.show_rotation_offer.connect(_on_show_rotation_offer)
 
 # ── signal handlers ──────────────────────────────────────────────────────────
 func _on_phase_changed(phase: String) -> void:
@@ -630,8 +612,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_reward_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
-	if _ability_offer_overlay:
-		_ability_offer_overlay.visible = false
+	if _rotation_overlay:
+		_rotation_overlay.visible = false
 	_action_button.disabled = false
 	_roll_all_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
@@ -656,28 +638,16 @@ func _on_run_over(match_number: int) -> void:
 	_run_over_detail_label.text = "Defeated on Match %d  |  HP: 0" % match_number
 	_run_over_overlay.visible = true
 
-func _on_show_ability_offer(offered: AbilityData) -> void:
-	_offer_ability_name_label.text = offered.flavor_name
-	_offer_ability_desc_label.text = offered.description
-	var hand = GameState.ability_hand
-	for i in _offer_swap_buttons.size():
-		var btn = _offer_swap_buttons[i]
-		if i < hand.size():
-			var a = hand[i]
-			btn.text = "%s\n%s" % [a.flavor_name, a.description]
-			btn.disabled = false
-		else:
-			btn.text = "—"
-			btn.disabled = true
-	_ability_offer_overlay.visible = true
+func _on_show_rotation_offer(options: Array) -> void:
+	_current_rotation_options = options
+	for i in 3:
+		var a = options[i]
+		_rotation_buttons[i].text = "%s\n\n%s\n\n[%d charges]" % [a.flavor_name, a.description, a.max_charges]
+	_rotation_overlay.visible = true
 
-func _on_offer_swap_pressed(index: int) -> void:
-	_ability_offer_overlay.visible = false
-	_run_manager.handle_ability_offer_result(index)
-
-func _on_offer_skip_pressed() -> void:
-	_ability_offer_overlay.visible = false
-	_run_manager.handle_ability_offer_result(-1)
+func _on_rotation_pick_pressed(index: int) -> void:
+	_rotation_overlay.visible = false
+	_run_manager.handle_rotation_pick(_current_rotation_options[index])
 
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
@@ -693,6 +663,7 @@ func _on_dev_win_series_pressed() -> void:
 	while not _match_ended and safety < 10:
 		safety += 1
 		_round_manager.dev_win_match()
+		_run_manager.dev_skip_rotation()
 
 func _on_play_again_pressed() -> void:
 	_run_manager.start_run()
