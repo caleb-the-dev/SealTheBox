@@ -640,7 +640,7 @@ func _on_run_over(match_number: int) -> void:
 
 func _on_show_rotation_offer(options: Array) -> void:
 	_current_rotation_options = options
-	for i in 3:
+	for i in min(3, options.size()):
 		var a = options[i]
 		_rotation_buttons[i].text = "%s\n\n%s\n\n[%d charges]" % [a.flavor_name, a.description, a.max_charges]
 	_rotation_overlay.visible = true
