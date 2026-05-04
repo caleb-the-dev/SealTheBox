@@ -1,4 +1,3 @@
-class_name PowerManager
 extends Node
 
 var GameState: Node:
