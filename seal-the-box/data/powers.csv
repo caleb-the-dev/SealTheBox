@@ -2,5 +2,5 @@ id,name,type,description
 lighter_box,Lighter Box,Passive,All match win thresholds are +3 per copy owned.
 eager,Eager,Match-Start,At each match start one random die is pre-set to its max face — usable for sealing in round 1 without rolling.
 tab_9_bounty,Tab 9 Bounty,On-Seal,When tab 9 is sealed gain +1 HP per copy owned.
-bonus_seal,Bonus Seal,On-Seal,When you seal tab N also seal tab floor(N/2) if it is open and N >= 2. Bonus seals do not cascade.
+bonus_seal,Bonus Seal,On-Seal,Sealing a tab also seals half its value (rounded down) if still open. E.g. sealing 8 seals 4; sealing 5 seals 2. No chain reactions.
 box_shutter,Box Shutter,Critical-Win,After a critical win the next match's win threshold is +5 per copy owned.
