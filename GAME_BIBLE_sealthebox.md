@@ -24,15 +24,16 @@ Roll your dice, play your cards, and seal the box — round by round, match by m
 
 ## Core Gameplay Loop
 
-**Roll → Spend AP → Seal Tabs → Win Match → Collect Rewards → Next Match**
+**Roll → Spend AP → Seal Tabs → Win Match → (Critical: Collect Rewards) → Next Match**
 
 Each **match** is one game of advanced Shut the Box:
 - Tabs (numbered tiles) sit in the box. The goal is to reduce the sum of remaining tabs below the win threshold.
 - Each round the player draws a hand of 3 dice from their pool, spends AP to roll them, then assigns dice combinations to seal matching tabs.
 - Ability cards (paid with AP) modify dice values, add rerolls, or grant special effects.
-- The match ends when the win threshold is reached (normal win) or all tabs are sealed (critical win / "shut the box").
+- When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — no reward) or keeps pushing to seal all tabs (critical win — reward fires).
+- The run ends only when HP reaches 0.
 
-Each **run** is a series of matches with rewards between them — new dice, abilities, relics — building toward increasingly difficult boxes.
+Each **run** is an infinite loop of matches cycling through boxes (Classic → Low Evens → High Odds → repeat). Rewards (new die + ability offer) only fire on critical wins.
 
 ---
 
@@ -40,10 +41,10 @@ Each **run** is a series of matches with rewards between them — new dice, abil
 
 - A **tab range** is the set of numbers present in the box. Default: [1–9].
 - Tab ranges are flexible and can be non-flush (e.g., [1,2,4,7,9]).
-- **Win threshold** (flush ranges): `highest_tab × 1.5` (floored). Example: tabs 1–9 → threshold 13.
-- **Round limit** (flush ranges): `highest_tab × 0.5` (floored). Example: tabs 1–9 → 4 rounds.
-- Exceeding the round limit costs 1 HP per extra round until the match is won.
-- **Shut the box** = all tabs sealed (sum = 0) → critical win, grants a relic.
+- **Win threshold**: explicit per-box value in boxes.csv (tuned for playtesting). Current values: Classic 20, Low Evens 17, High Odds 17. Target feel: threshold achievable most rounds; shut the box requires skill or luck.
+- **Round limit**: `ceili(tab_sum / 15) + 1`. Current values: all boxes 4 rounds.
+- Exceeding the round limit costs 1 HP per extra round until the match ends.
+- **Shut the box** = all tabs sealed (sum = 0) → critical win, grants a die reward + ability offer.
 
 ---
 

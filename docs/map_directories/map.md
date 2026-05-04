@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 0 |
+| Sessions since groom | 1 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -81,6 +81,7 @@ Same pattern for BoxLibrary and GameState.
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-04 | Replaced 3-match run with infinite match loop (boxes cycle: Classic → Low Evens → High Odds → repeat). Threshold wins no longer auto-end the match — a "Continue →" button appears and animates once when threshold is first breached; player decides when to advance. Only critical wins (shut the box) trigger the dice reward + ability offer flow. Removed run-won state and win overlay. Match label simplified to "Match: N". win_threshold moved from computed formula to explicit CSV column (Classic 20, Low Evens 17, High Odds 17). round_limit formula loosened by +1 (all boxes now 4 rounds before overtime). Reward dice pool restricted to standard faces [2,4,6,8,10,12]. |
 | 2026-05-02 | Built series-based match structure: BoxDefinition Resource, BoxLibrary autoload, data/boxes.csv with 3 boxes. RunManager redesigned: box sequencing, reward only after final match, handle_reward_picked replaces advance_to_next_match. RoundManager.start_match() accepts BoxDefinition. match.gd: dynamic tab buttons, box label, remaining-sum counter, win threshold label, BoxLibrary singleton registration. Fixed synchronous-signal bug causing match 2 to start on round 2. Fixed win threshold display direction (remaining ≤ N, not sealed ≥ N). Updated test_run_manager.gd; added test_box_definition.gd. |
 | 2026-05-01 | Initial build: full match loop, 3-match run structure, reward screen, win/over overlays, all UI in code. |
 

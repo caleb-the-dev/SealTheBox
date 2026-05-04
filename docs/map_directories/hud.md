@@ -14,7 +14,7 @@ Display round counter, HP, match progress, active box name, remaining-sum counte
 |-------|---------|-------|
 | Round label | "Round: X / Y" | `_round_label` |
 | HP label | "❤  X" | `_hp_label` |
-| Match label | "Match: X / 3" | `_match_label` |
+| Match label | "Match: X" (no denominator — infinite loop) | `_match_label` |
 | Box label | "Box: Classic" | `_box_label` |
 
 ### Tab Area
@@ -23,6 +23,7 @@ Display round counter, HP, match progress, active box name, remaining-sum counte
 | Remaining sum | "X left" (remaining tab sum, counts down) | `_sealed_total_label` |
 | Tab buttons | Dynamic — rebuilt per match from GameState.tabs | `_tab_row` / `_tab_buttons` |
 | Win threshold | "≤N to win" | `_threshold_label` |
+| Continue button | "Continue →" — hidden until threshold first breached; animates once; player clicks to advance with no reward | `_continue_button` |
 
 ### Middle
 - `_status_label` — narrative text (phase instructions, seal feedback, rolled total)
@@ -50,5 +51,6 @@ Display round counter, HP, match progress, active box name, remaining-sum counte
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Match label changed from "Match: X / 3" to "Match: X". Added _continue_button below threshold label; animates once on threshold breach. Threshold label and continue button now live in a shared VBoxContainer (thresh_col). |
 | 2026-05-02 | Added remaining-sum label and threshold label flanking the tab row. Moved threshold out of top bar. Tab buttons are now dynamically rebuilt per match. |
 | 2026-05-01 | Initial implementation. All HUD built in match.gd._setup_ui(). |

@@ -18,11 +18,12 @@ func get_ordered() -> Array                 # CSV row order — used by RunManag
 
 ## CSV Format
 ```
-id,name,tabs
-classic,Classic,1;2;3;4;5;6;7;8;9
-low_evens,Low Evens,2;3;4;5;6;7;8
-high_odds,High Odds,3;5;7;9;11
+id,name,tabs,win_threshold
+classic,Classic,1;2;3;4;5;6;7;8;9,20
+low_evens,Low Evens,2;3;4;5;6;7;8,17
+high_odds,High Odds,3;5;7;9;11,17
 ```
+All four columns are required (`row.size() < 4` rows are skipped). `win_threshold` is parsed as int and stored directly on BoxDefinition.
 
 ## Dependencies
 - `BoxDefinition` — instantiated per CSV row
@@ -35,4 +36,5 @@ high_odds,High Odds,3;5;7;9;11
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Added `win_threshold` column (index 3) parsing. Row size check updated from `< 3` to `< 4`. |
 | 2026-05-02 | Created. |
