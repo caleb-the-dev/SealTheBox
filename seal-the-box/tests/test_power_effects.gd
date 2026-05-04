@@ -39,7 +39,7 @@ func _init() -> void:
 	_test_tab9_bounty_no_hp_without_9(gs, pm)
 	_test_tab9_bounty_two_copies_grants_two_hp(gs, pm)
 	_test_bonus_seal_seals_half_tab(gs, pm)
-	_test_bonus_seal_no_cascade(gs, pm)
+	_test_bonus_seal_multi_primary(gs, pm)
 	_test_bonus_seal_skips_already_sealed(gs, pm)
 	_test_bonus_seal_skips_tab_1(gs, pm)
 	_test_box_shutter_sets_pending_bonus(gs, pm)
@@ -146,19 +146,18 @@ func _test_bonus_seal_seals_half_tab(gs: Node, pm: Node) -> void:
 	assert(bonus.size() == 1,
 		"Bonus Seal: exactly 1 bonus expected, got %d" % bonus.size())
 
-func _test_bonus_seal_no_cascade(gs: Node, pm: Node) -> void:
+func _test_bonus_seal_multi_primary(gs: Node, pm: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
 	gs.owned_powers = [power_lib.get_power("bonus_seal")]
 	var tb = TabBoard.new()
 	tb.reset([1, 2, 3, 4, 5, 6, 7, 8, 9])
-	tb.seal_tabs([8])
-	var primary_bonus = pm.get_bonus_seals(tb, [8])
-	assert(4 in primary_bonus, "Bonus Seal: tab 4 should be bonus-sealed")
-	tb.seal_tabs(primary_bonus)
-	var cascade_bonus = pm.get_bonus_seals(tb, primary_bonus)
-	assert(cascade_bonus.is_empty(),
-		"Bonus Seal: no cascade expected after bonus seals, got %s" % str(cascade_bonus))
+	tb.seal_tabs([3, 5])
+	var bonus = pm.get_bonus_seals(tb, [3, 5])
+	# floor(3/2)=1, floor(5/2)=2 — both open in remaining
+	assert(1 in bonus, "Bonus Seal: sealing 3 should bonus-seal tab 1")
+	assert(2 in bonus, "Bonus Seal: sealing 5 should bonus-seal tab 2")
+	assert(bonus.size() == 2, "Bonus Seal: exactly 2 bonuses expected for sealing {3,5}, got %d" % bonus.size())
 
 func _test_bonus_seal_skips_already_sealed(gs: Node, pm: Node) -> void:
 	gs.reset_run()
