@@ -13,4 +13,4 @@ func tab_sum() -> int:
     return sum
 
 var round_limit: int:
-    get: return ceili(tab_sum() / 15.0)
+    get: return ceili(tab_sum() / 15.0) + 1
