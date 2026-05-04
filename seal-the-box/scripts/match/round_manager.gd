@@ -80,6 +80,8 @@ func attempt_seal(dice: Array, tabs: Array) -> bool:
 func use_ability(ability: AbilityData, target_die) -> bool:
 	if _match_over:
 		return false
+	if ability.charges <= 0:
+		return false
 	if _current_phase == "roll":
 		status_updated.emit("Use abilities after rolling dice.")
 		return false
@@ -104,7 +106,7 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 		_:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
 			return false
-	GameState.ability_hand.erase(ability)
+	ability.charges -= 1
 	var total := 0
 	for die in GameState.dice_hand:
 		if die.rolled:
