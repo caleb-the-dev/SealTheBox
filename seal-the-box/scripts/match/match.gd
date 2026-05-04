@@ -31,8 +31,6 @@ var _tab_row: HBoxContainer
 var _reward_overlay: Control
 var _reward_title_label: Label
 var _reward_buttons: Array[Button] = []
-var _run_win_overlay: Control
-var _run_win_detail_label: Label
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
 var _ability_offer_overlay: Control
@@ -375,45 +373,6 @@ func _setup_ui() -> void:
 	root.add_child(reward_overlay)
 	_reward_overlay = reward_overlay
 
-	# ── Run-win overlay ────────────────────────────────────────────────────────
-	var win_overlay = Control.new()
-	win_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	win_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	win_overlay.visible = false
-	var win_bg = ColorRect.new()
-	win_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	win_bg.color = Color(0.0, 0.0, 0.0, 1.0)
-	win_overlay.add_child(win_bg)
-
-	var win_center = VBoxContainer.new()
-	win_center.anchor_left = 0.2
-	win_center.anchor_right = 0.8
-	win_center.anchor_top = 0.3
-	win_center.anchor_bottom = 0.75
-	win_center.add_theme_constant_override("separation", 20)
-	win_overlay.add_child(win_center)
-
-	var win_title = Label.new()
-	win_title.text = "Run Complete!\nYou Sealed the Box!"
-	win_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	win_title.add_theme_font_size_override("font_size", 30)
-	win_center.add_child(win_title)
-
-	_run_win_detail_label = Label.new()
-	_run_win_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_run_win_detail_label.add_theme_font_size_override("font_size", 20)
-	win_center.add_child(_run_win_detail_label)
-
-	var win_play_btn = Button.new()
-	win_play_btn.text = "Play Again"
-	win_play_btn.custom_minimum_size = Vector2(160, 52)
-	win_play_btn.add_theme_font_size_override("font_size", 18)
-	win_play_btn.pressed.connect(_on_play_again_pressed)
-	win_center.add_child(win_play_btn)
-
-	root.add_child(win_overlay)
-	_run_win_overlay = win_overlay
-
 	# ── Run-over overlay ───────────────────────────────────────────────────────
 	var over_overlay = Control.new()
 	over_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -590,7 +549,6 @@ func _connect_signals() -> void:
 	_round_manager.status_updated.connect(_on_status_updated)
 	_run_manager.next_match_ready.connect(_on_next_match_ready)
 	_run_manager.show_reward.connect(_on_show_reward)
-	_run_manager.run_won.connect(_on_run_won)
 	_run_manager.run_over.connect(_on_run_over)
 	_run_manager.show_ability_offer.connect(_on_show_ability_offer)
 
@@ -640,8 +598,6 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_targeting_die = false
 	if _reward_overlay:
 		_reward_overlay.visible = false
-	if _run_win_overlay:
-		_run_win_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
 	if _ability_offer_overlay:
@@ -657,7 +613,7 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 
 func _on_show_reward(dice_faces: Array) -> void:
 	_current_reward_faces = dice_faces
-	_reward_title_label.text = "Match %d Complete — Pick a Reward Die" % _run_manager.match_number
+	_reward_title_label.text = "Shut the Box! — Pick a Reward Die"
 	for i in 3:
 		_reward_buttons[i].text = "d%d" % dice_faces[i]
 	_reward_overlay.visible = true
@@ -666,12 +622,8 @@ func _on_reward_die_picked(index: int) -> void:
 	_reward_overlay.visible = false
 	_run_manager.handle_reward_picked(_current_reward_faces[index])
 
-func _on_run_won(match_number: int, hp: int) -> void:
-	_run_win_detail_label.text = "Match: %d / %d  |  Final HP: %d" % [match_number, RunManager.RUN_LENGTH, hp]
-	_run_win_overlay.visible = true
-
 func _on_run_over(match_number: int) -> void:
-	_run_over_detail_label.text = "Defeated on Match: %d / %d  |  HP: 0" % [match_number, RunManager.RUN_LENGTH]
+	_run_over_detail_label.text = "Defeated on Match %d  |  HP: 0" % match_number
 	_run_over_overlay.visible = true
 
 func _on_show_ability_offer(offered: AbilityData) -> void:
@@ -850,7 +802,7 @@ func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
 	_ap_label.text = "AP: %d" % GameState.ap
 	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
-	_match_label.text = "Match: %d / %d" % [_run_manager.match_number, RunManager.RUN_LENGTH]
+	_match_label.text = "Match: %d" % _run_manager.match_number
 	if GameState.current_box:
 		_box_label.text = "Box: %s" % GameState.current_box.name
 		var remaining_sum := 0
