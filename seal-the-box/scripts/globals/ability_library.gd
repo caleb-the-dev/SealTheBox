@@ -30,7 +30,7 @@ func _load_csv() -> void:
 		data.cooldown = row[4].to_int()
 		data.ap_cost = row[5].to_int()
 		data.description = row[6].strip_edges()
-		data.charges = row[7].to_int() if row.size() > 7 and row[7].strip_edges().is_valid_int() else 1
+		data.charges = max(1, row[7].to_int()) if row.size() > 7 and row[7].strip_edges().is_valid_int() else 1
 		data.max_charges = data.charges
 		_abilities[data.id] = data
 	file.close()
