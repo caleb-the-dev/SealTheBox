@@ -17,6 +17,7 @@ var _round_label: Label
 var _status_label: Label
 var _tab_buttons: Array[Button] = []
 var _dice_buttons: Array[Button] = []
+var _dice_face_labels: Array[Label] = []
 var _ability_buttons: Array[Button] = []
 var _action_button: Button
 var _roll_all_button: Button
@@ -283,6 +284,23 @@ func _setup_ui() -> void:
 		btn.pressed.connect(_on_die_pressed.bind(i))
 		dice_row.add_child(btn)
 		_dice_buttons.append(btn)
+
+		var face_lbl = Label.new()
+		face_lbl.add_theme_font_size_override("font_size", 11)
+		face_lbl.anchor_left = 1.0
+		face_lbl.anchor_right = 1.0
+		face_lbl.anchor_top = 1.0
+		face_lbl.anchor_bottom = 1.0
+		face_lbl.offset_left = -34
+		face_lbl.offset_right = -4
+		face_lbl.offset_top = -18
+		face_lbl.offset_bottom = -3
+		face_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		face_lbl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		face_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		face_lbl.visible = false
+		btn.add_child(face_lbl)
+		_dice_face_labels.append(face_lbl)
 
 	# Abilities column — narrower, right of dice
 	var ability_col = VBoxContainer.new()
@@ -857,13 +875,22 @@ func _refresh_dice_display() -> void:
 	var hand = GameState.dice_hand
 	for i in 3:
 		var btn = _dice_buttons[i]
+		var face_lbl = _dice_face_labels[i] if i < _dice_face_labels.size() else null
 		if i < hand.size():
 			var die = hand[i]
 			btn.text = str(die.value) if die.rolled else "d%d" % die.faces
 			btn.disabled = false
+			if face_lbl:
+				if die.rolled:
+					face_lbl.text = "d%d" % die.faces
+					face_lbl.visible = true
+				else:
+					face_lbl.visible = false
 		else:
 			btn.text = "—"
 			btn.disabled = true
+			if face_lbl:
+				face_lbl.visible = false
 
 func _refresh_dice_highlight() -> void:
 	var hand = GameState.dice_hand
