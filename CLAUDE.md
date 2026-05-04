@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working in this
 
 ## Project Overview
 
-**Seal the Box** is a roguelike puzzle game built in Godot 4. Core loop: roll dice → spend AP to play ability cards → put down numbered tabs (1–9, Shut the Box style). Win a match by sealing all tabs; survive a run of matches with powers, events, and rewards between fights.
+**Seal the Box** is a roguelike puzzle game built in Godot 4. Core loop: roll dice → play ability cards → put down numbered tabs (1–9, Shut the Box style). Win a match by sealing all tabs; survive a run of matches with powers, events, and rewards between fights.
 
 Data lives in CSVs under `seal-the-box/data/`. Game logic lives in GDScript. The Godot project root is `seal-the-box/`.
 
@@ -55,7 +55,7 @@ seal-the-box/
 **Data flow:** CSVs are parsed once at startup by Library autoloads (e.g., `AbilityLibrary`, `PowerLibrary`) into typed Resource objects. Game logic reads from these libraries; it never re-parses CSVs at runtime.
 
 **Globals / Autoloads:**
-- `GameState` — current run state (HP, AP, round, tabs, dice pool, ability hand, current box)
+- `GameState` — current run state (HP, round, tabs, dice pool, ability hand, current box)
 - `AbilityLibrary` — all ability definitions indexed by id
 - `BoxLibrary` — all box definitions indexed by id; get_ordered() returns CSV row order
 
@@ -69,7 +69,6 @@ seal-the-box/
 |------|---------|
 | Tab | Numbered tile (1–9) to be sealed |
 | Dice Pool | Quantity of dice available each round |
-| AP | Action Points — currency for ability cards |
 | Match | One Shut-the-Box game (core loop) |
 | Run | Series of matches + events |
 | Power | Persistent run modifier |
@@ -84,7 +83,7 @@ seal-the-box/
 - **Pool size: 5–7 dice.** Default starting pool is 5 (3d6 + 1d4 + 1d8). Hard cap at 7.
 - **Per-type max** (TBD as dice types are designed; lower than the 7 global cap for some types). Example placeholder: Diabolic max = 6.
 - **No acquisition, only swapping.** Players never accumulate new dice. Reward flows offer a die to swap *into* the pool, replacing one currently in it. Pool size never grows organically.
-- **Why 5–7:** AP = 3 caps useful rolls per round at 3, so pool > 7 produces dead weight without adding decisions. Mixed distributions (small + medium + large faces) outperform uniform pools — varied probability mass across tab values 1–9 is mathematically better than face concentration.
+- **Why 5–7:** Pool > 7 produces dead weight without adding decisions. Mixed distributions (small + medium + large faces) outperform uniform pools — varied probability mass across tab values 1–9 is mathematically better than face concentration.
 
 ## Prototyping UI Rules
 
