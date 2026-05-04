@@ -79,6 +79,13 @@ seal-the-box/
 **Ability traits:** Repeatable, Preroll, Non-Final, Cooldown X, Expended, Lost
 **Types:** Diabolic (high rolls, max HP), Cosmic (low rolls, healing), Ethereal (rerolls, flexible manipulation), Mundane (baseline)
 
+## Game Bible — Dice Pool Rules
+
+- **Pool size: 5–7 dice.** Default starting pool is 5 (3d6 + 1d4 + 1d8). Hard cap at 7.
+- **Per-type max** (TBD as dice types are designed; lower than the 7 global cap for some types). Example placeholder: Diabolic max = 6.
+- **No acquisition, only swapping.** Players never accumulate new dice. Reward flows offer a die to swap *into* the pool, replacing one currently in it. Pool size never grows organically.
+- **Why 5–7:** AP = 3 caps useful rolls per round at 3, so pool > 7 produces dead weight without adding decisions. Mixed distributions (small + medium + large faces) outperform uniform pools — varied probability mass across tab values 1–9 is mathematically better than face concentration.
+
 ## Prototyping UI Rules
 
 - **All overlay backgrounds must be fully opaque** (`Color(0, 0, 0, 1.0)`). No semi-transparency on any overlay during prototyping — it makes text hard to read against the 3D scene behind it.
