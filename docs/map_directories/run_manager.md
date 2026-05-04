@@ -1,22 +1,16 @@
 # Run Manager
-*Orchestrates the infinite match loop. Owns box cycling, end-of-match rewards (critical wins), and mandatory ability rotation.*
+*Orchestrates the infinite match loop. Owns box cycling, end-of-match power offers (critical wins), and mandatory ability rotation.*
 
 ## Location
 `scripts/run/run_manager.gd` (class_name RunManager, instantiated by match.gd)
 
 ## Responsibility
-Drive an infinite loop of matches: cycle through boxes in order, emit signals to advance the UI. After every match win (threshold or critical), run a mandatory ability rotation (player picks 1 of 3). Critical wins additionally fire a dice reward before rotation. The run ends only when HP reaches 0.
-
-## Constants
-```gdscript
-const REWARD_DIE_FACES = [2, 4, 6, 8, 10, 12]   # standard dice only
-# Note: ABILITY_POOL_IDS lives on GameState, not here. Access via gs.ABILITY_POOL_IDS.
-```
+Drive an infinite loop of matches: cycle through boxes in order, emit signals to advance the UI. After every match win (threshold or critical), run a mandatory ability rotation (player picks 1 of 3). Critical wins additionally fire a power offer before rotation. The run ends only when HP reaches 0.
 
 ## Signals
 ```gdscript
 signal next_match_ready(box: BoxDefinition)     # emitted at run start and after rotation is resolved
-signal show_reward(dice_faces: Array)           # emitted only on critical wins (shut the box)
+signal show_power_offer(power: PowerData)       # emitted only on critical wins; player can Accept or Skip
 signal show_rotation_offer(options: Array)      # emitted after every match win (3 AbilityData options)
 signal run_over(match_number: int)              # emitted when player loses (HP = 0)
 ```
@@ -31,13 +25,16 @@ func start_run() -> void
 func handle_match_won(critical: bool) -> void
     # Always increments match_number first.
     # critical=false (threshold win): calls _do_rotation_offer() directly.
-    # critical=true  (shut the box):  emits show_reward(3 unique random dice faces).
+    # critical=true  (shut the box):  calls PowerManager.apply_box_shutter(), then _do_power_offer().
 
 func handle_match_lost() -> void
     # Emits run_over(match_number).
 
-func handle_reward_picked(chosen_face: int) -> void
-    # Appends Die(chosen_face) to GameState.dice_pool. Then calls _do_rotation_offer().
+func handle_power_offer_accepted(power: PowerData) -> void
+    # Appends power to GameState.owned_powers. Then calls _do_rotation_offer().
+
+func handle_power_offer_skipped() -> void
+    # No state change. Calls _do_rotation_offer() directly.
 
 func handle_rotation_pick(chosen: AbilityData) -> void
     # Shifts ability_hand slots: [0]=old[1], [1]=old[2], [2]=chosen.
@@ -54,17 +51,27 @@ Boxes are loaded from `BoxLibrary.get_ordered()` in `start_run()`. After each ma
 
 ## Match Win Flow
 ```
-Every match win (threshold or critical):
-  handle_match_won(critical)
+Threshold win (critical=false):
+  handle_match_won(false)
     → match_number += 1
-    → if critical: show_reward.emit(dice_faces)
-         → handle_reward_picked(face) → dice_pool gets new die
     → _do_rotation_offer()
          → show_rotation_offer.emit([optionA, optionB, optionC])
     → handle_rotation_pick(chosen)
-         → hand shifts: [0]=old[1], [1]=old[2], [2]=chosen
-         → gs.reset_run_end()
-         → _start_next_match() → next_match_ready.emit(next_box)
+         → hand shifts, gs.reset_run_end(), _start_next_match()
+
+Critical win (critical=true):
+  handle_match_won(true)
+    → match_number += 1
+    → PowerManager.apply_box_shutter()     (adds to pending_threshold_bonus)
+    → _do_power_offer()
+         → if unowned power exists: show_power_offer.emit(power)
+              → handle_power_offer_accepted(power) → gs.owned_powers.append(power)
+              OR handle_power_offer_skipped() → no change
+         → if all powers owned: skip directly to _do_rotation_offer()
+    → _do_rotation_offer()
+         → show_rotation_offer.emit([optionA, optionB, optionC])
+    → handle_rotation_pick(chosen)
+         → hand shifts, gs.reset_run_end(), _start_next_match()
 ```
 
 ## Internal State
@@ -75,19 +82,24 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 
 ## Dependencies
 - `BoxLibrary` — loads ordered box list at start_run()
-- `GameState` — calls reset_run(), reset_run_end(); appends to dice_pool; shifts ability_hand slots
+- `GameState` — calls reset_run(), reset_run_end(); appends to owned_powers; shifts ability_hand slots
 - `AbilityLibrary` — used by _do_rotation_offer() to duplicate ability options
+- `PowerLibrary` — used by _do_power_offer() to get random unowned power
+- `PowerManager` — called in handle_match_won(true) to apply Box Shutter effect
 
 ## Gotchas
 - **`match_number` is incremented inside `handle_match_won()` BEFORE any signal fires.** By the time any listener sees match_number, it already reflects the upcoming match number.
 - **Rotation is mandatory.** There is no skip. `handle_rotation_pick` must be called before `next_match_ready` fires.
+- **Power offer fires only on critical wins.** Threshold wins go straight to rotation. If all 5 powers are already owned, the power offer is skipped entirely even on critical wins.
 - **`_do_rotation_offer` picks 3 UNIQUE abilities** (without replacement from ABILITY_POOL_IDS). Duplicates within the offer are impossible. Duplicates with currently-held abilities are allowed and intentional.
 - **Signals emit synchronously in Godot 4.** By the time `handle_match_won()` returns for a threshold win with auto-rotation connected, the next match may already be mid-start.
-- **`dev_skip_rotation()` only works for threshold wins** via the dev loop — it auto-picks immediately after `dev_win_match()` fires. It does not handle the critical-win reward step (but `dev_win_match` always emits `false`, so critical wins are never triggered from the dev button).
+- **`dev_skip_rotation()` only works for threshold wins** via the dev loop — it auto-picks immediately after `dev_win_match()` fires. Critical wins (dev_critical_win) require manual interaction with the power offer and rotation overlays.
+- **PowerManager and PowerLibrary calls are guarded** with `Engine.has_singleton()` so tests that don't register these singletons still pass.
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Replaced dice reward with power offer. Removed: show_reward signal, REWARD_DIE_FACES const, handle_reward_picked(), _pick_reward_dice(). Added: show_power_offer(power: PowerData) signal, handle_power_offer_accepted(), handle_power_offer_skipped(), _do_power_offer(). Critical wins now call PowerManager.apply_box_shutter() then _do_power_offer(). |
 | 2026-05-04 | Complete redesign of post-match flow. Removed: show_ability_offer signal, handle_ability_offer_result(), _pick_ability_offer(), _current_offered_ability, local ABILITY_POOL_IDS const. Added: show_rotation_offer signal, handle_rotation_pick(), _do_rotation_offer() (unique pick without replacement), dev_skip_rotation(), _pending_rotation_options. Both threshold and critical wins now trigger rotation. |
 | 2026-05-04 | Complete redesign: removed RUN_LENGTH / run_won; threshold wins now advance directly without reward; critical wins trigger reward+ability offer then advance; boxes cycle infinitely; REWARD_DIE_FACES trimmed to standard dice only [2,4,6,8,10,12]. |
 | 2026-05-02 | Created. Replaced mid-run reward flow with box-sequenced series. |

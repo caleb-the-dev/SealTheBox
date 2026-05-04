@@ -12,7 +12,7 @@ This is the game's main scene (`run/main_scene` in project.godot). It starts aut
 match.tscn  (Node3D, script: match.gd)
   Camera3D
   DirectionalLight3D
-  MeshInstance3D          # flat table plane — placeholder for 3D environment
+  MeshInstance3D               # flat table plane — placeholder for 3D environment
   CanvasLayer
     Control (root UI)
       top_bar (HBoxContainer)    — Round / HP / Match / Box labels
@@ -26,22 +26,21 @@ match.tscn  (Node3D, script: match.gd)
             _continue_button     — "Continue →", hidden until threshold reached; disabled during seal phase
       _status_label              — narrative status / rolled total
       bottom (HBoxContainer)
-        draw_panel               — draw pile circle
-        content_panel            — dice hand + abilities oval
-          dice_row               — 3 die buttons (each has a small face label child, e.g. "d6")
-          ability_col            — 3 ability slots (TooltipButton)
-          btn_row                — Roll All + Roll Selected / Commit & End Round
-        discard_panel            — discard pile circle
-      _reward_overlay            — hidden until critical win (shut the box)
+        content_panel            — dice hand + abilities
+          dice_panel             — 3 die buttons + draw/discard counts + Roll/Commit button
+          ability_panel          — 3 ability slots (TooltipButton)
+      _power_offer_overlay       — hidden until critical win; shows power name/desc + Accept/Skip
       _rotation_overlay          — hidden until any match win; shows 3 ability pick buttons
       _run_over_overlay          — hidden until run over (HP = 0)
       dev_toggle (Button)        — "DEV" button, top-right corner
-      _dev_overlay               — dev menu (Win Current Match / Win Entire Series)
+      _dev_overlay               — dev menu (see Dev Menu section)
+      _dev_power_overlay         — Give Power submenu; populated dynamically on open
+      _powers_panel              — always-visible right-side panel listing owned powers
 ```
 
 ## Responsibilities
 - Instantiates and owns RoundManager and RunManager
-- Registers all three singletons (AbilityLibrary, GameState, BoxLibrary) via Engine.register_singleton()
+- Registers all 5 singletons (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager)
 - Builds all UI in code (_setup_ui()) — no UI child nodes in the .tscn
 - Wires signals from both managers in _connect_signals()
 - Rebuilds tab buttons dynamically per match (_rebuild_tab_buttons()) since tab values vary by box
@@ -49,52 +48,82 @@ match.tscn  (Node3D, script: match.gd)
 
 ## Key Signal Wiring
 ```
-RoundManager.phase_changed      → _on_phase_changed       (switches button labels, enables/disables Continue)
-RoundManager.round_ended        → _on_round_ended          (clears selections)
-RoundManager.match_won          → _on_match_won            (disables input, calls handle_match_won)
-RoundManager.match_lost         → _on_match_lost           (disables input, calls handle_match_lost)
-RoundManager.tabs_sealed        → _on_tabs_sealed          (clears selections, refreshes UI)
-RoundManager.status_updated     → _on_status_updated       (sets status label text)
-RoundManager.threshold_reached  → _on_threshold_reached    (shows + animates _continue_button)
-RunManager.next_match_ready     → _on_next_match_ready     (resets UI, calls start_match(box), rebuilds tabs)
-RunManager.show_reward          → _on_show_reward          (shows reward overlay)
-RunManager.show_rotation_offer  → _on_show_rotation_offer  (shows rotation overlay with 3 picks)
-RunManager.run_over             → _on_run_over             (shows over overlay)
+RoundManager.phase_changed      → _on_phase_changed         (switches button labels, enables/disables Continue)
+RoundManager.round_ended        → _on_round_ended            (clears selections)
+RoundManager.match_won          → _on_match_won              (disables input, calls handle_match_won)
+RoundManager.match_lost         → _on_match_lost             (disables input, calls handle_match_lost)
+RoundManager.tabs_sealed        → _on_tabs_sealed            (clears selections, refreshes UI)
+RoundManager.status_updated     → _on_status_updated         (sets status label text)
+RoundManager.threshold_reached  → _on_threshold_reached      (shows + animates _continue_button)
+RunManager.next_match_ready     → _on_next_match_ready       (resets UI, start_match, rebuilds tabs, refreshes powers panel)
+RunManager.show_power_offer     → _on_show_power_offer       (shows power offer overlay)
+RunManager.show_rotation_offer  → _on_show_rotation_offer    (shows rotation overlay with 3 picks)
+RunManager.run_over             → _on_run_over               (shows over overlay)
 ```
 
-## Tab Buttons
-Tab buttons are dynamic. `_rebuild_tab_buttons()` clears `_tab_row` children and creates one Button per value in `GameState.tabs`. Called after `start_match(box)` sets the new tab set. `_refresh_tab_display()` reads each button's text value to determine sealed/active state — no hardcoded 1–9 range.
-
-## Singleton Registration Pattern
-```gdscript
-if not Engine.has_singleton("AbilityLibrary"):
-    Engine.register_singleton("AbilityLibrary", AbilityLibrary)
-```
-Done in `_ready()` for all three autoloads. Necessary because `Engine.get_singleton()` (used by all game scripts) requires explicit registration even when the autoload is declared in project.godot.
-
-## Continue Button Flow
-`_continue_button` is hidden at match start. When `threshold_reached` fires:
-1. Button becomes visible
-2. A tween runs once: scale 1.0 → 1.3 → 1.0 + modulate white → yellow → white (0.4s total)
-3. **Button is disabled during "act" phase** (dice have been rolled). It re-enables when the next "roll" phase begins. Player cannot Continue mid-round.
-4. Shut-the-box still ends the match automatically (with reward); Continue button is hidden on either exit
-
-`_on_phase_changed` toggles `_continue_button.disabled` — false on "roll", true on "act".
+## Power Offer Overlay Flow
+After every **critical win** (shut the box):
+1. `_on_show_power_offer(power: PowerData)` fires
+2. Power offer overlay appears (opaque black `Color(0,0,0,1.0)`)
+3. Shows: header "Shut the Box! — Power Earned", power name (large), description, Accept / Skip buttons
+4. **Accept** → `_run_manager.handle_power_offer_accepted(power)` → power added to owned_powers → `_refresh_powers_panel()` → rotation overlay follows
+5. **Skip** → `_run_manager.handle_power_offer_skipped()` → rotation overlay follows
+6. If all 5 powers already owned: overlay is skipped entirely, rotation fires immediately
 
 ## Rotation Overlay Flow
-After every match win (threshold or critical):
+After every match win (threshold or critical, after power offer resolves):
 1. `_on_show_rotation_offer(options: Array)` fires — 3 AbilityData options
 2. Rotation overlay appears (opaque black, `Color(0,0,0,1.0)`)
 3. Three buttons show: `"FlavorName\n\nDescription\n\n[N charges]"`
 4. Player picks one → `_on_rotation_pick_pressed(index)` → `_run_manager.handle_rotation_pick(chosen)`
 5. RunManager shifts slots, `next_match_ready` fires, overlay hides in `_on_next_match_ready`
 
-`_current_rotation_options: Array` stores the 3 options so `_on_rotation_pick_pressed` can pass the chosen AbilityData back.
+## Powers Side Panel
+`_powers_panel` is anchored to the right edge (offset_left=-175, offset_right=-6, top=60, bottom=-310).
+- Always visible, even when empty (shows "── POWERS ──" header with no pills)
+- Contains `_powers_vbox: VBoxContainer` — rebuilt by `_refresh_powers_panel()`
+- Each owned power appears as a `TooltipButton` pill showing the power name; hover shows description tooltip
+- `_refresh_powers_panel()` called from: `_on_power_offer_accepted()`, `_on_dev_give_power()`, `_on_next_match_ready()`
+
+## Dev Menu
+Open with T key or the "DEV" button (top-right corner). Full-screen opaque overlay.
+
+| Button | Effect |
+|--------|--------|
+| Win Current Match | `dev_win_match()` → threshold win; rotation overlay appears |
+| Shut the Box (Critical Win) | `dev_critical_win()` → power offer + rotation overlays |
+| Give Power → | Opens `_dev_power_overlay` with all 5 power buttons |
+| Win Entire Series | Loops threshold wins + auto-rotation until stuck; no power offers |
+| Restart Run | `start_run()` — resets everything including owned powers |
+| Close [T] | Hides overlay |
+
+**Give Power submenu:** Populated dynamically when opened (not at startup). Each power button calls `_on_dev_give_power(power)` → appends to owned_powers and refreshes panel. Multiple copies of the same power can be stacked by clicking repeatedly.
+
+## Tab Buttons
+Tab buttons are dynamic. `_rebuild_tab_buttons()` clears `_tab_row` children and creates one Button per value in `GameState.tabs`. Called after `start_match(box)` sets the new tab set. `_refresh_tab_display()` reads each button's text value to determine sealed/active state — no hardcoded 1–9 range.
+
+## Singleton Registration Pattern
+```gdscript
+if not Engine.has_singleton("PowerLibrary"):
+    Engine.register_singleton("PowerLibrary", PowerLibrary)
+```
+Done in `_ready()` for all 5 autoloads. Necessary because `Engine.get_singleton()` requires explicit registration even when the autoload is declared in project.godot.
+
+## Continue Button Flow
+`_continue_button` is hidden at match start. When `threshold_reached` fires:
+1. Button becomes visible
+2. A tween runs once: scale 1.0 → 1.3 → 1.0 + modulate white → yellow → white (0.4s total)
+3. **Button is disabled during "act" phase** (dice have been rolled). It re-enables when the next "roll" phase begins. Player cannot Continue mid-round.
+
+`_on_phase_changed` toggles `_continue_button.disabled` — false on "roll", true on "act".
 
 ## Die Face Labels
 Each die button has a small child Label (`font_size=11`, anchored to bottom-right corner).
 - **Hidden** when die is unrolled (shows "d?" as button text instead)
 - **Visible** after rolling: shows "d6", "d4", etc. so player knows the max value for Empower
+
+## Dice Highlight Rules
+`_refresh_dice_highlight()` greys unrolled dice **only in "act" phase**. In "roll" phase all unrolled dice show at full brightness — this prevents the Eager pre-rolled die from making other dice look unclickable.
 
 ## Ability Slot Display
 See `ability_hand.md` for full detail. Summary:
@@ -103,21 +132,22 @@ See `ability_hand.md` for full detail. Summary:
 - Null slot: darker grey, disabled
 
 ## Dependencies
-All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrary, TabBoard (indirect), DicePool (indirect).
+All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrary, PowerLibrary, PowerManager, TabBoard (indirect), DicePool (indirect).
 
 ## Gotchas
 - **All UI is code-built.** Do not add child nodes to match.tscn — add them in `_setup_ui()`.
+- **Give Power submenu is populated on open, not at startup.** PowerLibrary.get_all() is called inside `_on_dev_give_power_menu_pressed()` to avoid initialization-order issues during `_setup_ui()`.
+- **Power pills use direct field assignment instead of TooltipButton.update_info().** `update_info()` appends "(once)" to the button text (charge display for abilities). Powers have no charges, so pills set `pill.text`, `pill.tooltip_text`, `pill._tooltip_title`, and `pill._tooltip_body` directly.
 - **`_on_end_round_pressed` end_round guard:** After `attempt_seal()`, the code checks `_run_manager.match_number != match_before or _match_ended` before calling `end_round()`. Without this guard, the synchronous signal chain would start the next match and then `end_round()` would advance it to round 2 before the player acts.
 - **Tab display uses button.text.to_int()** to get tab values. Don't change button text formatting without updating `_refresh_tab_display()`.
 - **No run-won overlay.** The run-win overlay and `_on_run_won` handler were removed — there is no "run complete" state in the infinite loop.
-- **`_on_die_pressed` does not check use_ability return value** in the targeting path. Safe in current flow because ability selection guards prevent a 0-charge ability from entering targeting mode.
-- **Dev "Win Entire Series"** calls `dev_win_match()` then `dev_skip_rotation()` in a loop. Always produces threshold wins (not critical), so the reward overlay never appears in this path.
+- **Dev "Win Entire Series"** calls `dev_win_match()` then `dev_skip_rotation()` in a loop. Always produces threshold wins (not critical), so the power offer overlay never appears in this path.
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Removed _reward_overlay and all dice reward UI. Added _power_offer_overlay (Accept/Skip, opaque black). Added _powers_panel (right-side always-visible list of owned powers with TooltipButton pills). Added _refresh_powers_panel(). Dev menu: added "Shut the Box (Critical Win)" button → dev_critical_win(), "Give Power →" submenu (_dev_power_overlay, populated on open), "Restart Run" button. Fixed dice highlight: unrolled dice no longer grey during roll phase (Eager fix). Registered PowerLibrary + PowerManager singletons in _ready(). Signal wiring: show_power_offer replaces show_reward. |
 | 2026-05-04 | Removed ap_row (AP badge) from scene tree. |
-| 2026-05-04 | Added die face labels (small "d6" etc. in bottom-right of each die button after rolling). Added rotation overlay replacing old ability-offer overlay. _on_phase_changed now disables Continue during "act" phase and enables on "roll". Ability buttons now show charges [N/M], orange tint on slot 0, grey-out at 0 charges. Signal wiring: show_rotation_offer replaces show_ability_offer. Dev "Win Entire Series" calls dev_skip_rotation() after each win. |
-| 2026-05-04 | Removed run-win overlay and _on_run_won handler. Added _continue_button (threshold exit). Added _on_threshold_reached() with tween animation. Added _on_continue_pressed() → accept_threshold_win(). Match label changed from "Match: X/3" to "Match: X". Reward overlay title changed to "Shut the Box! — Pick a Reward Die". |
-| 2026-05-02 | Added BoxLibrary singleton registration. _on_next_match_ready now accepts BoxDefinition and passes to start_match(box). Added _rebuild_tab_buttons() for variable tab sets. Added _sealed_total_label and _threshold_label flanking tab row. Moved threshold display from top bar to tab area. Fixed end_round guard for winning seal. |
-| 2026-05-01 | Initial implementation — full match+run UI built in code. |
+| 2026-05-04 | Added die face labels, rotation overlay, ability charges display, dice panel/ability panel split. |
+| 2026-05-02 | Added BoxLibrary singleton, dynamic tab buttons, remaining-sum label, threshold label, end_round guard. |
+| 2026-05-01 | Initial implementation. |

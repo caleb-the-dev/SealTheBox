@@ -5,7 +5,7 @@
 `scripts/globals/game_state.gd` (Autoload: `GameState`)
 
 ## Responsibility
-Own all mutable state: HP, tabs, dice pool, ability hand, round number, round limit, win threshold, current box.
+Own all mutable state: HP, tabs, dice pool, ability hand, round number, round limit, win threshold, current box, owned powers, pending threshold bonus.
 Does NOT own game logic — it stores data, never drives phase transitions.
 
 ## Constants
@@ -22,7 +22,7 @@ const ABILITY_POOL_IDS: Array[String] = [
 var hp: int = 6
 var round: int = 0
 var round_limit: int = 3          # set per match by RoundManager.start_match(box)
-var win_threshold: int = 13       # set per match by RoundManager.start_match(box)
+var win_threshold: int = 13       # set per match by RoundManager.start_match(box); may be boosted by powers
 var tabs: Array[int]              # unsealed tabs remaining — set per match from box
 var dice_pool: Array              # Array of Die — full pool (deck)
 var dice_hand: Array              # Array of Die — currently drawn hand
@@ -32,29 +32,37 @@ var ability_hand: Array = [null, null, null]
     # Slot 2 = newest (where rotation picks land)
     # RunManager shifts slots on each rotation: [0]=old[1], [1]=old[2], [2]=new pick
 var current_box: BoxDefinition    # active box for the current match (null before first match)
+var owned_powers: Array = []      # Array of PowerData — powers earned during this run
+    # Persists across matches (reset_match does NOT clear it).
+    # Cleared by reset_run() at the start of each new run.
+var pending_threshold_bonus: int = 0
+    # Carries the Box Shutter bonus from the previous match into the next start_match().
+    # Consumed and reset to 0 inside RoundManager.start_match().
+    # Cleared by reset_run(). Not touched by reset_match().
 ```
 
 ## Public Methods
 ```gdscript
 func reset_run() -> void
-    # Resets hp=6, rebuilds dice_pool (3d6+1d4+1d8), calls reset_match(),
+    # Resets hp=6, owned_powers=[], pending_threshold_bonus=0,
+    # rebuilds dice_pool (1d4+4d6+2d8 = 7 dice), calls reset_match(),
     # then always calls _setup_ability_hand() (no is_empty guard).
     # Does NOT set tabs/round_limit/win_threshold — those come from start_match(box).
 
 func reset_match() -> void
     # Resets round=0, dice_hand=[]. Resets all dice in pool to value=0/rolled=false.
-    # Does NOT touch tabs, round_limit, win_threshold, ability_hand, or dice_pool size.
+    # Does NOT touch tabs, round_limit, win_threshold, ability_hand, dice_pool size,
+    # owned_powers, or pending_threshold_bonus.
 
 func reset_run_end() -> void
     # Calls reset_match(). Called by RunManager after rotation pick before starting next match.
     # Does NOT reset ability_hand or dice_pool — rotation already handled the hand shift.
-
 ```
 
 ## Private Methods
 ```gdscript
 func _setup_dice_pool() -> void
-    # Rebuilds dice_pool as [d6, d6, d6, d4, d8] (5 dice total). Called by reset_run().
+    # Rebuilds dice_pool as 1d4 + 4d6 + 2d8 (7 dice total). Called by reset_run().
 
 func _setup_ability_hand() -> void
     # Resets ability_hand = [null, null, null].
@@ -68,6 +76,8 @@ func _setup_ability_hand() -> void
 - `BoxDefinition` — type of `current_box`; values set by RoundManager, not GameState itself
 
 ## Gotchas
+- **`owned_powers` persists across matches but NOT across runs.** reset_match() does not clear it; reset_run() does. Do not store ability-level state here — owned_powers holds PowerData objects only.
+- **`pending_threshold_bonus` is a one-shot buffer.** RunManager.handle_match_won(critical=true) adds to it via PowerManager.apply_box_shutter(). RoundManager.start_match() reads and resets it to 0. It survives between matches in the same run but is cleared by reset_run().
 - **`ability_hand` is always exactly 3 elements.** Slots can be null (empty). Never use `ability_hand.append()` or `ability_hand.erase()` — slots must be assigned by index. RunManager owns all mutations post-setup.
 - **`reset_match()` does NOT reset tabs, round_limit, or win_threshold.** Those are set by `RoundManager.start_match(box)` before `reset_match()` is called.
 - **Charges persist across matches.** An ability with 1 charge left in match 1 enters match 2 with 1 charge. Charges only reset if the ability is discarded and a fresh duplicate is picked in rotation.
@@ -77,6 +87,7 @@ func _setup_ability_hand() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-04 | Added owned_powers: Array = [] and pending_threshold_bonus: int = 0. reset_run() clears both. reset_match() leaves both untouched. _setup_dice_pool() changed from 3d6+1d4+1d8 (5 dice) to 1d4+4d6+2d8 (7 dice). |
 | 2026-05-04 | Removed ap variable and spend_ap(). Rolling dice is now free. |
 | 2026-05-04 | Added ABILITY_POOL_IDS const (6 ability ids). Restructured ability_hand from variable Array to fixed 3-slot [null, null, null]. _setup_ability_hand() now picks ONE random ability into slot 2 only (slots 0,1 = null). reset_run() always calls _setup_ability_hand() unconditionally. Added null guard on AbilityLibrary singleton. |
 | 2026-05-02 | Added `current_box: BoxDefinition`. Removed hardcoded tabs/round_limit/win_threshold from reset_match(). Moved _setup_ability_hand() out of reset_match() — now called only in reset_run(). Added reset_run_end(). |

@@ -110,11 +110,12 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - win_threshold is explicit per-box in CSV (Classic 20, Low Evens 17, High Odds 17); round_limit = ceili(tab_sum/15)+1 (all boxes: 4 rounds before overtime)
 - Abilities have charges (reroll_die=2, empower/weaken=3, reroll_all=1); 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3; rolling dice is free (no AP)
 - Threshold win: "Continue →" button appears and animates when remaining sum ≤ threshold; player chooses when to advance, then picks a rotation ability
-- Critical win (shut the box): auto-ends match, fires dice reward (pick 1 of 3 from [d2,d4,d6,d8,d10,d12]), then rotation ability pick
-- GameState: hp=6, starting pool=3d6+1d4+1d8, ability_hand=[null, null, random_ability]
-- Dev menu (T key or DEV button): "Win Current Match" and "Win Entire Series" shortcuts for playtesting
-- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3) — draw/discard counts in dice header with hover tooltips, single "Roll Dice (All/N)" button + hint label that becomes "Commit & End Round" after rolling, die face label bottom-right of each die button; rotation overlay, reward overlay, over overlay — all built in code in match.gd
-- Tests: test_run_manager.gd (15 tests) + test_ability_library.gd pass headless
+- Critical win (shut the box): auto-ends match, fires power offer (Accept or Skip), then rotation ability pick
+- Powers: 5 powers in data/powers.csv (Lighter Box, Eager, Tab 9 Bounty, Bonus Seal, Box Shutter); PowerData resource, PowerLibrary autoload, PowerManager autoload; owned_powers persist across matches within a run; powers stack (multiple copies allowed)
+- GameState: hp=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], pending_threshold_bonus=0
+- Dev menu (T key or DEV button): "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu, "Win Entire Series", "Restart Run" shortcuts for playtesting
+- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips); power offer overlay + rotation overlay + run-over overlay — all built in code in match.gd
+- Tests: test_run_manager.gd (17 tests) + test_power_effects.gd (18 tests) + test_ability_library.gd pass headless
 
 ## Git & GitHub
 

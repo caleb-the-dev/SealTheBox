@@ -30,10 +30,10 @@ Each **match** is one game of advanced Shut the Box:
 - Tabs (numbered tiles) sit in the box. The goal is to reduce the sum of remaining tabs below the win threshold.
 - Each round the player draws a hand of 3 dice from their pool, rolls them, then assigns dice combinations to seal matching tabs.
 - Ability cards modify dice values, add rerolls, or grant special effects.
-- When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — no reward) or keeps pushing to seal all tabs (critical win — reward fires).
+- When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — rotation only) or keeps pushing to seal all tabs (critical win — power offer then rotation).
 - The run ends only when HP reaches 0.
 
-Each **run** is an infinite loop of matches cycling through boxes (Classic → Low Evens → High Odds → repeat). After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins grant a new die (pick 1 of 3) before the rotation.
+Each **run** is an infinite loop of matches cycling through boxes (Classic → Low Evens → High Odds → repeat). After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins offer a power (Accept to add it to owned_powers, or Skip) before the rotation. Dice are no longer acquired as rewards — the pool is fixed for the run.
 
 ---
 
@@ -44,7 +44,7 @@ Each **run** is an infinite loop of matches cycling through boxes (Classic → L
 - **Win threshold**: explicit per-box value in boxes.csv (tuned for playtesting). Current values: Classic 20, Low Evens 17, High Odds 17. Target feel: threshold achievable most rounds; shut the box requires skill or luck.
 - **Round limit**: `ceili(tab_sum / 15) + 1`. Current values: all boxes 4 rounds.
 - Exceeding the round limit costs 1 HP per extra round until the match ends.
-- **Shut the box** = all tabs sealed (sum = 0) → critical win, grants a die reward (pick 1 of 3) + mandatory ability rotation pick.
+- **Shut the box** = all tabs sealed (sum = 0) → critical win, offers a power (Accept or Skip) + mandatory ability rotation pick.
 
 ---
 
