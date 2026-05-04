@@ -36,6 +36,9 @@ func handle_reward_picked(chosen_face: int) -> void:
 	_do_rotation_offer()
 
 func handle_rotation_pick(chosen: AbilityData) -> void:
+	if chosen == null:
+		push_error("RunManager: handle_rotation_pick called with null ability")
+		return
 	var gs = Engine.get_singleton("GameState")
 	gs.ability_hand[0] = gs.ability_hand[1]
 	gs.ability_hand[1] = gs.ability_hand[2]
@@ -64,10 +67,17 @@ func _pick_reward_dice(count: int) -> Array:
 func _do_rotation_offer() -> void:
 	var gs = Engine.get_singleton("GameState")
 	var lib = Engine.get_singleton("AbilityLibrary")
+	var pool: Array = gs.ABILITY_POOL_IDS.duplicate()
 	_pending_rotation_options = []
 	for i in 3:
-		var id = gs.ABILITY_POOL_IDS[randi() % gs.ABILITY_POOL_IDS.size()]
-		var ability = lib.get_ability(id)
+		if pool.is_empty():
+			break
+		var idx = randi() % pool.size()
+		var ability = lib.get_ability(pool[idx])
+		pool.remove_at(idx)
 		if ability:
 			_pending_rotation_options.append(ability.duplicate())
+	if _pending_rotation_options.size() < 3:
+		push_error("RunManager: _do_rotation_offer could not build 3 options (got %d)" % _pending_rotation_options.size())
+		return
 	show_rotation_offer.emit(_pending_rotation_options)
