@@ -22,7 +22,13 @@ var GameState: Node:
 
 func start_match(box: BoxDefinition) -> void:
 	GameState.current_box = box
-	GameState.win_threshold = box.win_threshold
+	var threshold = box.win_threshold
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+	if power_mgr:
+		threshold += power_mgr.get_threshold_bonus()
+		threshold += GameState.pending_threshold_bonus
+		GameState.pending_threshold_bonus = 0
+	GameState.win_threshold = threshold
 	GameState.round_limit = box.round_limit
 	GameState.tabs = box.tabs.duplicate()
 	_tab_board = TabBoard.new()
@@ -44,6 +50,10 @@ func start_round() -> void:
 			return
 	var hand = _dice_pool.draw_hand()
 	GameState.dice_hand = hand
+	if GameState.round == 1:
+		var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+		if power_mgr:
+			power_mgr.apply_eager(hand)
 	_set_phase("roll")
 	if GameState.round > GameState.round_limit:
 		status_updated.emit("Overtime — Round %d / %d — Lost 1 HP (%d remaining). Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit, GameState.hp])
@@ -69,8 +79,16 @@ func attempt_seal(dice: Array, tabs: Array) -> bool:
 	if not _tab_board.can_seal_multi(dice_total, tabs):
 		return false
 	_tab_board.seal_tabs(tabs)
+	var all_sealed = tabs.duplicate()
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+	if power_mgr:
+		var bonus = power_mgr.get_bonus_seals(_tab_board, tabs)
+		if not bonus.is_empty():
+			_tab_board.seal_tabs(bonus)
+			all_sealed.append_array(bonus)
+		power_mgr.apply_tab9_bounty(all_sealed)
 	GameState.tabs = _tab_board.get_remaining()
-	tabs_sealed.emit(tabs)
+	tabs_sealed.emit(all_sealed)
 	_check_win()
 	return true
 
