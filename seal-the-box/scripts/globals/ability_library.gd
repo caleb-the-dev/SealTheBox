@@ -13,10 +13,10 @@ func _load_csv() -> void:
 	file.get_csv_line()  # skip header row
 	while not file.eof_reached():
 		var row = file.get_csv_line()
-		if row.size() < 7 or row[0].strip_edges().is_empty():
+		if row.size() < 6 or row[0].strip_edges().is_empty():
 			continue
-		if not row[4].is_valid_int() or not row[5].is_valid_int():
-			push_warning("AbilityLibrary: skipping malformed row (non-integer cost/cooldown): %s" % row[0])
+		if not row[4].is_valid_int():
+			push_warning("AbilityLibrary: skipping malformed row (non-integer cooldown): %s" % row[0])
 			continue
 		var data = AbilityData.new()
 		data.id = row[0].strip_edges()
@@ -28,9 +28,8 @@ func _load_csv() -> void:
 			for t in traits_raw.split(",", false):
 				data.traits.append(t.strip_edges())
 		data.cooldown = row[4].to_int()
-		data.ap_cost = row[5].to_int()
-		data.description = row[6].strip_edges()
-		data.charges = max(1, row[7].to_int()) if row.size() > 7 and row[7].strip_edges().is_valid_int() else 1
+		data.description = row[5].strip_edges()
+		data.charges = max(1, row[6].to_int()) if row.size() > 6 and row[6].strip_edges().is_valid_int() else 1
 		data.max_charges = data.charges
 		_abilities[data.id] = data
 	file.close()

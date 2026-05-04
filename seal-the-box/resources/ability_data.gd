@@ -6,7 +6,6 @@ extends Resource
 @export var type: String = ""
 @export var traits: Array[String] = []
 @export var cooldown: int = 0
-@export var ap_cost: int = 1
 @export var description: String = ""
 @export var charges: int = 1
 @export var max_charges: int = 1

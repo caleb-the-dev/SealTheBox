@@ -3,7 +3,6 @@ extends Node
 const ABILITY_POOL_IDS: Array[String] = ["reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all"]
 
 var hp: int = 6
-var ap: int = 3
 var round: int = 0
 var round_limit: int = 3
 var win_threshold: int = 13
@@ -20,18 +19,11 @@ func reset_run() -> void:
 	_setup_ability_hand()
 
 func reset_match() -> void:
-	ap = 3
 	round = 0
 	dice_hand = []
 	for die in dice_pool:
 		die.value = 0
 		die.rolled = false
-
-func spend_ap(amount: int) -> bool:
-	if ap < amount:
-		return false
-	ap -= amount
-	return true
 
 func reset_run_end() -> void:
 	reset_match()
