@@ -862,6 +862,9 @@ func _on_rotation_pick_pressed(index: int) -> void:
 	_run_manager.handle_rotation_pick(_current_rotation_options[index])
 
 func _on_show_die_swap(offered_dice: Array) -> void:
+	assert(offered_dice.size() == _die_swap_offered_buttons.size(),
+		"Die swap: offered_dice count %d does not match button count %d" \
+		% [offered_dice.size(), _die_swap_offered_buttons.size()])
 	_die_swap_offered_dice = offered_dice
 	_selected_swap_offered_idx = -1
 	_selected_swap_pool_die = null
@@ -1088,10 +1091,9 @@ func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
 	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
 	_match_label.text = "Match: %d" % _run_manager.match_number
-	if _swap_label:
-		var mn = _run_manager.match_number
-		var remaining = (5 - (mn % 5)) % 5
-		_swap_label.text = "Swap after this!" if remaining == 0 else "Swap in %d" % remaining
+	var mn = _run_manager.match_number
+	var remaining = (5 - (mn % 5)) % 5
+	_swap_label.text = "Swap after this!" if remaining == 0 else "Swap in %d" % remaining
 	if GameState.current_box:
 		_box_label.text = "Box: %s" % GameState.current_box.name
 		var remaining_sum := 0
