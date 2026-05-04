@@ -108,13 +108,13 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Infinite match loop: Classic → Low Evens → High Odds → repeat; run ends only at HP = 0
 - BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv (columns: id, name, tabs, win_threshold)
 - win_threshold is explicit per-box in CSV (Classic 20, Low Evens 17, High Odds 17); round_limit = ceili(tab_sum/15)+1 (all boxes: 4 rounds before overtime)
-- Abilities have charges (reroll_die=2, empower/weaken=3, reroll_all=1); 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3
+- Abilities have charges (reroll_die=2, empower/weaken=3, reroll_all=1); 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3; rolling dice is free (no AP)
 - Threshold win: "Continue →" button appears and animates when remaining sum ≤ threshold; player chooses when to advance, then picks a rotation ability
 - Critical win (shut the box): auto-ends match, fires dice reward (pick 1 of 3 from [d2,d4,d6,d8,d10,d12]), then rotation ability pick
 - GameState: hp=6, starting pool=3d6+1d4+1d8, ability_hand=[null, null, random_ability]
 - Dev menu (T key or DEV button): "Win Current Match" and "Win Entire Series" shortcuts for playtesting
-- UI: top bar (Round/HP/Match/Box), tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round), dice hand (die face label bottom-right after rolling), abilities (charges shown, orange tint on slot 1, grey-out at 0), rotation overlay, reward overlay, over overlay — all built in code in match.gd
-- Tests: test_run_manager.gd (15 tests) + test_box_definition.gd pass headless
+- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3) — draw/discard counts in dice header with hover tooltips, single "Roll Dice (All/N)" button + hint label that becomes "Commit & End Round" after rolling, die face label bottom-right of each die button; rotation overlay, reward overlay, over overlay — all built in code in match.gd
+- Tests: test_run_manager.gd (15 tests) + test_ability_library.gd pass headless
 
 ## Git & GitHub
 
