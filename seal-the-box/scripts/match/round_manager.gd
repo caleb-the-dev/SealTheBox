@@ -7,11 +7,13 @@ signal match_won(critical: bool)
 signal match_lost()
 signal tabs_sealed(tabs: Array)
 signal status_updated(text: String)
+signal threshold_reached()
 
 var _tab_board: TabBoard
 var _dice_pool: DicePool
 var _current_phase: String = ""
 var _match_over: bool = false
+var _threshold_notified: bool = false
 
 func start_match(box: BoxDefinition) -> void:
 	GameState.current_box = box
@@ -21,6 +23,7 @@ func start_match(box: BoxDefinition) -> void:
 	_tab_board = TabBoard.new()
 	_dice_pool = DicePool.new()
 	_match_over = false
+	_threshold_notified = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
 	_dice_pool.setup(GameState.dice_pool.duplicate())
@@ -117,13 +120,19 @@ func end_round() -> void:
 	round_ended.emit(GameState.round)
 	start_round()
 
+func accept_threshold_win() -> void:
+	if _match_over:
+		return
+	_match_over = true
+	match_won.emit(false)
+
 func _check_win() -> void:
 	if _tab_board.check_critical_win():
 		_match_over = true
 		match_won.emit(true)
-	elif _tab_board.check_win(GameState.win_threshold):
-		_match_over = true
-		match_won.emit(false)
+	elif _tab_board.check_win(GameState.win_threshold) and not _threshold_notified:
+		_threshold_notified = true
+		threshold_reached.emit()
 
 func get_draw_count() -> int:
 	return _dice_pool.get_draw_count() if _dice_pool else 0

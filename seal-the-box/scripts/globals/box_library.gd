@@ -14,7 +14,7 @@ func _load_csv() -> void:
     file.get_csv_line()
     while not file.eof_reached():
         var row = file.get_csv_line()
-        if row.size() < 3 or row[0].strip_edges().is_empty():
+        if row.size() < 4 or row[0].strip_edges().is_empty():
             continue
         var data = BoxDefinition.new()
         data.id = row[0].strip_edges()
@@ -22,6 +22,7 @@ func _load_csv() -> void:
         data.tabs.clear()
         for part in row[2].split(";", false):
             data.tabs.append(part.strip_edges().to_int())
+        data.win_threshold = row[3].strip_edges().to_int()
         _boxes[data.id] = data
         _order.append(data.id)
     file.close()

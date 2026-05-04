@@ -4,6 +4,7 @@ extends Resource
 @export var id: String = ""
 @export var name: String = ""
 @export var tabs: Array[int] = []
+var win_threshold: int = 0
 
 func tab_sum() -> int:
     var sum = 0
@@ -11,8 +12,5 @@ func tab_sum() -> int:
         sum += tab
     return sum
 
-var win_threshold: int:
-    get: return floori(tab_sum() * 0.30)
-
 var round_limit: int:
-    get: return ceili(tab_sum() / 15.0)
+    get: return ceili(tab_sum() / 15.0) + 1
