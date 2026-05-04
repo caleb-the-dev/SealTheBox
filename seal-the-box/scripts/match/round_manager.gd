@@ -36,7 +36,6 @@ func start_match(box: BoxDefinition) -> void:
 
 func start_round() -> void:
 	GameState.round += 1
-	GameState.ap = 3
 	if GameState.round > GameState.round_limit:
 		GameState.hp -= 1
 		if GameState.hp <= 0:
@@ -49,24 +48,17 @@ func start_round() -> void:
 	if GameState.round > GameState.round_limit:
 		status_updated.emit("Overtime — Round %d / %d — Lost 1 HP (%d remaining). Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit, GameState.hp])
 	else:
-		status_updated.emit("Round %d / %d — Roll Phase: select dice to roll (1 AP each)" % [GameState.round, GameState.round_limit])
+		status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
-	var partial := false
 	for die in dice:
-		if not GameState.spend_ap(1):
-			partial = true
-			break
 		_dice_pool.roll_die(die)
 	var total := 0
 	for die in GameState.dice_hand:
 		if die.rolled:
 			total += die.value
 	_set_phase("act")
-	if partial:
-		status_updated.emit("Seal Phase — Out of AP. Total: %d — select tabs to seal." % total)
-	else:
-		status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
+	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 
 func attempt_seal(dice: Array, tabs: Array) -> bool:
 	if _match_over:
