@@ -12,7 +12,6 @@ var _current_reward_faces: Array = []
 
 # ── ui references ───────────────────────────────────────────────────────────
 var _hp_label: Label
-var _ap_label: Label
 var _round_label: Label
 var _status_label: Label
 var _tab_buttons: Array[Button] = []
@@ -196,25 +195,6 @@ func _setup_ui() -> void:
 	_status_label.add_theme_font_size_override("font_size", 20)
 	root.add_child(_status_label)
 
-	# ── AP badge — centered circle, between status and table ────────────────
-	var ap_row = HBoxContainer.new()
-	ap_row.anchor_left = 0.0
-	ap_row.anchor_right = 1.0
-	ap_row.anchor_top = 1.0
-	ap_row.anchor_bottom = 1.0
-	ap_row.offset_top = -335
-	ap_row.offset_bottom = -290
-	ap_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	root.add_child(ap_row)
-
-	var ap_panel = _make_rounded_panel(50, DARK, 20, 8)
-	ap_row.add_child(ap_panel)
-	_ap_label = Label.new()
-	_ap_label.add_theme_font_size_override("font_size", 16)
-	_ap_label.custom_minimum_size = Vector2(60, 0)
-	_ap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ap_panel.add_child(_ap_label)
-
 	# ── Bottom: [DRAW circle] [Dice + Abilities oval] [DISCARD circle] ──────
 	var bottom = HBoxContainer.new()
 	bottom.anchor_left = 0.0
@@ -334,7 +314,7 @@ func _setup_ui() -> void:
 	btn_row.add_child(_roll_all_button)
 
 	_action_button = Button.new()
-	_action_button.text = "Roll Selected  (1 AP each)"
+	_action_button.text = "Roll Selected"
 	_action_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_action_button.pressed.connect(_on_action_pressed)
 	btn_row.add_child(_action_button)
@@ -567,7 +547,7 @@ func _connect_signals() -> void:
 func _on_phase_changed(phase: String) -> void:
 	_current_phase = phase
 	if phase == "roll":
-		_action_button.text = "Roll Selected  (1 AP each)"
+		_action_button.text = "Roll Selected"
 		_roll_all_button.disabled = false
 		_continue_button.disabled = false
 	else:
@@ -825,7 +805,6 @@ func _on_end_round_pressed() -> void:
 # ── ui refresh ───────────────────────────────────────────────────────────────
 func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
-	_ap_label.text = "AP: %d" % GameState.ap
 	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
 	_match_label.text = "Match: %d" % _run_manager.match_number
 	if GameState.current_box:
