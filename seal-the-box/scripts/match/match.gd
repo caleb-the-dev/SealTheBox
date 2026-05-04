@@ -39,6 +39,7 @@ var _rotation_buttons: Array[Button] = []
 var _current_rotation_options: Array = []
 var _dev_overlay: Control
 var _dev_power_overlay: Control
+var _dev_power_list: VBoxContainer
 var _powers_vbox: VBoxContainer
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
@@ -575,15 +576,9 @@ func _setup_ui() -> void:
 	dev_power_title.add_theme_font_size_override("font_size", 22)
 	dev_power_panel.add_child(dev_power_title)
 
-	if Engine.has_singleton("PowerLibrary"):
-		for power in Engine.get_singleton("PowerLibrary").get_all():
-			var pbtn = Button.new()
-			pbtn.text = power.name
-			pbtn.tooltip_text = power.description
-			pbtn.custom_minimum_size = Vector2(0, 52)
-			pbtn.add_theme_font_size_override("font_size", 17)
-			pbtn.pressed.connect(_on_dev_give_power.bind(power))
-			dev_power_panel.add_child(pbtn)
+	_dev_power_list = VBoxContainer.new()
+	_dev_power_list.add_theme_constant_override("separation", 12)
+	dev_power_panel.add_child(_dev_power_list)
 
 	var dev_power_back_btn = Button.new()
 	dev_power_back_btn.text = "← Back"
@@ -773,6 +768,17 @@ func _on_dev_shut_box_pressed() -> void:
 		_round_manager.dev_critical_win()
 
 func _on_dev_give_power_menu_pressed() -> void:
+	for child in _dev_power_list.get_children():
+		child.queue_free()
+	if Engine.has_singleton("PowerLibrary"):
+		for power in Engine.get_singleton("PowerLibrary").get_all():
+			var pbtn = Button.new()
+			pbtn.text = power.name
+			pbtn.tooltip_text = power.description
+			pbtn.custom_minimum_size = Vector2(0, 52)
+			pbtn.add_theme_font_size_override("font_size", 17)
+			pbtn.pressed.connect(_on_dev_give_power.bind(power))
+			_dev_power_list.add_child(pbtn)
 	_dev_overlay.visible = false
 	_dev_power_overlay.visible = true
 
