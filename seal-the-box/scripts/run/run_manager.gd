@@ -2,11 +2,9 @@ class_name RunManager
 extends Node
 
 signal next_match_ready(box: BoxDefinition)
-signal show_reward(dice_faces: Array)
+signal show_power_offer(power: PowerData)
 signal show_rotation_offer(options: Array)
 signal run_over(match_number: int)
-
-const REWARD_DIE_FACES = [2, 4, 6, 8, 10, 12]
 
 var match_number: int = 1
 var _boxes: Array = []
@@ -23,16 +21,21 @@ func start_run() -> void:
 func handle_match_won(critical: bool) -> void:
 	match_number += 1
 	if critical:
-		show_reward.emit(_pick_reward_dice(3))
+		if Engine.has_singleton("PowerManager"):
+			Engine.get_singleton("PowerManager").apply_box_shutter()
+		_do_power_offer()
 	else:
 		_do_rotation_offer()
 
 func handle_match_lost() -> void:
 	run_over.emit(match_number)
 
-func handle_reward_picked(chosen_face: int) -> void:
+func handle_power_offer_accepted(power: PowerData) -> void:
 	var gs = Engine.get_singleton("GameState")
-	gs.dice_pool.append(Die.new(chosen_face))
+	gs.owned_powers.append(power)
+	_do_rotation_offer()
+
+func handle_power_offer_skipped() -> void:
 	_do_rotation_offer()
 
 func handle_rotation_pick(chosen: AbilityData) -> void:
@@ -55,14 +58,16 @@ func _start_next_match() -> void:
 	var next_box = _boxes[(match_number - 1) % _boxes.size()]
 	next_match_ready.emit(next_box)
 
-func _pick_reward_dice(count: int) -> Array:
-	var pool: Array = REWARD_DIE_FACES.duplicate()
-	var picks: Array = []
-	for i in count:
-		var idx = randi() % pool.size()
-		picks.append(pool[idx])
-		pool.remove_at(idx)
-	return picks
+func _do_power_offer() -> void:
+	var gs = Engine.get_singleton("GameState")
+	if not Engine.has_singleton("PowerLibrary"):
+		_do_rotation_offer()
+		return
+	var power = Engine.get_singleton("PowerLibrary").get_random_unowned(gs.owned_powers)
+	if power == null:
+		_do_rotation_offer()
+		return
+	show_power_offer.emit(power)
 
 func _do_rotation_offer() -> void:
 	var gs = Engine.get_singleton("GameState")

@@ -8,7 +8,6 @@ var _selected_tabs: Array[int] = []
 var _selected_ability: AbilityData = null
 var _targeting_die: bool = false
 var _match_ended: bool = false
-var _current_reward_faces: Array = []
 
 # ── ui references ───────────────────────────────────────────────────────────
 var _hp_label: Label
@@ -29,15 +28,19 @@ var _threshold_label: Label
 var _continue_button: Button
 var _sealed_total_label: Label
 var _tab_row: HBoxContainer
-var _reward_overlay: Control
-var _reward_title_label: Label
-var _reward_buttons: Array[Button] = []
+var _power_offer_overlay: Control
+var _power_offer_name_label: Label
+var _power_offer_desc_label: Label
+var _current_power_offer: PowerData = null
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
 var _rotation_overlay: Control
 var _rotation_buttons: Array[Button] = []
 var _current_rotation_options: Array = []
 var _dev_overlay: Control
+var _dev_power_overlay: Control
+var _dev_power_list: VBoxContainer
+var _powers_vbox: VBoxContainer
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -49,6 +52,10 @@ func _ready() -> void:
 		Engine.register_singleton("GameState", GameState)
 	if not Engine.has_singleton("BoxLibrary"):
 		Engine.register_singleton("BoxLibrary", BoxLibrary)
+	if not Engine.has_singleton("PowerLibrary"):
+		Engine.register_singleton("PowerLibrary", PowerLibrary)
+	if not Engine.has_singleton("PowerManager"):
+		Engine.register_singleton("PowerManager", PowerManager)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
@@ -325,50 +332,62 @@ func _setup_ui() -> void:
 		ability_vbox.add_child(btn)
 		_ability_buttons.append(btn)
 
-	# ── Reward overlay (hidden until match 1 or 2 ends in a win) ──────────────
-	var reward_overlay = Control.new()
-	reward_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	reward_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	reward_overlay.visible = false
-	var reward_bg = ColorRect.new()
-	reward_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	reward_bg.color = Color(0.0, 0.0, 0.0, 1.0)
-	reward_overlay.add_child(reward_bg)
+	# ── Power offer overlay (hidden until a critical win) ────────────────────────
+	var power_overlay = Control.new()
+	power_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	power_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	power_overlay.visible = false
+	var power_bg = ColorRect.new()
+	power_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	power_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	power_overlay.add_child(power_bg)
 
-	var reward_center = VBoxContainer.new()
-	reward_center.anchor_left = 0.2
-	reward_center.anchor_right = 0.8
-	reward_center.anchor_top = 0.3
-	reward_center.anchor_bottom = 0.75
-	reward_center.add_theme_constant_override("separation", 20)
-	reward_overlay.add_child(reward_center)
+	var power_center = VBoxContainer.new()
+	power_center.anchor_left = 0.25
+	power_center.anchor_right = 0.75
+	power_center.anchor_top = 0.25
+	power_center.anchor_bottom = 0.8
+	power_center.add_theme_constant_override("separation", 24)
+	power_overlay.add_child(power_center)
 
-	_reward_title_label = Label.new()
-	_reward_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_reward_title_label.add_theme_font_size_override("font_size", 24)
-	reward_center.add_child(_reward_title_label)
+	var power_header = Label.new()
+	power_header.text = "Shut the Box! — Power Earned"
+	power_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	power_header.add_theme_font_size_override("font_size", 22)
+	power_center.add_child(power_header)
 
-	var reward_subtitle = Label.new()
-	reward_subtitle.text = "Pick one die to permanently add to your pool:"
-	reward_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	reward_center.add_child(reward_subtitle)
+	_power_offer_name_label = Label.new()
+	_power_offer_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_power_offer_name_label.add_theme_font_size_override("font_size", 30)
+	power_center.add_child(_power_offer_name_label)
 
-	var reward_btn_row = HBoxContainer.new()
-	reward_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	reward_btn_row.add_theme_constant_override("separation", 20)
-	reward_center.add_child(reward_btn_row)
+	_power_offer_desc_label = Label.new()
+	_power_offer_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_power_offer_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_power_offer_desc_label.add_theme_font_size_override("font_size", 18)
+	power_center.add_child(_power_offer_desc_label)
 
-	_reward_buttons = []
-	for i in 3:
-		var rbtn = Button.new()
-		rbtn.custom_minimum_size = Vector2(110, 70)
-		rbtn.add_theme_font_size_override("font_size", 22)
-		rbtn.pressed.connect(_on_reward_die_picked.bind(i))
-		reward_btn_row.add_child(rbtn)
-		_reward_buttons.append(rbtn)
+	var power_btn_row = HBoxContainer.new()
+	power_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	power_btn_row.add_theme_constant_override("separation", 24)
+	power_center.add_child(power_btn_row)
 
-	root.add_child(reward_overlay)
-	_reward_overlay = reward_overlay
+	var accept_btn = Button.new()
+	accept_btn.text = "Accept"
+	accept_btn.custom_minimum_size = Vector2(130, 64)
+	accept_btn.add_theme_font_size_override("font_size", 20)
+	accept_btn.pressed.connect(_on_power_offer_accepted)
+	power_btn_row.add_child(accept_btn)
+
+	var skip_btn = Button.new()
+	skip_btn.text = "Skip"
+	skip_btn.custom_minimum_size = Vector2(130, 64)
+	skip_btn.add_theme_font_size_override("font_size", 20)
+	skip_btn.pressed.connect(_on_power_offer_skipped)
+	power_btn_row.add_child(skip_btn)
+
+	root.add_child(power_overlay)
+	_power_offer_overlay = power_overlay
 
 	# ── Run-over overlay ───────────────────────────────────────────────────────
 	var over_overlay = Control.new()
@@ -503,12 +522,33 @@ func _setup_ui() -> void:
 	dev_win_match_btn.pressed.connect(_on_dev_win_match_pressed)
 	dev_panel.add_child(dev_win_match_btn)
 
+	var dev_shut_box_btn = Button.new()
+	dev_shut_box_btn.text = "Shut the Box (Critical Win)"
+	dev_shut_box_btn.custom_minimum_size = Vector2(0, 56)
+	dev_shut_box_btn.add_theme_font_size_override("font_size", 17)
+	dev_shut_box_btn.pressed.connect(_on_dev_shut_box_pressed)
+	dev_panel.add_child(dev_shut_box_btn)
+
+	var dev_give_power_btn = Button.new()
+	dev_give_power_btn.text = "Give Power →"
+	dev_give_power_btn.custom_minimum_size = Vector2(0, 56)
+	dev_give_power_btn.add_theme_font_size_override("font_size", 17)
+	dev_give_power_btn.pressed.connect(_on_dev_give_power_menu_pressed)
+	dev_panel.add_child(dev_give_power_btn)
+
 	var dev_win_series_btn = Button.new()
 	dev_win_series_btn.text = "Win Entire Series"
 	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
 	dev_win_series_btn.add_theme_font_size_override("font_size", 17)
 	dev_win_series_btn.pressed.connect(_on_dev_win_series_pressed)
 	dev_panel.add_child(dev_win_series_btn)
+
+	var dev_restart_btn = Button.new()
+	dev_restart_btn.text = "Restart Run"
+	dev_restart_btn.custom_minimum_size = Vector2(0, 56)
+	dev_restart_btn.add_theme_font_size_override("font_size", 17)
+	dev_restart_btn.pressed.connect(_on_dev_restart_pressed)
+	dev_panel.add_child(dev_restart_btn)
 
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
@@ -518,6 +558,69 @@ func _setup_ui() -> void:
 
 	root.add_child(dev_overlay)
 	_dev_overlay = dev_overlay
+
+	# ── Dev power picker sub-overlay ─────────────────────────────────────────────
+	var dev_power_overlay = Control.new()
+	dev_power_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_power_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_power_overlay.visible = false
+	var dev_power_bg = ColorRect.new()
+	dev_power_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_power_bg.color = Color(0, 0, 0, 1.0)
+	dev_power_overlay.add_child(dev_power_bg)
+
+	var dev_power_panel = VBoxContainer.new()
+	dev_power_panel.anchor_left = 0.35
+	dev_power_panel.anchor_right = 0.65
+	dev_power_panel.anchor_top = 0.15
+	dev_power_panel.anchor_bottom = 0.9
+	dev_power_panel.add_theme_constant_override("separation", 12)
+	dev_power_overlay.add_child(dev_power_panel)
+
+	var dev_power_title = Label.new()
+	dev_power_title.text = "— GIVE POWER —"
+	dev_power_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_power_title.add_theme_font_size_override("font_size", 22)
+	dev_power_panel.add_child(dev_power_title)
+
+	_dev_power_list = VBoxContainer.new()
+	_dev_power_list.add_theme_constant_override("separation", 12)
+	dev_power_panel.add_child(_dev_power_list)
+
+	var dev_power_back_btn = Button.new()
+	dev_power_back_btn.text = "← Back"
+	dev_power_back_btn.custom_minimum_size = Vector2(0, 44)
+	dev_power_back_btn.pressed.connect(_on_dev_power_back_pressed)
+	dev_power_panel.add_child(dev_power_back_btn)
+
+	root.add_child(dev_power_overlay)
+	_dev_power_overlay = dev_power_overlay
+
+	# ── Powers side panel (right side, always visible) ────────────────────────
+	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
+	powers_panel.anchor_left = 1.0
+	powers_panel.anchor_right = 1.0
+	powers_panel.anchor_top = 0.0
+	powers_panel.anchor_bottom = 1.0
+	powers_panel.offset_left = -175
+	powers_panel.offset_right = -6
+	powers_panel.offset_top = 60
+	powers_panel.offset_bottom = -310
+	root.add_child(powers_panel)
+
+	var powers_outer = VBoxContainer.new()
+	powers_outer.add_theme_constant_override("separation", 8)
+	powers_panel.add_child(powers_outer)
+
+	var powers_title = Label.new()
+	powers_title.text = "── POWERS ──"
+	powers_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	powers_title.add_theme_font_size_override("font_size", 13)
+	powers_outer.add_child(powers_title)
+
+	_powers_vbox = VBoxContainer.new()
+	_powers_vbox.add_theme_constant_override("separation", 6)
+	powers_outer.add_child(_powers_vbox)
 
 # ── signal wiring ────────────────────────────────────────────────────────────
 func _connect_signals() -> void:
@@ -529,7 +632,7 @@ func _connect_signals() -> void:
 	_round_manager.status_updated.connect(_on_status_updated)
 	_round_manager.threshold_reached.connect(_on_threshold_reached)
 	_run_manager.next_match_ready.connect(_on_next_match_ready)
-	_run_manager.show_reward.connect(_on_show_reward)
+	_run_manager.show_power_offer.connect(_on_show_power_offer)
 	_run_manager.run_over.connect(_on_run_over)
 	_run_manager.show_rotation_offer.connect(_on_show_rotation_offer)
 
@@ -596,8 +699,10 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_continue_button.visible = false
 	_continue_button.scale = Vector2.ONE
 	_continue_button.modulate = Color.WHITE
-	if _reward_overlay:
-		_reward_overlay.visible = false
+	if _power_offer_overlay:
+		_power_offer_overlay.visible = false
+	if _dev_power_overlay:
+		_dev_power_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
 	if _rotation_overlay:
@@ -609,21 +714,41 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_rebuild_tab_buttons()
 	for btn in _tab_buttons:
 		btn.disabled = false
-
-func _on_show_reward(dice_faces: Array) -> void:
-	_current_reward_faces = dice_faces
-	_reward_title_label.text = "Shut the Box! — Pick a Reward Die"
-	for i in 3:
-		_reward_buttons[i].text = "d%d" % dice_faces[i]
-	_reward_overlay.visible = true
-
-func _on_reward_die_picked(index: int) -> void:
-	_reward_overlay.visible = false
-	_run_manager.handle_reward_picked(_current_reward_faces[index])
+	_refresh_powers_panel()
 
 func _on_run_over(match_number: int) -> void:
 	_run_over_detail_label.text = "Defeated on Match %d  |  HP: 0" % match_number
 	_run_over_overlay.visible = true
+
+func _on_show_power_offer(power: PowerData) -> void:
+	_current_power_offer = power
+	_power_offer_name_label.text = power.name
+	_power_offer_desc_label.text = power.description
+	_power_offer_overlay.visible = true
+
+func _on_power_offer_accepted() -> void:
+	_power_offer_overlay.visible = false
+	_run_manager.handle_power_offer_accepted(_current_power_offer)
+	_refresh_powers_panel()
+
+func _on_power_offer_skipped() -> void:
+	_power_offer_overlay.visible = false
+	_run_manager.handle_power_offer_skipped()
+
+func _refresh_powers_panel() -> void:
+	if not _powers_vbox:
+		return
+	for child in _powers_vbox.get_children():
+		child.queue_free()
+	for power in GameState.owned_powers:
+		var pill = TooltipButton.new()
+		pill.custom_minimum_size = Vector2(0, 44)
+		pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pill.text = power.name
+		pill.tooltip_text = power.name
+		pill._tooltip_title = power.name
+		pill._tooltip_body = power.description
+		_powers_vbox.add_child(pill)
 
 func _on_show_rotation_offer(options: Array) -> void:
 	_current_rotation_options = options
@@ -643,6 +768,38 @@ func _on_dev_win_match_pressed() -> void:
 	_dev_overlay.visible = false
 	if not _match_ended:
 		_round_manager.dev_win_match()
+
+func _on_dev_shut_box_pressed() -> void:
+	_dev_overlay.visible = false
+	if not _match_ended:
+		_round_manager.dev_critical_win()
+
+func _on_dev_give_power_menu_pressed() -> void:
+	for child in _dev_power_list.get_children():
+		child.queue_free()
+	if Engine.has_singleton("PowerLibrary"):
+		for power in Engine.get_singleton("PowerLibrary").get_all():
+			var pbtn = Button.new()
+			pbtn.text = power.name
+			pbtn.tooltip_text = power.description
+			pbtn.custom_minimum_size = Vector2(0, 52)
+			pbtn.add_theme_font_size_override("font_size", 17)
+			pbtn.pressed.connect(_on_dev_give_power.bind(power))
+			_dev_power_list.add_child(pbtn)
+	_dev_overlay.visible = false
+	_dev_power_overlay.visible = true
+
+func _on_dev_give_power(power: PowerData) -> void:
+	GameState.owned_powers.append(power)
+	_refresh_powers_panel()
+
+func _on_dev_power_back_pressed() -> void:
+	_dev_power_overlay.visible = false
+	_dev_overlay.visible = true
+
+func _on_dev_restart_pressed() -> void:
+	_dev_overlay.visible = false
+	_run_manager.start_run()
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false
@@ -862,7 +1019,7 @@ func _refresh_dice_highlight() -> void:
 	for i in hand.size():
 		if i < _dice_buttons.size():
 			var die = hand[i]
-			if any_rolled and not die.rolled:
+			if any_rolled and not die.rolled and _current_phase == "act":
 				_dice_buttons[i].modulate = Color(0.4, 0.4, 0.4)
 			elif die in _selected_dice:
 				_dice_buttons[i].modulate = Color(1.5, 1.5, 0.3)
