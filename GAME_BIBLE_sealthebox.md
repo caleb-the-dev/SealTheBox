@@ -33,7 +33,7 @@ Each **match** is one game of advanced Shut the Box:
 - When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — rotation only) or keeps pushing to seal all tabs (critical win — power offer then rotation).
 - The run ends only when HP reaches 0.
 
-Each **run** is an infinite loop of matches cycling through boxes (Classic → Low Evens → High Odds → repeat). After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins offer a power (Accept to add it to owned_powers, or Skip) before the rotation. Dice are no longer acquired as rewards — the pool is fixed for the run.
+Each **run** is an infinite loop of matches cycling through 5 boxes (Classic → Low Evens → High Odds → Compressed → Stairs → repeat). After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins offer a power (Accept to add it to owned_powers, or Skip) before the rotation. Every 5 matches, a die swap is offered: player may swap one die in their pool for one of 5 offered dice [d2, d4, d8, d10, d12] or skip.
 
 ---
 
@@ -98,7 +98,16 @@ Ability cards are played for free. Each card has a type, optional traits, cooldo
 
 Powers are persistent run modifiers acquired between matches. They modify core game mechanics throughout the run.
 
-**Power traits:**
+**Power types (implemented):**
+| Type | Meaning |
+|------|---------|
+| Passive | Always-on effect (e.g. Lighter Box, Phoenix Down, Survivor) |
+| Match-Start | Fires at the start of round 1 each match (e.g. Eager, Coffee Break) |
+| On-Seal | Fires when specific tabs are sealed (e.g. Tab 9 Bounty) |
+| Critical-Win | Fires on critical wins only (e.g. Box Shutter) |
+| Counter | Charges every N rounds; effect fires when counter reaches target, then resets (e.g. Bonus Seal — every 3 rounds, bonus-seals floor(N/2) of next sealed tab). Counter initializes to 1 at acquisition, fires on round 3, resets to 1 after each fire. |
+
+**Power traits (design intent, not all implemented):**
 | Trait | Meaning |
 |-------|---------|
 | SessionReward | Affects the rewards offered after a match |

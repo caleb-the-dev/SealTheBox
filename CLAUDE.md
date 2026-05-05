@@ -64,7 +64,7 @@ seal-the-box/
 - `AbilityLibrary` — all ability definitions indexed by id
 - `BoxLibrary` — all box definitions indexed by id; get_ordered() returns CSV row order
 
-**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player uses free one-time abilities → player assigns dice to seal tabs → check win/lose. A **run** is 3 sequential matches across 3 different boxes (tab sets), each with its own tabs/round_limit/win_threshold loaded from BoxDefinition.
+**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player uses free one-time abilities → player assigns dice to seal tabs → check win/lose. A **run** is an infinite sequence of matches cycling through 5 boxes (Classic → Low Evens → High Odds → Compressed → Stairs → repeat), each with its own tabs/round_limit/win_threshold loaded from BoxDefinition. The run ends only when HP reaches 0.
 
 **Win condition:** `TabBoard.check_win(threshold)` — remaining tab sum ≤ threshold (not sealed sum ≥ threshold).
 
@@ -118,10 +118,12 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Critical win (shut the box): auto-ends match, fires 1-of-3 power card selection overlay (highlight + Confirm/Skip), then rotation ability pick
 - Powers: 8 powers in data/powers.csv (Lighter Box +1/copy, Eager, Tab 9 Bounty, Bonus Seal, Box Shutter +2/copy, Phoenix Down, Coffee Break, Survivor); PowerData resource, PowerLibrary autoload, PowerManager autoload; owned_powers persist across matches within a run; powers stack (multiple copies show count badge in panel)
 - Phoenix Down: intercepts run-over, sets HP=1, self-consumes. Coffee Break: round-1 hook charges a random below-max ability (capped at max). Survivor: win-at-exactly-HP=1 heals +1.
-- GameState: hp=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], pending_threshold_bonus=0
+- Counter infrastructure: GameState.power_counters Dictionary; PowerManager.add_power() is the single acquisition entry point (initializes counter to 1 on first acquisition). Bonus Seal converted to Counter type (target=3): counter ticks each round end, fires when counter==3, resets after firing. Counter display in powers panel: "Name X/Y". Counter resets to 0 at match end, starts next match at 1/3.
+- GameState: hp=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], power_counters={}, pending_threshold_bonus=0
+- Boxes: 5 boxes cycling (Classic → Low Evens → High Odds → Compressed → Stairs → repeat); die swap offered every 5 matches
 - Dev menu (T key or DEV button): scrollable panels; "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu (all 8 powers), "Win Entire Series", "Restart Run" shortcuts for playtesting
-- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates); power offer overlay (3-card pick) + rotation overlay + run-over overlay — all built in code in match.gd
-- Tests: test_run_manager.gd (30 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd pass headless
+- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates, counter display "Name X/Y" for counter powers); power offer overlay (3-card pick) + rotation overlay + run-over overlay — all built in code in match.gd
+- Tests: test_run_manager.gd (37 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd pass headless
 
 ## Git & GitHub
 

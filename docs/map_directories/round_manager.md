@@ -39,8 +39,8 @@ func commit_roll(dice: Array) -> void
 
 func attempt_seal(dice: Array, tabs: Array) -> bool
     # Validates dice sum == tab sum and all tabs are unsealed. Seals primary tabs.
-    # If Bonus Seal power owned: calls PowerManager.get_bonus_seals() and seals additional tabs
-    #   (no cascade — get_bonus_seals called once on primary seals only).
+    # Calls PowerManager.get_bonus_seals_if_ready() — fires only when bonus_seal counter==target (3);
+    #   seals bonus tabs and resets counter. No cascade — called once on primary seals only.
     # Calls PowerManager.apply_tab9_bounty(all_sealed) — grants HP if 9 was sealed.
     # Updates GameState.tabs, emits tabs_sealed(all_sealed), checks win condition.
     # Returns false if invalid.
@@ -52,17 +52,21 @@ func use_ability(ability: AbilityData, target_die: Die) -> bool
     # Returns false if unknown ability id.
 
 func end_round() -> void
-    # Discards hand, clears GameState.dice_hand, emits round_ended, calls start_round().
+    # Discards hand, clears GameState.dice_hand.
+    # Calls PowerManager.on_round_end() (increments bonus_seal counter, if owned and below target).
+    # Emits round_ended(round_num). Calls start_round() OR emits match_lost if HP=0 in overtime.
+    # PowerManager.on_match_end() is called before match_lost.emit() on the losing path.
 
 func accept_threshold_win() -> void
     # Called by match.gd when player clicks Continue. Sets _match_over = true,
-    # emits match_won(false). Safe to call from any phase — no-ops if already over.
+    # calls PowerManager.on_match_end(), emits match_won(false).
+    # Safe to call from any phase — no-ops if already over.
 
 func dev_win_match() -> void
-    # Dev shortcut: emits match_won(false) immediately. Always threshold (not critical).
+    # Dev shortcut: calls PowerManager.on_match_end(), emits match_won(false). Threshold (not critical).
 
 func dev_critical_win() -> void
-    # Dev shortcut: emits match_won(true) immediately (triggers power offer + rotation).
+    # Dev shortcut: calls PowerManager.on_match_end(), emits match_won(true) (power offer + rotation).
 
 func get_draw_count() -> int
 func get_discard_count() -> int
@@ -79,8 +83,10 @@ func get_discard_count() -> int
 | Box Shutter (consume) | start_match() | Reads pending_threshold_bonus, resets to 0 |
 | Eager | start_round() | Round 1 only — pre-rolls one hand die at max face |
 | Coffee Break | start_round() | Round 1 only, AFTER Eager — charges a random below-max ability |
-| Bonus Seal | attempt_seal() | After primary seals — bonus seals floor(N/2) tabs |
+| Bonus Seal (counter tick) | end_round() via on_round_end() | Every round — increments counter toward 3 |
+| Bonus Seal (fire) | attempt_seal() via get_bonus_seals_if_ready() | When counter==3 — bonus seals floor(N/2), resets counter |
 | Tab 9 Bounty | attempt_seal() | After all seals — grants HP if 9 in sealed set |
+| Counter reset (all powers) | accept_threshold_win, _check_win, end_round(loss), dev_win, dev_critical | Every match end via on_match_end() |
 
 ## Key Internal State
 ```gdscript
@@ -102,7 +108,8 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Gotchas
 - **All PowerManager calls use `Engine.has_singleton("PowerManager")` guard.** If PowerManager is not registered (e.g., headless tests without it), power effects are silently skipped. All existing tests still pass.
 - **`tabs_sealed` now includes bonus-sealed tabs.** Code that reads this signal must handle more tabs than the dice total would suggest. The `all_sealed` array = primary seals + bonus seals.
-- **Bonus seals do not cascade.** `get_bonus_seals` is called once with the primary sealed tabs only. Its results are applied to the board but NOT fed back into get_bonus_seals.
+- **Bonus seals do not cascade.** `get_bonus_seals_if_ready` is called once with the primary sealed tabs only. Its results are applied to the board but NOT fed back into the method.
+- **on_match_end() must fire at every match-end path.** There are 5: accept_threshold_win(), _check_win() (critical), end_round() (loss branch), dev_win_match(), dev_critical_win(). Missing one leaves the bonus_seal counter non-zero going into the next match.
 - **Eager applies to the drawn hand, not the pool.** `apply_eager(hand)` is called after `draw_hand()` in round 1. The pre-rolled die is in the hand array; dice in the pool are unaffected.
 - **Unrolled dice in roll phase are NOT greyed.** The UI greys unrolled dice only in "act" phase. The Eager pre-rolled die shows its value while other dice remain bright and clickable during roll phase.
 - **`use_ability` does NOT remove abilities from the hand.** It decrements `ability.charges`. The ability stays in its slot (visible, greyed out at 0 charges) until the rotation discards it.
@@ -115,6 +122,7 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-05 | Counter hooks added: end_round() now calls PowerManager.on_round_end() before round_ended; all 5 match-end paths (accept_threshold_win, _check_win critical, end_round loss, dev_win_match, dev_critical_win) now call PowerManager.on_match_end() before emitting. attempt_seal() now calls get_bonus_seals_if_ready() (was get_bonus_seals) — only fires when counter==target. |
 | 2026-05-05 | start_round(): added PowerManager.apply_coffee_break() call on round 1, immediately after apply_eager(). Ordering is intentional — Coffee Break fires after Eager. Lighter Box hook: threshold bonus now 1×count (was 3×count); this change is in PowerManager, not round_manager, but affects the value start_match() computes. |
 | 2026-05-04 | Added dev_critical_win() — emits match_won(true) for testing power offer + Box Shutter flow. |
 | 2026-05-04 | start_match(): computes win_threshold from box base + Lighter Box bonus + pending_threshold_bonus (then resets pending to 0). start_round(): calls PowerManager.apply_eager(hand) on round 1 only. attempt_seal(): calls PowerManager.get_bonus_seals() then seal_tabs(bonus), then PowerManager.apply_tab9_bounty(all_sealed); emits tabs_sealed with combined primary+bonus tab list. |

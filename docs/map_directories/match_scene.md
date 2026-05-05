@@ -86,7 +86,8 @@ After every match win (threshold or critical, after power offer resolves):
 - `_refresh_powers_panel()` deduplicates owned_powers by id — if you own 2× Lighter Box, one pill appears
 - Each pill is a `TooltipButton` showing the power name; hover shows description tooltip
 - When count > 1: a small Label badge (font_size=11) appears anchored to the bottom-right corner of the pill showing the stack count. `mouse_filter = MOUSE_FILTER_IGNORE` so it doesn't block the button.
-- `_refresh_powers_panel()` called from: `_on_power_confirm_pressed()`, `_on_dev_give_power()`, `_on_next_match_ready()`
+- **Counter powers show `"Name X/Y"` format** — if `power.counter_target > 0`, pill text becomes `"%s %d/%d" % [power.name, current_count, counter_target]`. Current count is read from `GameState.power_counters[power.id]`.
+- `_refresh_powers_panel()` called from: `_on_power_confirm_pressed()`, `_on_dev_give_power()`, `_on_next_match_ready()`, `_on_round_ended()` (so counter ticks update the display each round)
 
 ## Dev Menu
 Open with T key or the "DEV" button (top-right corner). Full-screen opaque overlay.
@@ -152,6 +153,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-05 | Powers panel: counter powers (counter_target > 0) now display "Name X/Y" instead of just "Name" — reads GameState.power_counters[id] for current value. _on_round_ended() now calls _refresh_powers_panel() so counter ticks update the display each round. _on_dev_give_power() and handle_power_offer_accepted routing now go through PowerManager.add_power() to ensure counter initialization. |
 | 2026-05-05 | Power offer overlay rebuilt as 3-card selection: 3 card buttons (200×140, autowrap), disabled Confirm + Skip; player clicks card to highlight (yellow tint), Confirm enables. _on_show_power_offer now receives Array; _on_power_card_pressed, _on_power_confirm_pressed replace old _on_power_offer_accepted. Powers panel: _refresh_powers_panel() now deduplicates by id and adds a stack count badge (Label, font 11, bottom-right, MOUSE_FILTER_IGNORE) when count > 1. Dev menu: both main and Give Power panels are now scrollable (ScrollContainer + SIZE_EXPAND_FILL inner VBox); panels expanded to 5%–95% viewport height; Give Power now lists all 8 powers. |
 | 2026-05-04 | Removed _reward_overlay and all dice reward UI. Added _power_offer_overlay (Accept/Skip, opaque black). Added _powers_panel (right-side always-visible list of owned powers with TooltipButton pills). Added _refresh_powers_panel(). Dev menu: added "Shut the Box (Critical Win)" button → dev_critical_win(), "Give Power →" submenu (_dev_power_overlay, populated on open), "Restart Run" button. Fixed dice highlight: unrolled dice no longer grey during roll phase (Eager fix). Registered PowerLibrary + PowerManager singletons in _ready(). Signal wiring: show_power_offer replaces show_reward. |
 | 2026-05-04 | Removed ap_row (AP badge) from scene tree. |

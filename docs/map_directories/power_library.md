@@ -27,8 +27,9 @@ func get_random_unowned_multiple(owned_powers: Array, count: int) -> Array
 ```
 
 ## Data Source
-`seal-the-box/data/powers.csv` — columns: `id, name, type, description`
+`seal-the-box/data/powers.csv` — columns: `id, name, type, description, counter_target`
 Currently 8 rows: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor.
+`counter_target` defaults to 0 (no counter) if the column is missing or empty.
 
 ## Gotchas
 - **No class_name** — the file starts with `extends Node` only. Adding `class_name PowerLibrary` would conflict with the autoload singleton name and cause a parse error.
@@ -50,5 +51,6 @@ Currently 8 rows: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, pho
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-05 | powers.csv gained a 5th column (counter_target); parsed and stored on PowerData. bonus_seal now has counter_target=3; all other powers have counter_target=0. |
 | 2026-05-05 | Added get_random_unowned_multiple(owned_powers, count). powers.csv expanded from 5 to 8 rows: added phoenix_down, coffee_break, survivor. |
 | 2026-05-04 | Created. |
