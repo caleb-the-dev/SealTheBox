@@ -28,6 +28,8 @@ var _threshold_label: Label
 var _continue_button: Button
 var _sealed_total_label: Label
 var _tab_row: HBoxContainer
+var _tabs_header: HBoxContainer
+var _thresh_col: VBoxContainer
 var _power_offer_overlay: Control
 var _power_offer_name_label: Label
 var _power_offer_desc_label: Label
@@ -158,16 +160,18 @@ func _setup_ui() -> void:
 	tabs_vbox.add_theme_constant_override("separation", 6)
 	root.add_child(tabs_vbox)
 
-	# Header row: [x left]  ── TABS ──  [≤y to win / Continue →]
+	# Header row: [x left]  ── TABS ──  [≤y to win]
+	# Width is matched to _tab_row dynamically in _update_tabs_header_widths().
 	var tabs_header = HBoxContainer.new()
-	tabs_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs_header.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	tabs_header.alignment = BoxContainer.ALIGNMENT_CENTER
+	tabs_header.add_theme_constant_override("separation", 8)
 	tabs_vbox.add_child(tabs_header)
+	_tabs_header = tabs_header
 
 	_sealed_total_label = Label.new()
 	_sealed_total_label.add_theme_font_size_override("font_size", 20)
-	_sealed_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_sealed_total_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sealed_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	tabs_header.add_child(_sealed_total_label)
 
 	var tabs_lbl = Label.new()
@@ -181,12 +185,12 @@ func _setup_ui() -> void:
 
 	var thresh_col = VBoxContainer.new()
 	thresh_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	thresh_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs_header.add_child(thresh_col)
+	_thresh_col = thresh_col
 
 	_threshold_label = Label.new()
 	_threshold_label.add_theme_font_size_override("font_size", 20)
-	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	thresh_col.add_child(_threshold_label)
 
 
@@ -835,6 +839,7 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_dev_box_label.text = "Box: %s" % box.name
 	_round_manager.start_match(box)
 	_rebuild_tab_buttons()
+	_update_tabs_header_widths()
 	for btn in _tab_buttons:
 		btn.disabled = false
 	_refresh_powers_panel()
@@ -1110,6 +1115,13 @@ func _on_end_round_pressed() -> void:
 	_round_manager.end_round()
 
 # ── ui refresh ───────────────────────────────────────────────────────────────
+func _update_tabs_header_widths() -> void:
+	var tab_count = GameState.tabs.size()
+	var row_width = tab_count * 62.0 + max(0, tab_count - 1) * 8.0
+	var side_width = max(60.0, (row_width - 110.0) / 2.0)
+	_sealed_total_label.custom_minimum_size.x = side_width
+	_thresh_col.custom_minimum_size.x = side_width
+
 func _stop_hp_pulse() -> void:
 	if _hp_tween:
 		_hp_tween.kill()
