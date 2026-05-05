@@ -50,14 +50,14 @@ func apply_coffee_break() -> void:
 	var count = count_owned("coffee_break")
 	if count == 0:
 		return
-	var non_null: Array = []
+	var eligible: Array = []
 	for ability in GameState.ability_hand:
-		if ability != null:
-			non_null.append(ability)
-	if non_null.is_empty():
+		if ability != null and ability.charges < ability.max_charges:
+			eligible.append(ability)
+	if eligible.is_empty():
 		return
-	var target = non_null[randi() % non_null.size()]
-	target.charges += count
+	var target = eligible[randi() % eligible.size()]
+	target.charges = min(target.charges + count, target.max_charges)
 
 func apply_survivor() -> void:
 	var count = count_owned("survivor")

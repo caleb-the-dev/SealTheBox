@@ -54,6 +54,7 @@ func _init() -> void:
 	_test_get_random_unowned_multiple_no_duplicates(gs, pm)
 	_test_coffee_break_adds_charge(gs, pm)
 	_test_coffee_break_no_effect_with_empty_hand(gs, pm)
+	_test_coffee_break_no_effect_when_all_at_max(gs, pm)
 	_test_survivor_heals_at_1hp(gs, pm)
 	_test_survivor_no_heal_above_1hp(gs, pm)
 	_test_phoenix_down_saves_run(gs, pm)
@@ -306,13 +307,13 @@ func _test_coffee_break_adds_charge(gs: Node, pm: Node) -> void:
 	gs.owned_powers = [power_lib.get_power("coffee_break")]
 	var lib = Engine.get_singleton("AbilityLibrary")
 	var ability = lib.get_ability("greater_1").duplicate()
-	var original_charges = ability.charges
+	ability.charges = ability.max_charges - 1
 	gs.ability_hand = [null, null, ability]
 
 	pm.apply_coffee_break()
 
-	assert(ability.charges == original_charges + 1,
-		"Coffee Break: charge should increase by 1, got %d (expected %d)" % [ability.charges, original_charges + 1])
+	assert(ability.charges == ability.max_charges,
+		"Coffee Break: charge should increase to max, got %d (expected %d)" % [ability.charges, ability.max_charges])
 
 func _test_coffee_break_no_effect_with_empty_hand(gs: Node, pm: Node) -> void:
 	gs.reset_run()
@@ -321,6 +322,18 @@ func _test_coffee_break_no_effect_with_empty_hand(gs: Node, pm: Node) -> void:
 	gs.ability_hand = [null, null, null]
 	pm.apply_coffee_break()
 	# Should not crash; reaching this line is the assertion
+
+func _test_coffee_break_no_effect_when_all_at_max(gs: Node, pm: Node) -> void:
+	gs.reset_run()
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("coffee_break")]
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability = lib.get_ability("greater_1").duplicate()
+	ability.charges = ability.max_charges
+	gs.ability_hand = [null, null, ability]
+	pm.apply_coffee_break()
+	assert(ability.charges == ability.max_charges,
+		"Coffee Break: should not exceed max_charges, got %d" % ability.charges)
 
 # ── Survivor ──────────────────────────────────────────────────────────────────
 
