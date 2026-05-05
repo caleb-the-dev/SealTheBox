@@ -24,7 +24,7 @@ func apply_eager(dice: Array) -> void:
 func add_power(power: PowerData) -> void:
 	GameState.owned_powers.append(power)
 	if power.counter_target > 0 and not GameState.power_counters.has(power.id):
-		GameState.power_counters[power.id] = 0
+		GameState.power_counters[power.id] = 1
 
 func on_round_end() -> void:
 	if count_owned("bonus_seal") == 0:
