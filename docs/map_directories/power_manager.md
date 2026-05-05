@@ -14,7 +14,7 @@ func count_owned(power_id: String) -> int
     # Stacked powers (e.g. 2x Lighter Box) return 2.
 
 func get_threshold_bonus() -> int
-    # Returns count_owned("lighter_box") * 3.
+    # Returns count_owned("lighter_box") — 1 per copy owned.
     # Called by RoundManager.start_match() to inflate win_threshold.
 
 func apply_eager(dice: Array) -> void
@@ -31,8 +31,24 @@ func apply_tab9_bounty(all_sealed_tabs: Array) -> void
     # If tab_9_bounty owned AND 9 is in all_sealed_tabs: GameState.hp += count_owned("tab_9_bounty").
 
 func apply_box_shutter() -> void
-    # GameState.pending_threshold_bonus += count_owned("box_shutter") * 5.
+    # GameState.pending_threshold_bonus += count_owned("box_shutter") * 2.
     # Called by RunManager.handle_match_won(true). The bonus is consumed in the next start_match().
+
+func apply_coffee_break() -> void
+    # Picks a random ability in GameState.ability_hand whose charges < max_charges.
+    # Adds count_owned("coffee_break") charges to it, capped at max_charges.
+    # Does nothing if all abilities are null or already at max charges.
+    # Called by RoundManager.start_round() on round 1 only, AFTER apply_eager().
+
+func apply_survivor() -> void
+    # If survivor is owned AND GameState.hp == 1: GameState.hp += count_owned("survivor").
+    # Called by RunManager.handle_match_won() on every win (threshold or critical).
+
+func try_phoenix_down() -> bool
+    # If phoenix_down is owned: removes one copy from GameState.owned_powers,
+    #   sets GameState.hp = 1, returns true.
+    # Returns false if no phoenix_down owned (run ends normally).
+    # Called by RunManager.handle_match_lost() before emitting run_over.
 ```
 
 ## Hook Map
@@ -40,9 +56,12 @@ func apply_box_shutter() -> void
 |--------|-----------|------|
 | get_threshold_bonus() | RoundManager.start_match() | Every match start |
 | apply_eager() | RoundManager.start_round() | Round 1 of every match |
+| apply_coffee_break() | RoundManager.start_round() | Round 1 of every match, after apply_eager() |
 | get_bonus_seals() | RoundManager.attempt_seal() | After each successful primary seal |
 | apply_tab9_bounty() | RoundManager.attempt_seal() | After primary + bonus seals resolved |
 | apply_box_shutter() | RunManager.handle_match_won(true) | Critical wins only |
+| apply_survivor() | RunManager.handle_match_won() | Every win (before power/rotation offer) |
+| try_phoenix_down() | RunManager.handle_match_lost() | On loss, before run_over emits |
 
 ## Gotchas
 - **No class_name** — starts with `extends Node` only. Adding `class_name PowerManager` causes a "Class hides an autoload singleton" parse error.
@@ -64,4 +83,5 @@ func apply_box_shutter() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-05 | Tuned Lighter Box: get_threshold_bonus() now returns count (was count×3). Tuned Box Shutter: apply_box_shutter() now adds count×2 (was count×5). Added apply_coffee_break() — round-1 hook, charges a random below-max ability, capped at max_charges. Added apply_survivor() — match-win hook, heals at exactly 1 HP. Added try_phoenix_down() — match-loss intercept, consumes itself, sets HP=1. |
 | 2026-05-04 | Created. |

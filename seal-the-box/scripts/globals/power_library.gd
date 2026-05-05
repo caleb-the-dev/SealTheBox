@@ -39,3 +39,11 @@ func get_random_unowned(owned_powers: Array) -> PowerData:
 	if candidates.is_empty():
 		return null
 	return candidates[randi() % candidates.size()]
+
+func get_random_unowned_multiple(owned_powers: Array, count: int) -> Array:
+	var owned_ids: Dictionary = {}
+	for p in owned_powers:
+		owned_ids[p.id] = true
+	var candidates = _powers.values().filter(func(p): return not owned_ids.has(p.id))
+	candidates.shuffle()
+	return candidates.slice(0, min(count, candidates.size()))

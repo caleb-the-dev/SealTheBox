@@ -2,7 +2,7 @@ class_name RunManager
 extends Node
 
 signal next_match_ready(box: BoxDefinition)
-signal show_power_offer(power: PowerData)
+signal show_power_offer(powers: Array)
 signal show_rotation_offer(options: Array)
 signal show_die_swap(offered_dice: Array)
 signal run_over(match_number: int)
@@ -23,6 +23,8 @@ func start_run() -> void:
 
 func handle_match_won(critical: bool) -> void:
 	match_number += 1
+	if Engine.has_singleton("PowerManager"):
+		Engine.get_singleton("PowerManager").apply_survivor()
 	if critical:
 		if Engine.has_singleton("PowerManager"):
 			Engine.get_singleton("PowerManager").apply_box_shutter()
@@ -31,6 +33,11 @@ func handle_match_won(critical: bool) -> void:
 		_do_rotation_offer()
 
 func handle_match_lost() -> void:
+	if Engine.has_singleton("PowerManager"):
+		if Engine.get_singleton("PowerManager").try_phoenix_down():
+			match_number += 1
+			_start_next_match()
+			return
 	run_over.emit(match_number)
 
 func handle_power_offer_accepted(power: PowerData) -> void:
@@ -85,11 +92,11 @@ func _do_power_offer() -> void:
 	if not Engine.has_singleton("PowerLibrary"):
 		_do_rotation_offer()
 		return
-	var power = Engine.get_singleton("PowerLibrary").get_random_unowned(gs.owned_powers)
-	if power == null:
+	var powers = Engine.get_singleton("PowerLibrary").get_random_unowned_multiple(gs.owned_powers, 3)
+	if powers.is_empty():
 		_do_rotation_offer()
 		return
-	show_power_offer.emit(power)
+	show_power_offer.emit(powers)
 
 func _do_rotation_offer() -> void:
 	var gs = Engine.get_singleton("GameState")

@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 4 |
+| Sessions since groom | 5 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -45,7 +45,7 @@ seal-the-box/
   data/
     abilities.csv          # ability definitions (15 abilities; 6 in rotation pool with charges 1–3)
     boxes.csv              # box definitions (3 boxes: classic, low_evens, high_odds)
-    powers.csv             # power definitions (5 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter)
+    powers.csv             # power definitions (8 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor)
   resources/
     ability_data.gd        # AbilityData Resource subclass
     box_definition.gd      # BoxDefinition Resource subclass (class_name BoxDefinition)
@@ -68,8 +68,8 @@ seal-the-box/
     match/
       match.tscn           # Main scene (script: match.gd)
   tests/
-    test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless)
-    test_power_effects.gd  # Tests for all 5 power effects via PowerManager (headless)
+    test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 30 tests
+    test_power_effects.gd  # Tests for all 8 power effects via PowerManager (headless) — 30 tests
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
 ```
 
@@ -91,6 +91,7 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-05 | Power balance + 3-offer + 3 new powers. Lighter Box tuned: +1/copy (was +3). Box Shutter tuned: +2/copy (was +5). powers.csv expanded to 8: added phoenix_down (failsafe, self-consumes), coffee_break (round-1 charge refill, capped at max), survivor (win-at-1HP heal). Power offer rebuilt as 1-of-3 card selection (highlight + Confirm/Skip). RunManager: show_power_offer now emits Array[PowerData]; apply_survivor() on every win; try_phoenix_down() intercept on loss. PowerLibrary: added get_random_unowned_multiple(). Dev menu: scrollable panels (ScrollContainer), expanded to 5–95% height, 8 powers in Give Power submenu. Powers panel: deduplicates stacked powers, shows count badge bottom-right. Coffee Break: only targets abilities below max_charges, caps addition at max. Tests: both suites at 30 tests each. |
 | 2026-05-04 | First Powers slice. New systems: PowerData resource, PowerLibrary autoload, PowerManager autoload, data/powers.csv (5 powers). GameState: added owned_powers (persists across matches, cleared on reset_run) and pending_threshold_bonus (Box Shutter buffer). Dice pool bumped from 5 to 7 (1d4+4d6+2d8). RunManager: replaced dice reward with power offer (show_power_offer signal, Accept/Skip flow, Box Shutter hook). RoundManager: Lighter Box + pending bonus in start_match; Eager pre-roll in start_round round 1; Bonus Seal + Tab 9 Bounty in attempt_seal; dev_critical_win() added. match.gd: replaced reward overlay with power offer overlay; added right-side powers panel; dev menu additions (Shut the Box, Give Power submenu, Restart Run); fixed dice highlight to not grey unrolled dice in roll phase. Tests: test_power_effects.gd (18 tests); test_run_manager.gd updated (17 tests). |
 | 2026-05-04 | Removed AP system entirely: dropped ap var, spend_ap(), ap_cost field from AbilityData + CSV, AP spend from commit_roll/start_round, AP badge from HUD. Rolling is now free. Updated all tests, docs, CLAUDE.md, GAME_BIBLE, and all map_directories bucket files. UI redesign: dice hand and abilities split into separate sub-panels (2/3 + 1/3); draw/discard pile counts moved into dice panel header with hover tooltips; Roll All + Roll Selected merged into single "Roll Dice (All/N)" button with "Select dice to roll" hint label above it; button becomes "Commit & End Round" in act phase. |
 | 2026-05-04 | Ability rotation + charges system. Abilities now have charges (1–3); 3-slot fixed hand rotates after every match (slot 0 discarded, slots shift, player picks 1 of 3 new abilities into slot 3). Run starts with 1 random ability in slot 2. Critical wins: dice reward then rotation. Threshold wins: rotation only. Replaced ability-offer overlay with rotation overlay. Ability buttons show charges [N/M], orange tint on slot 0, grey-out at 0 charges. Die face label ("d6" etc.) appears bottom-right of die buttons after rolling. Continue button disabled during seal phase. Test suite rewritten: 15 tests. |

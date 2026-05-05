@@ -48,6 +48,7 @@ func start_round() -> void:
 		var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 		if power_mgr:
 			power_mgr.apply_eager(hand)
+			power_mgr.apply_coffee_break()
 	_set_phase("roll")
 	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 

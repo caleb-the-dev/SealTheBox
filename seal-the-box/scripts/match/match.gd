@@ -31,8 +31,9 @@ var _tab_row: HBoxContainer
 var _tabs_header: HBoxContainer
 var _thresh_col: VBoxContainer
 var _power_offer_overlay: Control
-var _power_offer_name_label: Label
-var _power_offer_desc_label: Label
+var _power_offer_cards: Array[Button] = []
+var _power_offer_confirm_btn: Button
+var _power_offer_options: Array = []
 var _current_power_offer: PowerData = null
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
@@ -377,41 +378,47 @@ func _setup_ui() -> void:
 	power_overlay.add_child(power_bg)
 
 	var power_center = VBoxContainer.new()
-	power_center.anchor_left = 0.25
-	power_center.anchor_right = 0.75
-	power_center.anchor_top = 0.25
-	power_center.anchor_bottom = 0.8
+	power_center.anchor_left = 0.1
+	power_center.anchor_right = 0.9
+	power_center.anchor_top = 0.1
+	power_center.anchor_bottom = 0.9
 	power_center.add_theme_constant_override("separation", 24)
 	power_overlay.add_child(power_center)
 
 	var power_header = Label.new()
-	power_header.text = "Shut the Box! — Power Earned"
+	power_header.text = "Shut the Box! — Choose a Power"
 	power_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	power_header.add_theme_font_size_override("font_size", 22)
 	power_center.add_child(power_header)
 
-	_power_offer_name_label = Label.new()
-	_power_offer_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_power_offer_name_label.add_theme_font_size_override("font_size", 30)
-	power_center.add_child(_power_offer_name_label)
+	var power_cards_row = HBoxContainer.new()
+	power_cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	power_cards_row.add_theme_constant_override("separation", 24)
+	power_cards_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	power_center.add_child(power_cards_row)
 
-	_power_offer_desc_label = Label.new()
-	_power_offer_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_power_offer_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_power_offer_desc_label.add_theme_font_size_override("font_size", 18)
-	power_center.add_child(_power_offer_desc_label)
+	_power_offer_cards = []
+	for i in 3:
+		var card = Button.new()
+		card.custom_minimum_size = Vector2(200, 140)
+		card.add_theme_font_size_override("font_size", 15)
+		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.pressed.connect(_on_power_card_pressed.bind(i))
+		power_cards_row.add_child(card)
+		_power_offer_cards.append(card)
 
 	var power_btn_row = HBoxContainer.new()
 	power_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	power_btn_row.add_theme_constant_override("separation", 24)
 	power_center.add_child(power_btn_row)
 
-	var accept_btn = Button.new()
-	accept_btn.text = "Accept"
-	accept_btn.custom_minimum_size = Vector2(130, 64)
-	accept_btn.add_theme_font_size_override("font_size", 20)
-	accept_btn.pressed.connect(_on_power_offer_accepted)
-	power_btn_row.add_child(accept_btn)
+	_power_offer_confirm_btn = Button.new()
+	_power_offer_confirm_btn.text = "Confirm"
+	_power_offer_confirm_btn.custom_minimum_size = Vector2(130, 64)
+	_power_offer_confirm_btn.add_theme_font_size_override("font_size", 20)
+	_power_offer_confirm_btn.disabled = true
+	_power_offer_confirm_btn.pressed.connect(_on_power_confirm_pressed)
+	power_btn_row.add_child(_power_offer_confirm_btn)
 
 	var skip_btn = Button.new()
 	skip_btn.text = "Skip"
@@ -536,10 +543,10 @@ func _setup_ui() -> void:
 	dev_overlay.add_child(dev_bg)
 
 	var dev_panel = VBoxContainer.new()
-	dev_panel.anchor_left = 0.35
-	dev_panel.anchor_right = 0.65
-	dev_panel.anchor_top = 0.3
-	dev_panel.anchor_bottom = 0.72
+	dev_panel.anchor_left = 0.3
+	dev_panel.anchor_right = 0.7
+	dev_panel.anchor_top = 0.05
+	dev_panel.anchor_bottom = 0.95
 	dev_panel.add_theme_constant_override("separation", 14)
 	dev_overlay.add_child(dev_panel)
 
@@ -555,46 +562,55 @@ func _setup_ui() -> void:
 	_dev_box_label.modulate = Color(0.7, 0.7, 0.7)
 	dev_panel.add_child(_dev_box_label)
 
+	var dev_scroll = ScrollContainer.new()
+	dev_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var dev_btns = VBoxContainer.new()
+	dev_btns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dev_btns.add_theme_constant_override("separation", 14)
+	dev_scroll.add_child(dev_btns)
+	dev_panel.add_child(dev_scroll)
+
 	var dev_win_match_btn = Button.new()
 	dev_win_match_btn.text = "Win Current Match"
 	dev_win_match_btn.custom_minimum_size = Vector2(0, 56)
 	dev_win_match_btn.add_theme_font_size_override("font_size", 17)
 	dev_win_match_btn.pressed.connect(_on_dev_win_match_pressed)
-	dev_panel.add_child(dev_win_match_btn)
+	dev_btns.add_child(dev_win_match_btn)
 
 	var dev_shut_box_btn = Button.new()
 	dev_shut_box_btn.text = "Shut the Box (Critical Win)"
 	dev_shut_box_btn.custom_minimum_size = Vector2(0, 56)
 	dev_shut_box_btn.add_theme_font_size_override("font_size", 17)
 	dev_shut_box_btn.pressed.connect(_on_dev_shut_box_pressed)
-	dev_panel.add_child(dev_shut_box_btn)
+	dev_btns.add_child(dev_shut_box_btn)
 
 	var dev_give_power_btn = Button.new()
 	dev_give_power_btn.text = "Give Power →"
 	dev_give_power_btn.custom_minimum_size = Vector2(0, 56)
 	dev_give_power_btn.add_theme_font_size_override("font_size", 17)
 	dev_give_power_btn.pressed.connect(_on_dev_give_power_menu_pressed)
-	dev_panel.add_child(dev_give_power_btn)
+	dev_btns.add_child(dev_give_power_btn)
 
 	var dev_win_series_btn = Button.new()
 	dev_win_series_btn.text = "Win Entire Series"
 	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
 	dev_win_series_btn.add_theme_font_size_override("font_size", 17)
 	dev_win_series_btn.pressed.connect(_on_dev_win_series_pressed)
-	dev_panel.add_child(dev_win_series_btn)
+	dev_btns.add_child(dev_win_series_btn)
 
 	var dev_restart_btn = Button.new()
 	dev_restart_btn.text = "Restart Run"
 	dev_restart_btn.custom_minimum_size = Vector2(0, 56)
 	dev_restart_btn.add_theme_font_size_override("font_size", 17)
 	dev_restart_btn.pressed.connect(_on_dev_restart_pressed)
-	dev_panel.add_child(dev_restart_btn)
+	dev_btns.add_child(dev_restart_btn)
 
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
 	dev_close_btn.custom_minimum_size = Vector2(0, 44)
 	dev_close_btn.pressed.connect(_on_dev_toggle_pressed)
-	dev_panel.add_child(dev_close_btn)
+	dev_btns.add_child(dev_close_btn)
 
 	root.add_child(dev_overlay)
 	_dev_overlay = dev_overlay
@@ -610,10 +626,10 @@ func _setup_ui() -> void:
 	dev_power_overlay.add_child(dev_power_bg)
 
 	var dev_power_panel = VBoxContainer.new()
-	dev_power_panel.anchor_left = 0.35
-	dev_power_panel.anchor_right = 0.65
-	dev_power_panel.anchor_top = 0.15
-	dev_power_panel.anchor_bottom = 0.9
+	dev_power_panel.anchor_left = 0.3
+	dev_power_panel.anchor_right = 0.7
+	dev_power_panel.anchor_top = 0.05
+	dev_power_panel.anchor_bottom = 0.95
 	dev_power_panel.add_theme_constant_override("separation", 12)
 	dev_power_overlay.add_child(dev_power_panel)
 
@@ -623,9 +639,14 @@ func _setup_ui() -> void:
 	dev_power_title.add_theme_font_size_override("font_size", 22)
 	dev_power_panel.add_child(dev_power_title)
 
+	var dev_power_scroll = ScrollContainer.new()
+	dev_power_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_power_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_dev_power_list = VBoxContainer.new()
+	_dev_power_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_dev_power_list.add_theme_constant_override("separation", 12)
-	dev_power_panel.add_child(_dev_power_list)
+	dev_power_scroll.add_child(_dev_power_list)
+	dev_power_panel.add_child(dev_power_scroll)
 
 	var dev_power_back_btn = Button.new()
 	dev_power_back_btn.text = "← Back"
@@ -848,13 +869,31 @@ func _on_run_over(match_number: int) -> void:
 	_run_over_detail_label.text = "Defeated on Match %d  |  HP: 0" % match_number
 	_run_over_overlay.visible = true
 
-func _on_show_power_offer(power: PowerData) -> void:
-	_current_power_offer = power
-	_power_offer_name_label.text = power.name
-	_power_offer_desc_label.text = power.description
+func _on_show_power_offer(powers: Array) -> void:
+	_power_offer_options = powers
+	_current_power_offer = null
+	_power_offer_confirm_btn.disabled = true
+	for i in _power_offer_cards.size():
+		if i < powers.size():
+			var p = powers[i]
+			_power_offer_cards[i].text = "%s\n\n%s" % [p.name, p.description]
+			_power_offer_cards[i].modulate = Color.WHITE
+			_power_offer_cards[i].visible = true
+		else:
+			_power_offer_cards[i].visible = false
 	_power_offer_overlay.visible = true
 
-func _on_power_offer_accepted() -> void:
+func _on_power_card_pressed(index: int) -> void:
+	if index >= _power_offer_options.size():
+		return
+	_current_power_offer = _power_offer_options[index]
+	for i in _power_offer_cards.size():
+		_power_offer_cards[i].modulate = Color(1.5, 1.5, 0.3) if i == index else Color.WHITE
+	_power_offer_confirm_btn.disabled = false
+
+func _on_power_confirm_pressed() -> void:
+	if _current_power_offer == null:
+		return
 	_power_offer_overlay.visible = false
 	_run_manager.handle_power_offer_accepted(_current_power_offer)
 	_refresh_powers_panel()
@@ -868,7 +907,15 @@ func _refresh_powers_panel() -> void:
 		return
 	for child in _powers_vbox.get_children():
 		child.queue_free()
+	var counts: Dictionary = {}
+	var deduped: Array = []
 	for power in GameState.owned_powers:
+		if power.id in counts:
+			counts[power.id] += 1
+		else:
+			counts[power.id] = 1
+			deduped.append(power)
+	for power in deduped:
 		var pill = TooltipButton.new()
 		pill.custom_minimum_size = Vector2(0, 44)
 		pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -876,6 +923,22 @@ func _refresh_powers_panel() -> void:
 		pill.tooltip_text = power.name
 		pill._tooltip_title = power.name
 		pill._tooltip_body = power.description
+		var count = counts[power.id]
+		if count > 1:
+			var badge = Label.new()
+			badge.text = str(count)
+			badge.add_theme_font_size_override("font_size", 11)
+			badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			badge.anchor_left = 1.0
+			badge.anchor_right = 1.0
+			badge.anchor_top = 1.0
+			badge.anchor_bottom = 1.0
+			badge.offset_left = -18
+			badge.offset_right = -3
+			badge.offset_top = -16
+			badge.offset_bottom = -3
+			badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			pill.add_child(badge)
 		_powers_vbox.add_child(pill)
 
 func _on_show_rotation_offer(options: Array) -> void:
