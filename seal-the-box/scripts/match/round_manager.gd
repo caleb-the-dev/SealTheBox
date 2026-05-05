@@ -28,7 +28,6 @@ func start_match(box: BoxDefinition) -> void:
 		threshold += power_mgr.get_threshold_bonus()
 		threshold += GameState.pending_threshold_bonus
 		GameState.pending_threshold_bonus = 0
-		power_mgr.apply_coffee_break()
 	GameState.win_threshold = threshold
 	GameState.round_limit = box.round_limit
 	GameState.tabs = box.tabs.duplicate()
@@ -49,6 +48,7 @@ func start_round() -> void:
 		var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 		if power_mgr:
 			power_mgr.apply_eager(hand)
+			power_mgr.apply_coffee_break()
 	_set_phase("roll")
 	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
