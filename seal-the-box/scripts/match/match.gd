@@ -49,7 +49,6 @@ var _die_swap_confirm_btn: Button
 var _die_swap_offered_dice: Array = []
 var _selected_swap_offered_idx: int = -1
 var _selected_swap_pool_die = null
-var _swap_label: Label
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -146,11 +145,6 @@ func _setup_ui() -> void:
 	_box_label = Label.new()
 	_box_label.add_theme_font_size_override("font_size", 18)
 	top_bar.add_child(_box_label)
-
-	_swap_label = Label.new()
-	_swap_label.add_theme_font_size_override("font_size", 16)
-	_swap_label.modulate = Color(0.8, 0.9, 1.0)
-	top_bar.add_child(_swap_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -1091,9 +1085,6 @@ func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
 	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
 	_match_label.text = "Match: %d" % _run_manager.match_number
-	var mn = _run_manager.match_number
-	var remaining = (5 - (mn % 5)) % 5
-	_swap_label.text = "Swap after this!" if remaining == 0 else "Swap in %d" % remaining
 	if GameState.current_box:
 		_box_label.text = "Box: %s" % GameState.current_box.name
 		var remaining_sum := 0
