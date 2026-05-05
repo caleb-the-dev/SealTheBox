@@ -11,7 +11,7 @@ func count_owned(power_id: String) -> int:
 	return count
 
 func get_threshold_bonus() -> int:
-	return count_owned("lighter_box") * 3
+	return count_owned("lighter_box") * 1
 
 func apply_eager(dice: Array) -> void:
 	if count_owned("eager") == 0 or dice.is_empty():
@@ -44,4 +44,34 @@ func apply_box_shutter() -> void:
 	var count = count_owned("box_shutter")
 	if count == 0:
 		return
-	GameState.pending_threshold_bonus += count * 5
+	GameState.pending_threshold_bonus += count * 2
+
+func apply_coffee_break() -> void:
+	var count = count_owned("coffee_break")
+	if count == 0:
+		return
+	var non_null: Array = []
+	for ability in GameState.ability_hand:
+		if ability != null:
+			non_null.append(ability)
+	if non_null.is_empty():
+		return
+	var target = non_null[randi() % non_null.size()]
+	target.charges += count
+
+func apply_survivor() -> void:
+	var count = count_owned("survivor")
+	if count == 0 or GameState.hp != 1:
+		return
+	GameState.hp += count
+
+func try_phoenix_down() -> bool:
+	var count = count_owned("phoenix_down")
+	if count == 0:
+		return false
+	for i in GameState.owned_powers.size():
+		if GameState.owned_powers[i].id == "phoenix_down":
+			GameState.owned_powers.remove_at(i)
+			break
+	GameState.hp = 1
+	return true
