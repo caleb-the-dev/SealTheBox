@@ -5,3 +5,4 @@ extends Resource
 @export var name: String = ""
 @export var type: String = ""
 @export var description: String = ""
+@export var counter_target: int = 0

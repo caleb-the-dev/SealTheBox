@@ -21,9 +21,35 @@ func apply_eager(dice: Array) -> void:
 	die.value = die.faces
 	die.rolled = true
 
-func get_bonus_seals(tab_board: TabBoard, primary_seals: Array) -> Array:
+func add_power(power: PowerData) -> void:
+	GameState.owned_powers.append(power)
+	if power.counter_target > 0 and not GameState.power_counters.has(power.id):
+		GameState.power_counters[power.id] = 0
+
+func on_round_end() -> void:
+	if count_owned("bonus_seal") == 0:
+		return
+	var target = _get_counter_target("bonus_seal")
+	if target <= 0:
+		return
+	var current: int = GameState.power_counters.get("bonus_seal", 0)
+	if current < target:
+		GameState.power_counters["bonus_seal"] = current + 1
+
+func on_match_end() -> void:
+	if GameState.power_counters.has("bonus_seal"):
+		GameState.power_counters["bonus_seal"] = 0
+
+func get_bonus_seals_if_ready(tab_board: TabBoard, primary_seals: Array) -> Array:
 	if count_owned("bonus_seal") == 0:
 		return []
+	var target = _get_counter_target("bonus_seal")
+	if target <= 0:
+		return []
+	var current: int = GameState.power_counters.get("bonus_seal", 0)
+	if current < target:
+		return []
+	GameState.power_counters["bonus_seal"] = 0
 	var remaining = tab_board.get_remaining()
 	var bonus: Array = []
 	for tab in primary_seals:
@@ -33,6 +59,13 @@ func get_bonus_seals(tab_board: TabBoard, primary_seals: Array) -> Array:
 		if bonus_tab in remaining and not bonus_tab in bonus:
 			bonus.append(bonus_tab)
 	return bonus
+
+func _get_counter_target(power_id: String) -> int:
+	if Engine.has_singleton("PowerLibrary"):
+		var p = Engine.get_singleton("PowerLibrary").get_power(power_id)
+		if p:
+			return p.counter_target
+	return 0
 
 func apply_tab9_bounty(all_sealed_tabs: Array) -> void:
 	var count = count_owned("tab_9_bounty")

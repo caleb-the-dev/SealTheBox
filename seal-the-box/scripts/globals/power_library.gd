@@ -22,6 +22,8 @@ func _load_csv() -> void:
 		data.name = row[1].strip_edges()
 		data.type = row[2].strip_edges()
 		data.description = row[3].strip_edges()
+		if row.size() >= 5 and not row[4].strip_edges().is_empty():
+			data.counter_target = row[4].strip_edges().to_int()
 		_powers[data.id] = data
 	file.close()
 
