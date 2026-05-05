@@ -157,37 +157,31 @@ func _setup_ui() -> void:
 	tabs_vbox.add_theme_constant_override("separation", 6)
 	root.add_child(tabs_vbox)
 
-	var tabs_lbl = Label.new()
-	tabs_lbl.text = "── TABS ──"
-	tabs_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tabs_vbox.add_child(tabs_lbl)
-
-	var tab_area = HBoxContainer.new()
-	tab_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_area.alignment = BoxContainer.ALIGNMENT_CENTER
-	tabs_vbox.add_child(tab_area)
+	# Header row: [x left]  ── TABS ──  [≤y to win / Continue →]
+	var tabs_header = HBoxContainer.new()
+	tabs_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs_header.alignment = BoxContainer.ALIGNMENT_CENTER
+	tabs_vbox.add_child(tabs_header)
 
 	_sealed_total_label = Label.new()
 	_sealed_total_label.add_theme_font_size_override("font_size", 20)
 	_sealed_total_label.custom_minimum_size = Vector2(110, 0)
 	_sealed_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_sealed_total_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	tab_area.add_child(_sealed_total_label)
+	tabs_header.add_child(_sealed_total_label)
 
-	_tab_row = HBoxContainer.new()
-	_tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_tab_row.add_theme_constant_override("separation", 8)
-	_tab_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	tab_area.add_child(_tab_row)
+	var tabs_lbl = Label.new()
+	tabs_lbl.text = "── TABS ──"
+	tabs_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tabs_header.add_child(tabs_lbl)
 
 	var thresh_col = VBoxContainer.new()
 	thresh_col.custom_minimum_size = Vector2(140, 0)
 	thresh_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	tab_area.add_child(thresh_col)
+	tabs_header.add_child(thresh_col)
 
 	_threshold_label = Label.new()
 	_threshold_label.add_theme_font_size_override("font_size", 20)
-	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	thresh_col.add_child(_threshold_label)
 
 	_continue_button = Button.new()
@@ -195,6 +189,18 @@ func _setup_ui() -> void:
 	_continue_button.visible = false
 	_continue_button.pressed.connect(_on_continue_pressed)
 	thresh_col.add_child(_continue_button)
+
+	# Tab buttons row (centered, no flanking labels)
+	var tab_area = HBoxContainer.new()
+	tab_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_area.alignment = BoxContainer.ALIGNMENT_CENTER
+	tabs_vbox.add_child(tab_area)
+
+	_tab_row = HBoxContainer.new()
+	_tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_tab_row.add_theme_constant_override("separation", 8)
+	_tab_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tab_area.add_child(_tab_row)
 
 	# ── Status / rolled total ───────────────────────────────────────────────
 	_status_label = Label.new()
