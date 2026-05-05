@@ -11,7 +11,7 @@ func count_owned(power_id: String) -> int:
 	return count
 
 func get_threshold_bonus() -> int:
-	return count_owned("lighter_box") * 1
+	return count_owned("lighter_box")
 
 func apply_eager(dice: Array) -> void:
 	if count_owned("eager") == 0 or dice.is_empty():
