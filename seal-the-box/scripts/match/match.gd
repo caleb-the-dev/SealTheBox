@@ -188,11 +188,6 @@ func _setup_ui() -> void:
 	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	thresh_col.add_child(_threshold_label)
 
-	_continue_button = Button.new()
-	_continue_button.text = "Continue →"
-	_continue_button.visible = false
-	_continue_button.pressed.connect(_on_continue_pressed)
-	thresh_col.add_child(_continue_button)
 
 	# Tab buttons row (centered, no flanking labels)
 	var tab_area = HBoxContainer.new()
@@ -349,6 +344,22 @@ func _setup_ui() -> void:
 		btn.pressed.connect(_on_ability_pressed.bind(i))
 		ability_vbox.add_child(btn)
 		_ability_buttons.append(btn)
+
+	# ── Continue button — centered above dice panel ─────────────────────────────
+	_continue_button = Button.new()
+	_continue_button.text = "Continue →"
+	_continue_button.visible = false
+	_continue_button.anchor_left = 0.5
+	_continue_button.anchor_right = 0.5
+	_continue_button.anchor_top = 1.0
+	_continue_button.anchor_bottom = 1.0
+	_continue_button.offset_left = -80
+	_continue_button.offset_right = 80
+	_continue_button.offset_top = -330
+	_continue_button.offset_bottom = -286
+	_continue_button.add_theme_font_size_override("font_size", 18)
+	_continue_button.pressed.connect(_on_continue_pressed)
+	root.add_child(_continue_button)
 
 	# ── Power offer overlay (hidden until a critical win) ────────────────────────
 	var power_overlay = Control.new()
