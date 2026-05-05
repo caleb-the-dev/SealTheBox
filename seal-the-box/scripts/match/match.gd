@@ -11,7 +11,6 @@ var _match_ended: bool = false
 
 # ── ui references ───────────────────────────────────────────────────────────
 var _hp_label: Label
-var _round_label: Label
 var _status_label: Label
 var _tab_buttons: Array[Button] = []
 var _dice_buttons: Array[Button] = []
@@ -23,7 +22,7 @@ var _draw_label: Label
 var _discard_label: Label
 var _current_phase: String = ""
 var _match_label: Label
-var _box_label: Label
+var _dev_box_label: Label
 var _threshold_label: Label
 var _continue_button: Button
 var _sealed_total_label: Label
@@ -119,7 +118,7 @@ func _setup_ui() -> void:
 
 	const DARK = Color(0.18, 0.18, 0.18, 0.92)
 
-	# ── Top center: Round + HP side by side ────────────────────────────────
+	# ── Top bar: HP centered, Match top-left ───────────────────────────────
 	var top_bar = HBoxContainer.new()
 	top_bar.anchor_left = 0.0
 	top_bar.anchor_right = 1.0
@@ -128,23 +127,24 @@ func _setup_ui() -> void:
 	top_bar.offset_top = 10
 	top_bar.offset_bottom = 52
 	top_bar.alignment = BoxContainer.ALIGNMENT_CENTER
-	top_bar.add_theme_constant_override("separation", 24)
 	root.add_child(top_bar)
-
-	_round_label = Label.new()
-	top_bar.add_child(_round_label)
 
 	_hp_label = Label.new()
 	_hp_label.add_theme_font_size_override("font_size", 28)
 	top_bar.add_child(_hp_label)
 
 	_match_label = Label.new()
-	_match_label.add_theme_font_size_override("font_size", 20)
-	top_bar.add_child(_match_label)
-
-	_box_label = Label.new()
-	_box_label.add_theme_font_size_override("font_size", 18)
-	top_bar.add_child(_box_label)
+	_match_label.anchor_left = 0.0
+	_match_label.anchor_right = 0.0
+	_match_label.anchor_top = 0.0
+	_match_label.anchor_bottom = 0.0
+	_match_label.offset_left = 8
+	_match_label.offset_right = 130
+	_match_label.offset_top = 10
+	_match_label.offset_bottom = 42
+	_match_label.add_theme_font_size_override("font_size", 18)
+	_match_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	root.add_child(_match_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -529,6 +529,12 @@ func _setup_ui() -> void:
 	dev_title.add_theme_font_size_override("font_size", 22)
 	dev_panel.add_child(dev_title)
 
+	_dev_box_label = Label.new()
+	_dev_box_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_dev_box_label.add_theme_font_size_override("font_size", 15)
+	_dev_box_label.modulate = Color(0.7, 0.7, 0.7)
+	dev_panel.add_child(_dev_box_label)
+
 	var dev_win_match_btn = Button.new()
 	dev_win_match_btn.text = "Win Current Match"
 	dev_win_match_btn.custom_minimum_size = Vector2(0, 56)
@@ -810,6 +816,7 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 	_action_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
+	_dev_box_label.text = "Box: %s" % box.name
 	_round_manager.start_match(box)
 	_rebuild_tab_buttons()
 	for btn in _tab_buttons:
@@ -1089,17 +1096,14 @@ func _on_end_round_pressed() -> void:
 # ── ui refresh ───────────────────────────────────────────────────────────────
 func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
-	_round_label.text = "Round: %d / %d" % [GameState.round, GameState.round_limit]
 	_match_label.text = "Match: %d" % _run_manager.match_number
 	if GameState.current_box:
-		_box_label.text = "Box: %s" % GameState.current_box.name
 		var remaining_sum := 0
 		for t in GameState.tabs:
 			remaining_sum += t
 		_sealed_total_label.text = "%d left" % remaining_sum
 		_threshold_label.text = "≤%d to win" % GameState.win_threshold
 	else:
-		_box_label.text = ""
 		_sealed_total_label.text = ""
 		_threshold_label.text = ""
 	var draw_count := _round_manager.get_draw_count()
