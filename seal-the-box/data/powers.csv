@@ -7,3 +7,6 @@ box_shutter,Box Shutter,Critical-Win,After a critical win the next match's win t
 phoenix_down,Phoenix Down,Failsafe,When your run would end from HP reaching 0 instead set HP to 1 and continue. Consumed on use.,0
 coffee_break,Coffee Break,Match-Start,At each match start a random ability in your hand gains +1 charge per copy owned.,0
 survivor,Survivor,Match-End,After winning any match if your HP is exactly 1 gain +1 HP per copy owned.,0
+tax_collector,Tax Collector,Counter,Every 3 critical wins gain +1 HP.,3
+diabolic_pact,Diabolic Pact,Counter,Every 7 d12 rolls gain +1 HP.,7
+tab_counter,Tab Counter,Counter,"Every 5 tabs sealed gives +1 charge to the highest-charge ability in your hand.",5

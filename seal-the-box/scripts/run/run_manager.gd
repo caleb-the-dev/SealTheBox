@@ -27,7 +27,9 @@ func handle_match_won(critical: bool) -> void:
 		Engine.get_singleton("PowerManager").apply_survivor()
 	if critical:
 		if Engine.has_singleton("PowerManager"):
-			Engine.get_singleton("PowerManager").apply_box_shutter()
+			var pm = Engine.get_singleton("PowerManager")
+			pm.apply_box_shutter()
+			pm.on_critical_win()
 		_do_power_offer()
 	else:
 		_do_rotation_offer()

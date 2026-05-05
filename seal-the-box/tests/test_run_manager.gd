@@ -66,6 +66,16 @@ func _init() -> void:
 	_test_bonus_seal_counter_resets_at_match_end(gs)
 	_test_bonus_seal_no_cascade(gs)
 	_test_bonus_seal_counter_ui_reflects_state(gs)
+	_test_tax_collector_fires_after_2_critical_wins(gs)
+	_test_tax_collector_persists_across_non_critical_wins(gs)
+	_test_tax_collector_resets_and_fires_again(gs)
+	_test_diabolic_pact_increments_on_d12(gs)
+	_test_diabolic_pact_non_d12_no_increment(gs)
+	_test_diabolic_pact_fires_and_resets(gs)
+	_test_diabolic_pact_persists_across_matches(gs)
+	_test_tab_counter_fires_at_target(gs)
+	_test_tab_counter_bonus_seals_count(gs)
+	_test_tab_counter_null_hand_noop(gs)
 	print("All RunManager tests passed!")
 	quit()
 
@@ -329,7 +339,7 @@ func _test_power_library_loads_all_powers() -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
 	assert(power_lib != null, "PowerLibrary singleton should be registered")
 	var all_powers = power_lib.get_all()
-	assert(all_powers.size() == 8, "PowerLibrary should have 8 powers, got %d" % all_powers.size())
+	assert(all_powers.size() == 11, "PowerLibrary should have 11 powers, got %d" % all_powers.size())
 	var ids = all_powers.map(func(p): return p.id)
 	assert("lighter_box" in ids, "lighter_box should be in PowerLibrary")
 	assert("eager" in ids, "eager should be in PowerLibrary")
@@ -486,7 +496,7 @@ func _test_power_offer_fewer_than_3_shows_remainder(gs: Node) -> void:
 	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
 
 	rm.start_run()
-	# Own 7 of 8, leaving only box_shutter (set after start_run to avoid reset_run clearing it)
+	# Own 10 of 11, leaving only box_shutter (set after start_run to avoid reset_run clearing it)
 	gs.owned_powers = [
 		power_lib.get_power("lighter_box"),
 		power_lib.get_power("eager"),
@@ -495,6 +505,9 @@ func _test_power_offer_fewer_than_3_shows_remainder(gs: Node) -> void:
 		power_lib.get_power("phoenix_down"),
 		power_lib.get_power("coffee_break"),
 		power_lib.get_power("survivor"),
+		power_lib.get_power("tax_collector"),
+		power_lib.get_power("diabolic_pact"),
+		power_lib.get_power("tab_counter"),
 	]
 	rm.handle_match_won(true)
 
@@ -709,3 +722,160 @@ func _test_bonus_seal_counter_ui_reflects_state(gs: Node) -> void:
 	assert(gs.power_counters.get("bonus_seal", 0) == 3, "UI state: counter should be 3/3 (ready) after 2 rounds")
 	pm.on_round_end()
 	assert(gs.power_counters.get("bonus_seal", 0) == 3, "UI state: counter should stay 3/3 until seal triggers it")
+
+# ── Tax Collector tests ───────────────────────────────────────────────────────
+
+func _test_tax_collector_fires_after_2_critical_wins(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("tax_collector"))
+	assert(gs.power_counters.get("tax_collector", 0) == 1, "starts at 1")
+	gs.hp = 6
+
+	pm.on_critical_win()
+	assert(gs.hp == 6, "Tax Collector: no HP gain after 1 critical win (counter at 2)")
+	assert(gs.power_counters.get("tax_collector", 0) == 2, "counter should be 2 after 1 crit win")
+
+	pm.on_critical_win()
+	assert(gs.hp == 7, "Tax Collector: hp should be 7 after counter hits 3, got %d" % gs.hp)
+	assert(gs.power_counters.get("tax_collector", 0) == 0, "counter resets to 0 after firing")
+
+func _test_tax_collector_persists_across_non_critical_wins(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("tax_collector"))
+	pm.on_critical_win()
+	var counter_before = gs.power_counters.get("tax_collector", 0)
+	pm.on_match_end()
+	assert(gs.power_counters.get("tax_collector", 0) == counter_before,
+		"Tax Collector counter must NOT reset at match end, got %d" % gs.power_counters.get("tax_collector", 0))
+
+func _test_tax_collector_resets_and_fires_again(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("tax_collector"))
+	gs.hp = 6
+	pm.on_critical_win()
+	pm.on_critical_win()
+	assert(gs.hp == 7, "first fire")
+	# After reset to 0, next 3 critical wins fire again
+	pm.on_critical_win()
+	pm.on_critical_win()
+	pm.on_critical_win()
+	assert(gs.hp == 8, "Tax Collector: should fire again after 3 more crit wins, got %d" % gs.hp)
+	assert(gs.power_counters.get("tax_collector", 0) == 0, "counter resets again")
+
+# ── Diabolic Pact tests ───────────────────────────────────────────────────────
+
+func _test_diabolic_pact_increments_on_d12(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("diabolic_pact"))
+	assert(gs.power_counters.get("diabolic_pact", 0) == 1, "starts at 1")
+
+	var d12 = Die.new(12)
+	pm.on_die_rolled(d12)
+	assert(gs.power_counters.get("diabolic_pact", 0) == 2,
+		"Diabolic Pact: d12 roll should increment counter to 2, got %d" % gs.power_counters.get("diabolic_pact", 0))
+
+func _test_diabolic_pact_non_d12_no_increment(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("diabolic_pact"))
+	var initial = gs.power_counters.get("diabolic_pact", 0)
+
+	for faces in [4, 6, 8, 10]:
+		var die = Die.new(faces)
+		pm.on_die_rolled(die)
+	assert(gs.power_counters.get("diabolic_pact", 0) == initial,
+		"Diabolic Pact: non-d12 rolls must not increment counter")
+
+func _test_diabolic_pact_fires_and_resets(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("diabolic_pact"))
+	gs.hp = 6
+	# starts at 1; need 6 more d12 rolls to reach target 7
+	var d12 = Die.new(12)
+	for i in 5:
+		pm.on_die_rolled(d12)
+	assert(gs.hp == 6, "Diabolic Pact: no fire yet at counter 6")
+	pm.on_die_rolled(d12)
+	assert(gs.hp == 7, "Diabolic Pact: hp should be 7 after counter hits 7, got %d" % gs.hp)
+	assert(gs.power_counters.get("diabolic_pact", 0) == 0, "counter resets to 0 after firing")
+
+func _test_diabolic_pact_persists_across_matches(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("diabolic_pact"))
+	var d12 = Die.new(12)
+	pm.on_die_rolled(d12)
+	pm.on_die_rolled(d12)
+	var counter_before = gs.power_counters.get("diabolic_pact", 0)
+	pm.on_match_end()
+	assert(gs.power_counters.get("diabolic_pact", 0) == counter_before,
+		"Diabolic Pact counter must NOT reset at match end, got %d" % gs.power_counters.get("diabolic_pact", 0))
+
+# ── Tab Counter tests ─────────────────────────────────────────────────────────
+
+func _test_tab_counter_fires_at_target(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("tab_counter"))
+	assert(gs.power_counters.get("tab_counter", 0) == 1, "starts at 1")
+
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability = lib.get_ability("greater_1").duplicate()
+	ability.charges = 1
+	ability.max_charges = 3
+	gs.ability_hand = [null, null, ability]
+
+	# starts at 1; sealing 4 more tabs reaches target 5
+	pm.on_tabs_sealed(3)
+	assert(gs.power_counters.get("tab_counter", 0) == 4, "counter at 4 after 3 seals")
+	assert(ability.charges == 1, "no charge yet")
+
+	pm.on_tabs_sealed(1)
+	assert(gs.power_counters.get("tab_counter", 0) == 0, "counter resets to 0 after firing")
+	assert(ability.charges == 2, "Tab Counter: ability should gain +1 charge, got %d" % ability.charges)
+
+func _test_tab_counter_bonus_seals_count(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("tab_counter"))
+
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability = lib.get_ability("reroll_die").duplicate()
+	ability.charges = 1
+	ability.max_charges = 3
+	gs.ability_hand = [null, null, ability]
+
+	# starts at 1; calling on_tabs_sealed(2) simulates 1 primary + 1 bonus seal
+	pm.on_tabs_sealed(2)
+	assert(gs.power_counters.get("tab_counter", 0) == 3, "bonus seals count: counter should be 3 after 2 seals")
+
+	pm.on_tabs_sealed(2)
+	assert(gs.power_counters.get("tab_counter", 0) == 0, "counter fires at 5, resets to 0")
+	assert(ability.charges == 2, "Tab Counter: charge added after bonus seal counted, got %d" % ability.charges)
+
+func _test_tab_counter_null_hand_noop(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("tab_counter"))
+	gs.hp = 6
+	gs.ability_hand = [null, null, null]
+
+	# advance to fire (starts at 1, need 4 more)
+	pm.on_tabs_sealed(4)
+	assert(gs.power_counters.get("tab_counter", 0) == 0, "counter resets even with null hand")
+	assert(gs.hp == 6, "Tab Counter null hand: no HP change (correct no-op)")

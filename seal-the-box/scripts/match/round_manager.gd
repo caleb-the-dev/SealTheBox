@@ -53,8 +53,11 @@ func start_round() -> void:
 	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	for die in dice:
 		_dice_pool.roll_die(die)
+		if power_mgr:
+			power_mgr.on_die_rolled(die)
 	var total := 0
 	for die in GameState.dice_hand:
 		if die.rolled:
@@ -79,6 +82,7 @@ func attempt_seal(dice: Array, tabs: Array) -> bool:
 			_tab_board.seal_tabs(bonus)
 			all_sealed.append_array(bonus)
 		power_mgr.apply_tab9_bounty(all_sealed)
+		power_mgr.on_tabs_sealed(all_sealed.size())
 	GameState.tabs = _tab_board.get_remaining()
 	tabs_sealed.emit(all_sealed)
 	_check_win()
@@ -95,9 +99,12 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 	if target_die == null and ability.id != "reroll_all":
 		push_warning("RoundManager: target_die is null for ability: %s" % ability.id)
 		return false
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	match ability.id:
 		"reroll_die":
 			_dice_pool.reroll(target_die)
+			if power_mgr:
+				power_mgr.on_die_rolled(target_die)
 		"greater_1":
 			_dice_pool.apply_greater(target_die, 1)
 		"lesser_1":
@@ -110,6 +117,8 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			for die in GameState.dice_hand:
 				if die.rolled:
 					_dice_pool.reroll(die)
+					if power_mgr:
+						power_mgr.on_die_rolled(die)
 		_:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
 			return false

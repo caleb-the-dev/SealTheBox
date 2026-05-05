@@ -20,6 +20,7 @@ func apply_eager(dice: Array) -> void:
 	var die = dice[idx]
 	die.value = die.faces
 	die.rolled = true
+	on_die_rolled(die)
 
 func add_power(power: PowerData) -> void:
 	GameState.owned_powers.append(power)
@@ -39,6 +40,63 @@ func on_round_end() -> void:
 func on_match_end() -> void:
 	if GameState.power_counters.has("bonus_seal"):
 		GameState.power_counters["bonus_seal"] = 0
+
+func on_critical_win() -> void:
+	if count_owned("tax_collector") == 0:
+		return
+	var target = _get_counter_target("tax_collector")
+	if target <= 0:
+		return
+	var current: int = GameState.power_counters.get("tax_collector", 0)
+	current += 1
+	GameState.power_counters["tax_collector"] = current
+	if current >= target:
+		GameState.power_counters["tax_collector"] = 0
+		GameState.hp += 1
+
+func on_die_rolled(die: Die) -> void:
+	if die.faces != 12:
+		return
+	if count_owned("diabolic_pact") == 0:
+		return
+	var target = _get_counter_target("diabolic_pact")
+	if target <= 0:
+		return
+	var current: int = GameState.power_counters.get("diabolic_pact", 0)
+	current += 1
+	GameState.power_counters["diabolic_pact"] = current
+	if current >= target:
+		GameState.power_counters["diabolic_pact"] = 0
+		GameState.hp += 1
+
+func on_tabs_sealed(count: int) -> void:
+	if count_owned("tab_counter") == 0:
+		return
+	var target = _get_counter_target("tab_counter")
+	if target <= 0:
+		return
+	var current: int = GameState.power_counters.get("tab_counter", 0)
+	for i in count:
+		current += 1
+		if current >= target:
+			current = 0
+			_apply_tab_counter_charge()
+	GameState.power_counters["tab_counter"] = current
+
+func _apply_tab_counter_charge() -> void:
+	var best_slot: int = -1
+	var best_charges: int = -1
+	for i in GameState.ability_hand.size():
+		var ability = GameState.ability_hand[i]
+		if ability == null:
+			continue
+		if ability.charges > best_charges:
+			best_charges = ability.charges
+			best_slot = i
+	if best_slot < 0:
+		return
+	var ability = GameState.ability_hand[best_slot]
+	ability.charges = min(ability.charges + 1, ability.max_charges)
 
 func get_bonus_seals_if_ready(tab_board: TabBoard, primary_seals: Array) -> Array:
 	if count_owned("bonus_seal") == 0:
