@@ -31,8 +31,7 @@ func handle_match_won(critical: bool) -> void:
 		_do_rotation_offer()
 
 func handle_match_lost() -> void:
-	match_number += 1
-	_do_rotation_offer()
+	run_over.emit(match_number)
 
 func handle_power_offer_accepted(power: PowerData) -> void:
 	var gs = Engine.get_singleton("GameState")

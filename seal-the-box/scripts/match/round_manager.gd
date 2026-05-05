@@ -42,10 +42,6 @@ func start_match(box: BoxDefinition) -> void:
 
 func start_round() -> void:
 	GameState.round += 1
-	if GameState.round > GameState.round_limit:
-		_match_over = true
-		match_lost.emit()
-		return
 	var hand = _dice_pool.draw_hand()
 	GameState.dice_hand = hand
 	if GameState.round == 1:
@@ -129,7 +125,14 @@ func end_round() -> void:
 		return
 	_dice_pool.discard_hand()
 	GameState.dice_hand = []
+	var in_overtime := GameState.round > GameState.round_limit
+	if in_overtime:
+		GameState.hp -= 1
 	round_ended.emit(GameState.round)
+	if in_overtime and GameState.hp <= 0:
+		_match_over = true
+		match_lost.emit()
+		return
 	start_round()
 
 func accept_threshold_win() -> void:

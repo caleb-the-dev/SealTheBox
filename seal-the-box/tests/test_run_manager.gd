@@ -100,16 +100,12 @@ func _test_run_manager_start_run(gs: Node) -> void:
 func _test_run_manager_match_lost() -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
-	var next_match_log: Array = []
-	rm.next_match_ready.connect(func(box): next_match_log.append(box))
-	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
-	rm.show_die_swap.connect(func(_offered): rm.handle_die_swap_skip())
-
+	var run_over_log: Array = []
+	rm.run_over.connect(func(n): run_over_log.append(n))
 	rm.start_run()
-	assert(next_match_log.size() == 1, "start_run should emit next_match_ready once")
 	rm.handle_match_lost()
-	assert(next_match_log.size() == 2, "match lost should advance to next match, got %d" % next_match_log.size())
-	assert(rm.match_number == 2, "match_number should be 2 after loss, got %d" % rm.match_number)
+	assert(run_over_log.size() == 1, "match lost should emit run_over, got %d" % run_over_log.size())
+	assert(run_over_log[0] == 1, "run_over should carry match_number 1, got %d" % run_over_log[0])
 	rm.queue_free()
 
 # ── new ability-hand tests ────────────────────────────────────────────────────
