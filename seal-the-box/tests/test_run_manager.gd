@@ -59,6 +59,13 @@ func _init() -> void:
 	_test_survivor_heals_at_1hp_after_win(gs)
 	_test_survivor_no_heal_above_1hp_after_win(gs)
 	_test_coffee_break_adds_charge_at_match_start(gs)
+	_test_power_counters_init_on_acquire(gs)
+	_test_power_counters_cleared_by_reset_run(gs)
+	_test_bonus_seal_counter_increments_each_round(gs)
+	_test_bonus_seal_fires_and_resets_at_target(gs)
+	_test_bonus_seal_counter_resets_at_match_end(gs)
+	_test_bonus_seal_no_cascade(gs)
+	_test_bonus_seal_counter_ui_reflects_state(gs)
 	print("All RunManager tests passed!")
 	quit()
 
@@ -599,6 +606,7 @@ func _test_coffee_break_adds_charge_at_match_start(gs: Node) -> void:
 	gs.owned_powers = [power_lib.get_power("coffee_break")]
 	var lib = Engine.get_singleton("AbilityLibrary")
 	var ability = lib.get_ability("greater_1").duplicate()
+	ability.charges = ability.max_charges - 1  # ensure it's below max so coffee break applies
 	var original_charges = ability.charges
 	gs.ability_hand = [null, null, ability]
 
@@ -609,3 +617,95 @@ func _test_coffee_break_adds_charge_at_match_start(gs: Node) -> void:
 	assert(ability.charges == original_charges + 1,
 		"Coffee Break: match start should add 1 charge, got %d (expected %d)" % [ability.charges, original_charges + 1])
 	round_mgr.queue_free()
+
+# ── counter infrastructure tests ─────────────────────────────────────────────
+
+func _test_power_counters_init_on_acquire(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	var bonus_seal = power_lib.get_power("bonus_seal")
+	assert(bonus_seal.counter_target == 3, "bonus_seal counter_target should be 3, got %d" % bonus_seal.counter_target)
+	assert(not gs.power_counters.has("bonus_seal"), "counter should not exist before acquiring")
+	pm.add_power(bonus_seal)
+	assert(gs.power_counters.has("bonus_seal"), "counter should exist after acquiring bonus_seal")
+	assert(gs.power_counters["bonus_seal"] == 1, "counter should start at 1, got %d" % gs.power_counters["bonus_seal"])
+
+func _test_power_counters_cleared_by_reset_run(gs: Node) -> void:
+	gs.power_counters["bonus_seal"] = 2
+	gs.reset_run()
+	assert(gs.power_counters.is_empty(), "reset_run should clear power_counters")
+
+func _test_bonus_seal_counter_increments_each_round(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("bonus_seal"))
+	assert(gs.power_counters.get("bonus_seal", 0) == 1, "counter should start at 1")
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 2, "counter should be 2 after round 1, got %d" % gs.power_counters.get("bonus_seal", 0))
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 3, "counter should be 3 after round 2, got %d" % gs.power_counters.get("bonus_seal", 0))
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 3, "counter should stay at 3 (capped), got %d" % gs.power_counters.get("bonus_seal", 0))
+
+func _test_bonus_seal_fires_and_resets_at_target(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("bonus_seal"))
+	# Advance counter to target (3)
+	pm.on_round_end()
+	pm.on_round_end()
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 3, "counter should be at target (3)")
+	# Simulate a seal: sealing tab 8 should bonus-seal tab 4
+	var tab_board = TabBoard.new()
+	tab_board.reset([1, 2, 3, 4, 5, 6, 7, 8, 9] as Array[int])
+	var bonus = pm.get_bonus_seals_if_ready(tab_board, [8])
+	assert(bonus.size() == 1, "bonus seal should fire for 1 tab, got %d" % bonus.size())
+	assert(4 in bonus, "bonus seal for tab 8 should be tab 4")
+	assert(gs.power_counters.get("bonus_seal", 0) == 0, "counter should reset to 0 after firing, got %d" % gs.power_counters.get("bonus_seal", 0))
+	# Counter not at target anymore — next seal should NOT fire
+	var bonus2 = pm.get_bonus_seals_if_ready(tab_board, [6])
+	assert(bonus2.size() == 0, "bonus seal should not fire again when counter is 0, got %d items" % bonus2.size())
+
+func _test_bonus_seal_counter_resets_at_match_end(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("bonus_seal"))
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 2, "counter should be 2 before match end")
+	pm.on_match_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 0, "counter should reset to 0 at match end, got %d" % gs.power_counters.get("bonus_seal", 0))
+
+func _test_bonus_seal_no_cascade(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("bonus_seal"))
+	pm.on_round_end()
+	pm.on_round_end()
+	pm.on_round_end()
+	var tab_board = TabBoard.new()
+	tab_board.reset([1, 2, 3, 4, 5, 6, 7, 8, 9] as Array[int])
+	# Sealing tab 8 gets bonus tab 4; tab 4/2=2 should NOT chain
+	var bonus = pm.get_bonus_seals_if_ready(tab_board, [8])
+	assert(bonus.size() == 1, "no cascade: should only get 1 bonus tab, got %d" % bonus.size())
+	assert(4 in bonus, "bonus tab should be 4")
+	assert(not (2 in bonus), "tab 2 should NOT be in bonus (no cascade)")
+
+func _test_bonus_seal_counter_ui_reflects_state(gs: Node) -> void:
+	gs.reset_run()
+	var pm = Engine.get_singleton("PowerManager")
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	pm.add_power(power_lib.get_power("bonus_seal"))
+	# Verify counter state is readable for UI: 1/3 initially (fires on round 3)
+	assert(gs.power_counters.get("bonus_seal", 0) == 1, "UI state: counter should be 1/3 initially")
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 2, "UI state: counter should be 2/3 after 1 round")
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 3, "UI state: counter should be 3/3 (ready) after 2 rounds")
+	pm.on_round_end()
+	assert(gs.power_counters.get("bonus_seal", 0) == 3, "UI state: counter should stay 3/3 until seal triggers it")

@@ -1,9 +1,9 @@
-id,name,type,description
-lighter_box,Lighter Box,Passive,All match win thresholds are +1 per copy owned.
-eager,Eager,Match-Start,At each match start one random die is pre-set to its max face — usable for sealing in round 1 without rolling.
-tab_9_bounty,Tab 9 Bounty,On-Seal,When tab 9 is sealed gain +1 HP per copy owned.
-bonus_seal,Bonus Seal,On-Seal,Sealing a tab also seals half its value (rounded down) if still open. E.g. sealing 8 seals 4; sealing 5 seals 2. No chain reactions.
-box_shutter,Box Shutter,Critical-Win,After a critical win the next match's win threshold is +2 per copy owned.
-phoenix_down,Phoenix Down,Failsafe,When your run would end from HP reaching 0 instead set HP to 1 and continue. Consumed on use.
-coffee_break,Coffee Break,Match-Start,At each match start a random ability in your hand gains +1 charge per copy owned.
-survivor,Survivor,Match-End,After winning any match if your HP is exactly 1 gain +1 HP per copy owned.
+id,name,type,description,counter_target
+lighter_box,Lighter Box,Passive,All match win thresholds are +1 per copy owned.,0
+eager,Eager,Match-Start,At each match start one random die is pre-set to its max face — usable for sealing in round 1 without rolling.,0
+tab_9_bounty,Tab 9 Bounty,On-Seal,When tab 9 is sealed gain +1 HP per copy owned.,0
+bonus_seal,Bonus Seal,Counter,"Every 3 rounds a bonus seal charges up. When you seal a tab, also seals half its value (rounded down) if open. No chain reactions.",3
+box_shutter,Box Shutter,Critical-Win,After a critical win the next match's win threshold is +2 per copy owned.,0
+phoenix_down,Phoenix Down,Failsafe,When your run would end from HP reaching 0 instead set HP to 1 and continue. Consumed on use.,0
+coffee_break,Coffee Break,Match-Start,At each match start a random ability in your hand gains +1 charge per copy owned.,0
+survivor,Survivor,Match-End,After winning any match if your HP is exactly 1 gain +1 HP per copy owned.,0

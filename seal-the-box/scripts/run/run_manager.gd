@@ -41,8 +41,10 @@ func handle_match_lost() -> void:
 	run_over.emit(match_number)
 
 func handle_power_offer_accepted(power: PowerData) -> void:
-	var gs = Engine.get_singleton("GameState")
-	gs.owned_powers.append(power)
+	if Engine.has_singleton("PowerManager"):
+		Engine.get_singleton("PowerManager").add_power(power)
+	else:
+		Engine.get_singleton("GameState").owned_powers.append(power)
 	_do_rotation_offer()
 
 func handle_power_offer_skipped() -> void:

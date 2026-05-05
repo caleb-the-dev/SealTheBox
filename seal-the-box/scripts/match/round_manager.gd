@@ -74,7 +74,7 @@ func attempt_seal(dice: Array, tabs: Array) -> bool:
 	var all_sealed = tabs.duplicate()
 	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	if power_mgr:
-		var bonus = power_mgr.get_bonus_seals(_tab_board, tabs)
+		var bonus = power_mgr.get_bonus_seals_if_ready(_tab_board, tabs)
 		if not bonus.is_empty():
 			_tab_board.seal_tabs(bonus)
 			all_sealed.append_array(bonus)
@@ -129,9 +129,14 @@ func end_round() -> void:
 	var in_overtime: bool = GameState.round > GameState.round_limit
 	if in_overtime:
 		GameState.hp -= 1
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+	if power_mgr:
+		power_mgr.on_round_end()
 	round_ended.emit(GameState.round)
 	if in_overtime and GameState.hp <= 0:
 		_match_over = true
+		if power_mgr:
+			power_mgr.on_match_end()
 		match_lost.emit()
 		return
 	start_round()
@@ -140,11 +145,17 @@ func accept_threshold_win() -> void:
 	if _match_over:
 		return
 	_match_over = true
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+	if power_mgr:
+		power_mgr.on_match_end()
 	match_won.emit(false)
 
 func _check_win() -> void:
 	if _tab_board.check_critical_win():
 		_match_over = true
+		var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+		if power_mgr:
+			power_mgr.on_match_end()
 		match_won.emit(true)
 	elif _tab_board.check_win(GameState.win_threshold) and not _threshold_notified:
 		_threshold_notified = true
@@ -160,12 +171,18 @@ func dev_win_match() -> void:
 	if _match_over:
 		return
 	_match_over = true
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+	if power_mgr:
+		power_mgr.on_match_end()
 	match_won.emit(false)
 
 func dev_critical_win() -> void:
 	if _match_over:
 		return
 	_match_over = true
+	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
+	if power_mgr:
+		power_mgr.on_match_end()
 	match_won.emit(true)
 
 func _set_phase(phase: String) -> void:

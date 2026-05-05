@@ -800,6 +800,7 @@ func _on_round_ended(_round_num: int) -> void:
 	_selected_ability = null
 	_targeting_die = false
 	_refresh_ui()
+	_refresh_powers_panel()
 
 func _on_match_won(critical: bool) -> void:
 	if _match_ended:
@@ -919,7 +920,11 @@ func _refresh_powers_panel() -> void:
 		var pill = TooltipButton.new()
 		pill.custom_minimum_size = Vector2(0, 44)
 		pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		pill.text = power.name
+		var display_name: String = power.name
+		if power.counter_target > 0:
+			var current_count: int = GameState.power_counters.get(power.id, 0)
+			display_name = "%s %d/%d" % [power.name, current_count, power.counter_target]
+		pill.text = display_name
 		pill.tooltip_text = power.name
 		pill._tooltip_title = power.name
 		pill._tooltip_body = power.description
@@ -1029,7 +1034,10 @@ func _on_dev_give_power_menu_pressed() -> void:
 	_dev_power_overlay.visible = true
 
 func _on_dev_give_power(power: PowerData) -> void:
-	GameState.owned_powers.append(power)
+	if Engine.has_singleton("PowerManager"):
+		Engine.get_singleton("PowerManager").add_power(power)
+	else:
+		GameState.owned_powers.append(power)
 	_refresh_powers_panel()
 
 func _on_dev_power_back_pressed() -> void:
