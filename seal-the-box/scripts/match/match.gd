@@ -37,8 +37,10 @@ var _current_power_offer: PowerData = null
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
 var _rotation_overlay: Control
+var _rot_title_label: Label
 var _rotation_buttons: Array[Button] = []
 var _current_rotation_options: Array = []
+var _rotation_was_loss: bool = false
 var _dev_overlay: Control
 var _dev_power_overlay: Control
 var _dev_power_list: VBoxContainer
@@ -485,6 +487,7 @@ func _setup_ui() -> void:
 	rot_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rot_title.add_theme_font_size_override("font_size", 32)
 	rot_center.add_child(rot_title)
+	_rot_title_label = rot_title
 
 	var rot_subtitle = Label.new()
 	rot_subtitle.text = "Fills Slot 3 — Slot 1 will be discarded after this pick"
@@ -784,6 +787,7 @@ func _on_match_won(critical: bool) -> void:
 	if _match_ended:
 		return
 	_match_ended = true
+	_rotation_was_loss = false
 	_action_button.disabled = true
 	_continue_button.visible = false
 	for btn in _tab_buttons + _dice_buttons + _ability_buttons:
@@ -794,6 +798,7 @@ func _on_match_lost() -> void:
 	if _match_ended:
 		return
 	_match_ended = true
+	_rotation_was_loss = true
 	_action_button.disabled = true
 	_continue_button.visible = false
 	for btn in _tab_buttons + _dice_buttons + _ability_buttons:
@@ -880,6 +885,7 @@ func _refresh_powers_panel() -> void:
 
 func _on_show_rotation_offer(options: Array) -> void:
 	_current_rotation_options = options
+	_rot_title_label.text = "Match Lost — Pick an Ability to Continue" if _rotation_was_loss else "Match Won — Pick an Ability"
 	for i in min(3, options.size()):
 		var a = options[i]
 		_rotation_buttons[i].text = "%s\n\n%s\n\n[%d charges]" % [a.flavor_name, a.description, a.max_charges]
