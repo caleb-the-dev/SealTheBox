@@ -31,8 +31,9 @@ var _tab_row: HBoxContainer
 var _tabs_header: HBoxContainer
 var _thresh_col: VBoxContainer
 var _power_offer_overlay: Control
-var _power_offer_name_label: Label
-var _power_offer_desc_label: Label
+var _power_offer_cards: Array[Button] = []
+var _power_offer_confirm_btn: Button
+var _power_offer_options: Array = []
 var _current_power_offer: PowerData = null
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
@@ -377,41 +378,47 @@ func _setup_ui() -> void:
 	power_overlay.add_child(power_bg)
 
 	var power_center = VBoxContainer.new()
-	power_center.anchor_left = 0.25
-	power_center.anchor_right = 0.75
-	power_center.anchor_top = 0.25
-	power_center.anchor_bottom = 0.8
+	power_center.anchor_left = 0.1
+	power_center.anchor_right = 0.9
+	power_center.anchor_top = 0.1
+	power_center.anchor_bottom = 0.9
 	power_center.add_theme_constant_override("separation", 24)
 	power_overlay.add_child(power_center)
 
 	var power_header = Label.new()
-	power_header.text = "Shut the Box! — Power Earned"
+	power_header.text = "Shut the Box! — Choose a Power"
 	power_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	power_header.add_theme_font_size_override("font_size", 22)
 	power_center.add_child(power_header)
 
-	_power_offer_name_label = Label.new()
-	_power_offer_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_power_offer_name_label.add_theme_font_size_override("font_size", 30)
-	power_center.add_child(_power_offer_name_label)
+	var power_cards_row = HBoxContainer.new()
+	power_cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	power_cards_row.add_theme_constant_override("separation", 24)
+	power_cards_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	power_center.add_child(power_cards_row)
 
-	_power_offer_desc_label = Label.new()
-	_power_offer_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_power_offer_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_power_offer_desc_label.add_theme_font_size_override("font_size", 18)
-	power_center.add_child(_power_offer_desc_label)
+	_power_offer_cards = []
+	for i in 3:
+		var card = Button.new()
+		card.custom_minimum_size = Vector2(200, 140)
+		card.add_theme_font_size_override("font_size", 15)
+		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.pressed.connect(_on_power_card_pressed.bind(i))
+		power_cards_row.add_child(card)
+		_power_offer_cards.append(card)
 
 	var power_btn_row = HBoxContainer.new()
 	power_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	power_btn_row.add_theme_constant_override("separation", 24)
 	power_center.add_child(power_btn_row)
 
-	var accept_btn = Button.new()
-	accept_btn.text = "Accept"
-	accept_btn.custom_minimum_size = Vector2(130, 64)
-	accept_btn.add_theme_font_size_override("font_size", 20)
-	accept_btn.pressed.connect(_on_power_offer_accepted)
-	power_btn_row.add_child(accept_btn)
+	_power_offer_confirm_btn = Button.new()
+	_power_offer_confirm_btn.text = "Confirm"
+	_power_offer_confirm_btn.custom_minimum_size = Vector2(130, 64)
+	_power_offer_confirm_btn.add_theme_font_size_override("font_size", 20)
+	_power_offer_confirm_btn.disabled = true
+	_power_offer_confirm_btn.pressed.connect(_on_power_confirm_pressed)
+	power_btn_row.add_child(_power_offer_confirm_btn)
 
 	var skip_btn = Button.new()
 	skip_btn.text = "Skip"
@@ -848,13 +855,31 @@ func _on_run_over(match_number: int) -> void:
 	_run_over_detail_label.text = "Defeated on Match %d  |  HP: 0" % match_number
 	_run_over_overlay.visible = true
 
-func _on_show_power_offer(power: PowerData) -> void:
-	_current_power_offer = power
-	_power_offer_name_label.text = power.name
-	_power_offer_desc_label.text = power.description
+func _on_show_power_offer(powers: Array) -> void:
+	_power_offer_options = powers
+	_current_power_offer = null
+	_power_offer_confirm_btn.disabled = true
+	for i in _power_offer_cards.size():
+		if i < powers.size():
+			var p = powers[i]
+			_power_offer_cards[i].text = "%s\n\n%s" % [p.name, p.description]
+			_power_offer_cards[i].modulate = Color.WHITE
+			_power_offer_cards[i].visible = true
+		else:
+			_power_offer_cards[i].visible = false
 	_power_offer_overlay.visible = true
 
-func _on_power_offer_accepted() -> void:
+func _on_power_card_pressed(index: int) -> void:
+	if index >= _power_offer_options.size():
+		return
+	_current_power_offer = _power_offer_options[index]
+	for i in _power_offer_cards.size():
+		_power_offer_cards[i].modulate = Color(1.5, 1.5, 0.3) if i == index else Color.WHITE
+	_power_offer_confirm_btn.disabled = false
+
+func _on_power_confirm_pressed() -> void:
+	if _current_power_offer == null:
+		return
 	_power_offer_overlay.visible = false
 	_run_manager.handle_power_offer_accepted(_current_power_offer)
 	_refresh_powers_panel()
