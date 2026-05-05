@@ -165,18 +165,22 @@ func _setup_ui() -> void:
 
 	_sealed_total_label = Label.new()
 	_sealed_total_label.add_theme_font_size_override("font_size", 20)
-	_sealed_total_label.custom_minimum_size = Vector2(110, 0)
 	_sealed_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_sealed_total_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs_header.add_child(_sealed_total_label)
 
 	var tabs_lbl = Label.new()
 	tabs_lbl.text = "── TABS ──"
 	tabs_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var tabs_bold = FontVariation.new()
+	tabs_bold.variation_embolden = 1.0
+	tabs_lbl.add_theme_font_override("font", tabs_bold)
+	tabs_lbl.add_theme_font_size_override("font_size", 20)
 	tabs_header.add_child(tabs_lbl)
 
 	var thresh_col = VBoxContainer.new()
-	thresh_col.custom_minimum_size = Vector2(140, 0)
 	thresh_col.alignment = BoxContainer.ALIGNMENT_CENTER
+	thresh_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs_header.add_child(thresh_col)
 
 	_threshold_label = Label.new()
