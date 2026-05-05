@@ -43,11 +43,9 @@ func start_match(box: BoxDefinition) -> void:
 func start_round() -> void:
 	GameState.round += 1
 	if GameState.round > GameState.round_limit:
-		GameState.hp -= 1
-		if GameState.hp <= 0:
-			_match_over = true
-			match_lost.emit()
-			return
+		_match_over = true
+		match_lost.emit()
+		return
 	var hand = _dice_pool.draw_hand()
 	GameState.dice_hand = hand
 	if GameState.round == 1:
@@ -55,10 +53,7 @@ func start_round() -> void:
 		if power_mgr:
 			power_mgr.apply_eager(hand)
 	_set_phase("roll")
-	if GameState.round > GameState.round_limit:
-		status_updated.emit("Overtime — Round %d / %d — Lost 1 HP (%d remaining). Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit, GameState.hp])
-	else:
-		status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
+	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
 	for die in dice:
