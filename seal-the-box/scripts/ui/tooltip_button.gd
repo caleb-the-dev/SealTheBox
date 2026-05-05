@@ -7,7 +7,7 @@ var _tooltip_body: String = ""
 func update_info(display_name: String, full_description: String) -> void:
 	_tooltip_title = display_name
 	_tooltip_body = full_description
-	text = "%s\n(once)" % display_name
+	text = display_name
 	tooltip_text = display_name
 
 func clear_info() -> void:
