@@ -28,6 +28,7 @@ func start_match(box: BoxDefinition) -> void:
 		threshold += power_mgr.get_threshold_bonus()
 		threshold += GameState.pending_threshold_bonus
 		GameState.pending_threshold_bonus = 0
+		power_mgr.apply_coffee_break()
 	GameState.win_threshold = threshold
 	GameState.round_limit = box.round_limit
 	GameState.tabs = box.tabs.duplicate()

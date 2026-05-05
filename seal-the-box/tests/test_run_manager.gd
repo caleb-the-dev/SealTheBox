@@ -470,16 +470,6 @@ func _test_power_offer_shows_array_of_up_to_3(gs: Node) -> void:
 func _test_power_offer_fewer_than_3_shows_remainder(gs: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	# Own 7 of 8, leaving only box_shutter
-	gs.owned_powers = [
-		power_lib.get_power("lighter_box"),
-		power_lib.get_power("eager"),
-		power_lib.get_power("tab_9_bounty"),
-		power_lib.get_power("bonus_seal"),
-		power_lib.get_power("phoenix_down"),
-		power_lib.get_power("coffee_break"),
-		power_lib.get_power("survivor"),
-	]
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	rm.next_match_ready.connect(func(_box): pass)
@@ -489,6 +479,16 @@ func _test_power_offer_fewer_than_3_shows_remainder(gs: Node) -> void:
 	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
 
 	rm.start_run()
+	# Own 7 of 8, leaving only box_shutter (set after start_run to avoid reset_run clearing it)
+	gs.owned_powers = [
+		power_lib.get_power("lighter_box"),
+		power_lib.get_power("eager"),
+		power_lib.get_power("tab_9_bounty"),
+		power_lib.get_power("bonus_seal"),
+		power_lib.get_power("phoenix_down"),
+		power_lib.get_power("coffee_break"),
+		power_lib.get_power("survivor"),
+	]
 	rm.handle_match_won(true)
 
 	assert(offer_log.size() == 1, "should fire once")
@@ -502,8 +502,6 @@ func _test_power_offer_fewer_than_3_shows_remainder(gs: Node) -> void:
 func _test_power_offer_0_unowned_skips_to_rotation(gs: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	gs.owned_powers = power_lib.get_all()  # own everything
-
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	rm.next_match_ready.connect(func(_box): pass)
@@ -517,6 +515,7 @@ func _test_power_offer_0_unowned_skips_to_rotation(gs: Node) -> void:
 	)
 
 	rm.start_run()
+	gs.owned_powers = power_lib.get_all()  # own everything (set after start_run to avoid reset_run clearing it)
 	rm.handle_match_won(true)
 
 	assert(power_offer_count[0] == 0,
@@ -528,8 +527,6 @@ func _test_power_offer_0_unowned_skips_to_rotation(gs: Node) -> void:
 func _test_phoenix_down_prevents_run_over(gs: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	gs.owned_powers = [power_lib.get_power("phoenix_down")]
-
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
@@ -541,6 +538,8 @@ func _test_phoenix_down_prevents_run_over(gs: Node) -> void:
 
 	rm.start_run()
 	assert(next_match_count[0] == 1, "start_run should emit next_match_ready once")
+	# Set owned_powers after start_run to avoid gs.reset_run() clearing it
+	gs.owned_powers = [power_lib.get_power("phoenix_down")]
 
 	rm.handle_match_lost()
 
@@ -559,10 +558,7 @@ func _test_phoenix_down_prevents_run_over(gs: Node) -> void:
 
 func _test_survivor_heals_at_1hp_after_win(gs: Node) -> void:
 	gs.reset_run()
-	gs.hp = 1
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	gs.owned_powers = [power_lib.get_power("survivor")]
-
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	rm.next_match_ready.connect(func(_box): pass)
@@ -570,6 +566,9 @@ func _test_survivor_heals_at_1hp_after_win(gs: Node) -> void:
 	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
 
 	rm.start_run()
+	# Set hp and owned_powers after start_run to avoid gs.reset_run() clearing them
+	gs.hp = 1
+	gs.owned_powers = [power_lib.get_power("survivor")]
 	rm.handle_match_won(false)
 
 	assert(gs.hp == 2,
@@ -578,16 +577,16 @@ func _test_survivor_heals_at_1hp_after_win(gs: Node) -> void:
 
 func _test_survivor_no_heal_above_1hp_after_win(gs: Node) -> void:
 	gs.reset_run()
-	gs.hp = 3
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	gs.owned_powers = [power_lib.get_power("survivor")]
-
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	rm.next_match_ready.connect(func(_box): pass)
 	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
 
 	rm.start_run()
+	# Set hp and owned_powers after start_run to avoid gs.reset_run() clearing them
+	gs.hp = 3
+	gs.owned_powers = [power_lib.get_power("survivor")]
 	rm.handle_match_won(false)
 
 	assert(gs.hp == 3,
