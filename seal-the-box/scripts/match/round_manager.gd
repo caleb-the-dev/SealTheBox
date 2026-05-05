@@ -125,7 +125,7 @@ func end_round() -> void:
 		return
 	_dice_pool.discard_hand()
 	GameState.dice_hand = []
-	var in_overtime := GameState.round > GameState.round_limit
+	var in_overtime: bool = GameState.round > GameState.round_limit
 	if in_overtime:
 		GameState.hp -= 1
 	round_ended.emit(GameState.round)
