@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working in this repository.
 
+## Skill Overrides
+
+- **Do NOT use** `superpowers:finishing-a-development-branch`. Use the `/wrapup` skill instead.
+- **Do NOT use** `superpowers:writing-plans` when the user's first message is a large, fully-specified feature slice prompt. Instead, read the relevant files, write the plan directly, and proceed immediately to subagent-driven execution. Only invoke `superpowers:writing-plans` for open-ended or ambiguous tasks that genuinely need a planning pass before the spec exists.
+
 ## Project Overview
 
 **Seal the Box** is a roguelike puzzle game built in Godot 4. Core loop: roll dice → play ability cards → put down numbered tabs (1–9, Shut the Box style). Win a match by sealing all tabs; survive a run of matches with powers, events, and rewards between fights.
@@ -110,12 +115,13 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - win_threshold is explicit per-box in CSV (Classic 20, Low Evens 17, High Odds 17); round_limit = ceili(tab_sum/15)+1 (all boxes: 4 rounds before overtime)
 - Abilities have charges (reroll_die=2, empower/weaken=3, reroll_all=1); 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3; rolling dice is free (no AP)
 - Threshold win: "Continue →" button appears and animates when remaining sum ≤ threshold; player chooses when to advance, then picks a rotation ability
-- Critical win (shut the box): auto-ends match, fires power offer (Accept or Skip), then rotation ability pick
-- Powers: 5 powers in data/powers.csv (Lighter Box, Eager, Tab 9 Bounty, Bonus Seal, Box Shutter); PowerData resource, PowerLibrary autoload, PowerManager autoload; owned_powers persist across matches within a run; powers stack (multiple copies allowed)
+- Critical win (shut the box): auto-ends match, fires 1-of-3 power card selection overlay (highlight + Confirm/Skip), then rotation ability pick
+- Powers: 8 powers in data/powers.csv (Lighter Box +1/copy, Eager, Tab 9 Bounty, Bonus Seal, Box Shutter +2/copy, Phoenix Down, Coffee Break, Survivor); PowerData resource, PowerLibrary autoload, PowerManager autoload; owned_powers persist across matches within a run; powers stack (multiple copies show count badge in panel)
+- Phoenix Down: intercepts run-over, sets HP=1, self-consumes. Coffee Break: round-1 hook charges a random below-max ability (capped at max). Survivor: win-at-exactly-HP=1 heals +1.
 - GameState: hp=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], pending_threshold_bonus=0
-- Dev menu (T key or DEV button): "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu, "Win Entire Series", "Restart Run" shortcuts for playtesting
-- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips); power offer overlay + rotation overlay + run-over overlay — all built in code in match.gd
-- Tests: test_run_manager.gd (17 tests) + test_power_effects.gd (18 tests) + test_ability_library.gd pass headless
+- Dev menu (T key or DEV button): scrollable panels; "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu (all 8 powers), "Win Entire Series", "Restart Run" shortcuts for playtesting
+- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates); power offer overlay (3-card pick) + rotation overlay + run-over overlay — all built in code in match.gd
+- Tests: test_run_manager.gd (30 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd pass headless
 
 ## Git & GitHub
 

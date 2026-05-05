@@ -29,8 +29,9 @@ func start_match(box: BoxDefinition) -> void
 
 func start_round() -> void
     # Increments GameState.round. If round > round_limit: deduct 1 HP (overtime).
-    # Draws a hand. On round 1 only, calls PowerManager.apply_eager(hand) to pre-roll
-    # one random die at its max face (if Eager power owned).
+    # Draws a hand. On round 1 only, calls PowerManager.apply_eager(hand) then
+    # PowerManager.apply_coffee_break() — Coffee Break must fire after Eager so
+    # the Eager-pre-rolled die doesn't consume a charge slot prematurely.
     # Sets phase to "roll".
 
 func commit_roll(dice: Array) -> void
@@ -74,9 +75,10 @@ func get_discard_count() -> int
 ## Power Hooks Summary
 | Power | Hook location | When |
 |-------|--------------|------|
-| Lighter Box | start_match() | Every match start — adds 3×count to threshold |
+| Lighter Box | start_match() | Every match start — adds count (1 per copy) to threshold |
 | Box Shutter (consume) | start_match() | Reads pending_threshold_bonus, resets to 0 |
 | Eager | start_round() | Round 1 only — pre-rolls one hand die at max face |
+| Coffee Break | start_round() | Round 1 only, AFTER Eager — charges a random below-max ability |
 | Bonus Seal | attempt_seal() | After primary seals — bonus seals floor(N/2) tabs |
 | Tab 9 Bounty | attempt_seal() | After all seals — grants HP if 9 in sealed set |
 
@@ -113,6 +115,7 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-05 | start_round(): added PowerManager.apply_coffee_break() call on round 1, immediately after apply_eager(). Ordering is intentional — Coffee Break fires after Eager. Lighter Box hook: threshold bonus now 1×count (was 3×count); this change is in PowerManager, not round_manager, but affects the value start_match() computes. |
 | 2026-05-04 | Added dev_critical_win() — emits match_won(true) for testing power offer + Box Shutter flow. |
 | 2026-05-04 | start_match(): computes win_threshold from box base + Lighter Box bonus + pending_threshold_bonus (then resets pending to 0). start_round(): calls PowerManager.apply_eager(hand) on round 1 only. attempt_seal(): calls PowerManager.get_bonus_seals() then seal_tabs(bonus), then PowerManager.apply_tab9_bounty(all_sealed); emits tabs_sealed with combined primary+bonus tab list. |
 | 2026-05-04 | Removed AP initialization from start_round() and AP spending from commit_roll(). Rolling is now free. |

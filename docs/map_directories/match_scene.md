@@ -63,12 +63,13 @@ RunManager.run_over             → _on_run_over               (shows over overl
 
 ## Power Offer Overlay Flow
 After every **critical win** (shut the box):
-1. `_on_show_power_offer(power: PowerData)` fires
+1. `_on_show_power_offer(powers: Array)` fires — receives up to 3 PowerData candidates
 2. Power offer overlay appears (opaque black `Color(0,0,0,1.0)`)
-3. Shows: header "Shut the Box! — Power Earned", power name (large), description, Accept / Skip buttons
-4. **Accept** → `_run_manager.handle_power_offer_accepted(power)` → power added to owned_powers → `_refresh_powers_panel()` → rotation overlay follows
-5. **Skip** → `_run_manager.handle_power_offer_skipped()` → rotation overlay follows
-6. If all 5 powers already owned: overlay is skipped entirely, rotation fires immediately
+3. Shows: header "Shut the Box! — Choose a Power", three card buttons (200×140), disabled Confirm button, Skip button
+4. Player **clicks a card** → it highlights (yellow tint), Confirm button enables; `_current_power_offer` is set
+5. **Confirm** → `_run_manager.handle_power_offer_accepted(_current_power_offer)` → power added → `_refresh_powers_panel()` → rotation follows
+6. **Skip** → `_run_manager.handle_power_offer_skipped()` → rotation overlay follows
+7. If no unowned powers remain: overlay is skipped entirely, rotation fires immediately
 
 ## Rotation Overlay Flow
 After every match win (threshold or critical, after power offer resolves):
@@ -82,8 +83,10 @@ After every match win (threshold or critical, after power offer resolves):
 `_powers_panel` is anchored to the right edge (offset_left=-175, offset_right=-6, top=60, bottom=-310).
 - Always visible, even when empty (shows "── POWERS ──" header with no pills)
 - Contains `_powers_vbox: VBoxContainer` — rebuilt by `_refresh_powers_panel()`
-- Each owned power appears as a `TooltipButton` pill showing the power name; hover shows description tooltip
-- `_refresh_powers_panel()` called from: `_on_power_offer_accepted()`, `_on_dev_give_power()`, `_on_next_match_ready()`
+- `_refresh_powers_panel()` deduplicates owned_powers by id — if you own 2× Lighter Box, one pill appears
+- Each pill is a `TooltipButton` showing the power name; hover shows description tooltip
+- When count > 1: a small Label badge (font_size=11) appears anchored to the bottom-right corner of the pill showing the stack count. `mouse_filter = MOUSE_FILTER_IGNORE` so it doesn't block the button.
+- `_refresh_powers_panel()` called from: `_on_power_confirm_pressed()`, `_on_dev_give_power()`, `_on_next_match_ready()`
 
 ## Dev Menu
 Open with T key or the "DEV" button (top-right corner). Full-screen opaque overlay.
@@ -92,12 +95,14 @@ Open with T key or the "DEV" button (top-right corner). Full-screen opaque overl
 |--------|--------|
 | Win Current Match | `dev_win_match()` → threshold win; rotation overlay appears |
 | Shut the Box (Critical Win) | `dev_critical_win()` → power offer + rotation overlays |
-| Give Power → | Opens `_dev_power_overlay` with all 5 power buttons |
+| Give Power → | Opens `_dev_power_overlay` with all 8 power buttons |
 | Win Entire Series | Loops threshold wins + auto-rotation until stuck; no power offers |
 | Restart Run | `start_run()` — resets everything including owned powers |
 | Close [T] | Hides overlay |
 
-**Give Power submenu:** Populated dynamically when opened (not at startup). Each power button calls `_on_dev_give_power(power)` → appends to owned_powers and refreshes panel. Multiple copies of the same power can be stacked by clicking repeatedly.
+Both the main dev menu and the Give Power submenu are **scrollable** (mouse wheel + scrollbar). The button list lives inside a `ScrollContainer` with `SIZE_EXPAND_FILL`; title and Close/Back are pinned outside the scroll. Panels expand to 5%–95% of screen height so all buttons are reachable at any resolution.
+
+**Give Power submenu:** Populated dynamically when opened (not at startup). Each power button calls `_on_dev_give_power(power)` → appends to owned_powers and refreshes panel. Multiple copies of the same power can be stacked by clicking repeatedly — the stack badge will reflect the count.
 
 ## Tab Buttons
 Tab buttons are dynamic. `_rebuild_tab_buttons()` clears `_tab_row` children and creates one Button per value in `GameState.tabs`. Called after `start_match(box)` sets the new tab set. `_refresh_tab_display()` reads each button's text value to determine sealed/active state — no hardcoded 1–9 range.
@@ -138,6 +143,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 - **All UI is code-built.** Do not add child nodes to match.tscn — add them in `_setup_ui()`.
 - **Give Power submenu is populated on open, not at startup.** PowerLibrary.get_all() is called inside `_on_dev_give_power_menu_pressed()` to avoid initialization-order issues during `_setup_ui()`.
 - **Power pills use direct field assignment instead of TooltipButton.update_info().** `update_info()` appends "(once)" to the button text (charge display for abilities). Powers have no charges, so pills set `pill.text`, `pill.tooltip_text`, `pill._tooltip_title`, and `pill._tooltip_body` directly.
+- **Power offer uses `_current_power_offer` state.** The Confirm button is disabled until a card is clicked. If `_current_power_offer` is null when Confirm fires (shouldn't happen), it no-ops. Don't clear `_power_offer_options` before Confirm is handled.
 - **`_on_end_round_pressed` end_round guard:** After `attempt_seal()`, the code checks `_run_manager.match_number != match_before or _match_ended` before calling `end_round()`. Without this guard, the synchronous signal chain would start the next match and then `end_round()` would advance it to round 2 before the player acts.
 - **Tab display uses button.text.to_int()** to get tab values. Don't change button text formatting without updating `_refresh_tab_display()`.
 - **No run-won overlay.** The run-win overlay and `_on_run_won` handler were removed — there is no "run complete" state in the infinite loop.
@@ -146,6 +152,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-05 | Power offer overlay rebuilt as 3-card selection: 3 card buttons (200×140, autowrap), disabled Confirm + Skip; player clicks card to highlight (yellow tint), Confirm enables. _on_show_power_offer now receives Array; _on_power_card_pressed, _on_power_confirm_pressed replace old _on_power_offer_accepted. Powers panel: _refresh_powers_panel() now deduplicates by id and adds a stack count badge (Label, font 11, bottom-right, MOUSE_FILTER_IGNORE) when count > 1. Dev menu: both main and Give Power panels are now scrollable (ScrollContainer + SIZE_EXPAND_FILL inner VBox); panels expanded to 5%–95% viewport height; Give Power now lists all 8 powers. |
 | 2026-05-04 | Removed _reward_overlay and all dice reward UI. Added _power_offer_overlay (Accept/Skip, opaque black). Added _powers_panel (right-side always-visible list of owned powers with TooltipButton pills). Added _refresh_powers_panel(). Dev menu: added "Shut the Box (Critical Win)" button → dev_critical_win(), "Give Power →" submenu (_dev_power_overlay, populated on open), "Restart Run" button. Fixed dice highlight: unrolled dice no longer grey during roll phase (Eager fix). Registered PowerLibrary + PowerManager singletons in _ready(). Signal wiring: show_power_offer replaces show_reward. |
 | 2026-05-04 | Removed ap_row (AP badge) from scene tree. |
 | 2026-05-04 | Added die face labels, rotation overlay, ability charges display, dice panel/ability panel split. |
