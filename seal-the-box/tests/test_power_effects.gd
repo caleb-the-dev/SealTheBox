@@ -43,11 +43,21 @@ func _init() -> void:
 	_test_bonus_seal_skips_already_sealed(gs, pm)
 	_test_bonus_seal_skips_tab_1(gs, pm)
 	_test_box_shutter_sets_pending_bonus(gs, pm)
-	_test_box_shutter_two_copies_adds_ten(gs, pm)
+	_test_box_shutter_two_copies_double(gs, pm)
 	_test_box_shutter_no_power_no_change(gs, pm)
 	_test_get_random_unowned_excludes_owned(gs, pm)
 	_test_get_random_unowned_returns_null_when_all_owned(gs, pm)
-
+	_test_get_random_unowned_multiple_returns_up_to_3(gs, pm)
+	_test_get_random_unowned_multiple_respects_count(gs, pm)
+	_test_get_random_unowned_multiple_returns_fewer_when_only_1_unowned(gs, pm)
+	_test_get_random_unowned_multiple_returns_empty_when_all_owned(gs, pm)
+	_test_get_random_unowned_multiple_no_duplicates(gs, pm)
+	_test_coffee_break_adds_charge(gs, pm)
+	_test_coffee_break_no_effect_with_empty_hand(gs, pm)
+	_test_survivor_heals_at_1hp(gs, pm)
+	_test_survivor_no_heal_above_1hp(gs, pm)
+	_test_phoenix_down_saves_run(gs, pm)
+	_test_phoenix_down_not_triggered_when_not_owned(gs, pm)
 	print("All PowerEffects tests passed!")
 	quit()
 
@@ -61,15 +71,15 @@ func _test_lighter_box_no_powers(gs: Node, pm: Node) -> void:
 func _test_lighter_box_one_owned(gs: Node, pm: Node) -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
 	gs.owned_powers = [power_lib.get_power("lighter_box")]
-	assert(pm.get_threshold_bonus() == 3,
-		"1 Lighter Box: threshold bonus should be 3, got %d" % pm.get_threshold_bonus())
+	assert(pm.get_threshold_bonus() == 1,
+		"1 Lighter Box: threshold bonus should be 1, got %d" % pm.get_threshold_bonus())
 
 func _test_lighter_box_two_owned(gs: Node, pm: Node) -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
 	var lb = power_lib.get_power("lighter_box")
 	gs.owned_powers = [lb, lb]
-	assert(pm.get_threshold_bonus() == 6,
-		"2 Lighter Box: threshold bonus should be 6, got %d" % pm.get_threshold_bonus())
+	assert(pm.get_threshold_bonus() == 2,
+		"2 Lighter Box: threshold bonus should be 2, got %d" % pm.get_threshold_bonus())
 
 # ── Eager ────────────────────────────────────────────────────────────────────
 
@@ -189,17 +199,17 @@ func _test_box_shutter_sets_pending_bonus(gs: Node, pm: Node) -> void:
 	gs.owned_powers = [power_lib.get_power("box_shutter")]
 	assert(gs.pending_threshold_bonus == 0, "pending_threshold_bonus should start at 0")
 	pm.apply_box_shutter()
-	assert(gs.pending_threshold_bonus == 5,
-		"1 Box Shutter: pending bonus should be 5, got %d" % gs.pending_threshold_bonus)
+	assert(gs.pending_threshold_bonus == 2,
+		"1 Box Shutter: pending bonus should be 2, got %d" % gs.pending_threshold_bonus)
 
-func _test_box_shutter_two_copies_adds_ten(gs: Node, pm: Node) -> void:
+func _test_box_shutter_two_copies_double(gs: Node, pm: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
 	var shutter = power_lib.get_power("box_shutter")
 	gs.owned_powers = [shutter, shutter]
 	pm.apply_box_shutter()
-	assert(gs.pending_threshold_bonus == 10,
-		"2 Box Shutter: pending bonus should be 10, got %d" % gs.pending_threshold_bonus)
+	assert(gs.pending_threshold_bonus == 4,
+		"2 Box Shutter: pending bonus should be 4, got %d" % gs.pending_threshold_bonus)
 
 func _test_box_shutter_no_power_no_change(gs: Node, pm: Node) -> void:
 	gs.reset_run()
@@ -212,12 +222,15 @@ func _test_box_shutter_no_power_no_change(gs: Node, pm: Node) -> void:
 
 func _test_get_random_unowned_excludes_owned(gs: Node, _pm: Node) -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	# Own all 5 powers except box_shutter
+	# Own all 8 powers except box_shutter
 	gs.owned_powers = [
 		power_lib.get_power("lighter_box"),
 		power_lib.get_power("eager"),
 		power_lib.get_power("tab_9_bounty"),
 		power_lib.get_power("bonus_seal"),
+		power_lib.get_power("phoenix_down"),
+		power_lib.get_power("coffee_break"),
+		power_lib.get_power("survivor"),
 	]
 	for _i in 10:
 		var result = power_lib.get_random_unowned(gs.owned_powers)
@@ -231,3 +244,130 @@ func _test_get_random_unowned_returns_null_when_all_owned(gs: Node, _pm: Node) -
 	var result = power_lib.get_random_unowned(gs.owned_powers)
 	assert(result == null,
 		"get_random_unowned: should return null when all powers owned")
+
+# ── PowerLibrary.get_random_unowned_multiple ─────────────────────────────────
+
+func _test_get_random_unowned_multiple_returns_up_to_3(gs: Node, _pm: Node) -> void:
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = []
+	var result = power_lib.get_random_unowned_multiple(gs.owned_powers, 3)
+	assert(result is Array, "get_random_unowned_multiple: should return an Array")
+	assert(result.size() == 3,
+		"with 8 powers and 0 owned, should return 3, got %d" % result.size())
+
+func _test_get_random_unowned_multiple_respects_count(gs: Node, _pm: Node) -> void:
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = []
+	var result = power_lib.get_random_unowned_multiple(gs.owned_powers, 1)
+	assert(result.size() == 1,
+		"requesting 1 should return 1, got %d" % result.size())
+
+func _test_get_random_unowned_multiple_returns_fewer_when_only_1_unowned(gs: Node, _pm: Node) -> void:
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	# Own 7 of 8, leaving only box_shutter unowned
+	gs.owned_powers = [
+		power_lib.get_power("lighter_box"),
+		power_lib.get_power("eager"),
+		power_lib.get_power("tab_9_bounty"),
+		power_lib.get_power("bonus_seal"),
+		power_lib.get_power("phoenix_down"),
+		power_lib.get_power("coffee_break"),
+		power_lib.get_power("survivor"),
+	]
+	var result = power_lib.get_random_unowned_multiple(gs.owned_powers, 3)
+	assert(result.size() == 1,
+		"with 1 unowned, requesting 3 should return 1, got %d" % result.size())
+	assert(result[0].id == "box_shutter",
+		"the only unowned power should be box_shutter, got '%s'" % result[0].id)
+
+func _test_get_random_unowned_multiple_returns_empty_when_all_owned(gs: Node, _pm: Node) -> void:
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = power_lib.get_all()
+	var result = power_lib.get_random_unowned_multiple(gs.owned_powers, 3)
+	assert(result.is_empty(),
+		"with all powers owned, should return empty array, got %d" % result.size())
+
+func _test_get_random_unowned_multiple_no_duplicates(gs: Node, _pm: Node) -> void:
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = []
+	var result = power_lib.get_random_unowned_multiple(gs.owned_powers, 3)
+	var ids: Array = result.map(func(p): return p.id)
+	var unique_ids: Dictionary = {}
+	for id in ids:
+		unique_ids[id] = true
+	assert(unique_ids.size() == ids.size(),
+		"get_random_unowned_multiple: result should have no duplicate powers")
+
+# ── Coffee Break ─────────────────────────────────────────────────────────────
+
+func _test_coffee_break_adds_charge(gs: Node, pm: Node) -> void:
+	gs.reset_run()
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("coffee_break")]
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability = lib.get_ability("greater_1").duplicate()
+	var original_charges = ability.charges
+	gs.ability_hand = [null, null, ability]
+
+	pm.apply_coffee_break()
+
+	assert(ability.charges == original_charges + 1,
+		"Coffee Break: charge should increase by 1, got %d (expected %d)" % [ability.charges, original_charges + 1])
+
+func _test_coffee_break_no_effect_with_empty_hand(gs: Node, pm: Node) -> void:
+	gs.reset_run()
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("coffee_break")]
+	gs.ability_hand = [null, null, null]
+	pm.apply_coffee_break()
+	# Should not crash; reaching this line is the assertion
+
+# ── Survivor ──────────────────────────────────────────────────────────────────
+
+func _test_survivor_heals_at_1hp(gs: Node, pm: Node) -> void:
+	gs.reset_run()
+	gs.hp = 1
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("survivor")]
+
+	pm.apply_survivor()
+
+	assert(gs.hp == 2,
+		"Survivor: hp should go from 1 to 2, got %d" % gs.hp)
+
+func _test_survivor_no_heal_above_1hp(gs: Node, pm: Node) -> void:
+	gs.reset_run()
+	gs.hp = 3
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("survivor")]
+
+	pm.apply_survivor()
+
+	assert(gs.hp == 3,
+		"Survivor: hp should not change at 3hp, got %d" % gs.hp)
+
+# ── Phoenix Down ──────────────────────────────────────────────────────────────
+
+func _test_phoenix_down_saves_run(gs: Node, pm: Node) -> void:
+	gs.reset_run()
+	gs.hp = 1
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("phoenix_down")]
+
+	var result = pm.try_phoenix_down()
+
+	assert(result == true, "try_phoenix_down: should return true when owned")
+	assert(gs.hp == 1, "Phoenix Down: hp should be 1 after trigger, got %d" % gs.hp)
+	var phoenix_count := 0
+	for p in gs.owned_powers:
+		if p.id == "phoenix_down":
+			phoenix_count += 1
+	assert(phoenix_count == 0, "Phoenix Down: power should be consumed from owned_powers")
+
+func _test_phoenix_down_not_triggered_when_not_owned(gs: Node, pm: Node) -> void:
+	gs.reset_run()
+	gs.owned_powers = []
+
+	var result = pm.try_phoenix_down()
+
+	assert(result == false, "try_phoenix_down: should return false when not owned")
