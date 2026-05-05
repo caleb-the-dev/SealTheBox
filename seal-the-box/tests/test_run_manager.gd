@@ -52,6 +52,13 @@ func _init() -> void:
 	_test_die_swap_fires_after_match_10(gs)
 	_test_die_swap_confirm_replaces_die(gs)
 	_test_die_swap_skip_preserves_pool(gs)
+	_test_power_offer_shows_array_of_up_to_3(gs)
+	_test_power_offer_fewer_than_3_shows_remainder(gs)
+	_test_power_offer_0_unowned_skips_to_rotation(gs)
+	_test_phoenix_down_prevents_run_over(gs)
+	_test_survivor_heals_at_1hp_after_win(gs)
+	_test_survivor_no_heal_above_1hp_after_win(gs)
+	_test_coffee_break_adds_charge_at_match_start(gs)
 	print("All RunManager tests passed!")
 	quit()
 
@@ -147,7 +154,7 @@ func _test_critical_win_triggers_power_offer_then_rotation(gs: Node) -> void:
 	var rotation_count = [0]
 	var next_match_log: Array = []
 	rm.next_match_ready.connect(func(box): next_match_log.append(box))
-	rm.show_power_offer.connect(func(power): power_offer_log.append(power))
+	rm.show_power_offer.connect(func(powers): power_offer_log.append(powers))
 	rm.show_rotation_offer.connect(func(opts):
 		rotation_count[0] += 1
 		rm.handle_rotation_pick(opts[0])
@@ -169,7 +176,7 @@ func _test_power_offer_accept_adds_to_owned_powers(gs: Node) -> void:
 	var rm = RunManager.new()
 	get_root().add_child(rm)
 	rm.next_match_ready.connect(func(_box): pass)
-	rm.show_power_offer.connect(func(power): rm.call("handle_power_offer_accepted", power))
+	rm.show_power_offer.connect(func(powers): rm.call("handle_power_offer_accepted", powers[0]))
 	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
 
 	rm.start_run()
@@ -315,13 +322,16 @@ func _test_power_library_loads_all_powers() -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
 	assert(power_lib != null, "PowerLibrary singleton should be registered")
 	var all_powers = power_lib.get_all()
-	assert(all_powers.size() == 5, "PowerLibrary should have 5 powers, got %d" % all_powers.size())
+	assert(all_powers.size() == 8, "PowerLibrary should have 8 powers, got %d" % all_powers.size())
 	var ids = all_powers.map(func(p): return p.id)
 	assert("lighter_box" in ids, "lighter_box should be in PowerLibrary")
 	assert("eager" in ids, "eager should be in PowerLibrary")
 	assert("tab_9_bounty" in ids, "tab_9_bounty should be in PowerLibrary")
 	assert("bonus_seal" in ids, "bonus_seal should be in PowerLibrary")
 	assert("box_shutter" in ids, "box_shutter should be in PowerLibrary")
+	assert("phoenix_down" in ids, "phoenix_down should be in PowerLibrary")
+	assert("coffee_break" in ids, "coffee_break should be in PowerLibrary")
+	assert("survivor" in ids, "survivor should be in PowerLibrary")
 	var power = power_lib.get_power("lighter_box")
 	assert(power != null, "get_power('lighter_box') should return a PowerData")
 	assert(power.name == "Lighter Box", "lighter_box name should be 'Lighter Box', got '%s'" % power.name)
@@ -434,3 +444,169 @@ func _test_die_swap_skip_preserves_pool(gs: Node) -> void:
 	for i in pool_before.size():
 		assert(pool_before[i] in gs.dice_pool, "die %d (d%d) should still be in pool after skip" % [i, pool_before[i].faces])
 	rm.queue_free()
+
+func _test_power_offer_shows_array_of_up_to_3(gs: Node) -> void:
+	gs.reset_run()
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+
+	var offer_log: Array = []
+	rm.show_power_offer.connect(func(powers): offer_log.append(powers))
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	rm.start_run()
+	rm.handle_match_won(true)
+
+	assert(offer_log.size() == 1, "critical win should emit show_power_offer once, got %d" % offer_log.size())
+	var offered = offer_log[0]
+	assert(offered is Array, "show_power_offer should emit an Array")
+	assert(offered.size() >= 1, "power offer should have at least 1 power")
+	assert(offered.size() <= 3, "power offer should have at most 3 powers, got %d" % offered.size())
+
+	rm.handle_power_offer_skipped()
+	rm.queue_free()
+
+func _test_power_offer_fewer_than_3_shows_remainder(gs: Node) -> void:
+	gs.reset_run()
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	# Own 7 of 8, leaving only box_shutter
+	gs.owned_powers = [
+		power_lib.get_power("lighter_box"),
+		power_lib.get_power("eager"),
+		power_lib.get_power("tab_9_bounty"),
+		power_lib.get_power("bonus_seal"),
+		power_lib.get_power("phoenix_down"),
+		power_lib.get_power("coffee_break"),
+		power_lib.get_power("survivor"),
+	]
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+
+	var offer_log: Array = []
+	rm.show_power_offer.connect(func(powers): offer_log.append(powers))
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	rm.start_run()
+	rm.handle_match_won(true)
+
+	assert(offer_log.size() == 1, "should fire once")
+	assert(offer_log[0].size() == 1,
+		"with 1 unowned power, offer should show 1, got %d" % offer_log[0].size())
+	assert(offer_log[0][0].id == "box_shutter", "only unowned power should be box_shutter")
+
+	rm.handle_power_offer_skipped()
+	rm.queue_free()
+
+func _test_power_offer_0_unowned_skips_to_rotation(gs: Node) -> void:
+	gs.reset_run()
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = power_lib.get_all()  # own everything
+
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+
+	var power_offer_count = [0]
+	var rotation_count = [0]
+	rm.show_power_offer.connect(func(_powers): power_offer_count[0] += 1)
+	rm.show_rotation_offer.connect(func(opts):
+		rotation_count[0] += 1
+		rm.handle_rotation_pick(opts[0])
+	)
+
+	rm.start_run()
+	rm.handle_match_won(true)
+
+	assert(power_offer_count[0] == 0,
+		"0 unowned: power offer should NOT show, got %d" % power_offer_count[0])
+	assert(rotation_count[0] == 1,
+		"0 unowned: rotation should fire directly, got %d" % rotation_count[0])
+	rm.queue_free()
+
+func _test_phoenix_down_prevents_run_over(gs: Node) -> void:
+	gs.reset_run()
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("phoenix_down")]
+
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	var run_over_log: Array = []
+	rm.run_over.connect(func(n): run_over_log.append(n))
+	var next_match_count = [0]
+	rm.next_match_ready.connect(func(_box): next_match_count[0] += 1)
+
+	rm.start_run()
+	assert(next_match_count[0] == 1, "start_run should emit next_match_ready once")
+
+	rm.handle_match_lost()
+
+	assert(run_over_log.size() == 0,
+		"Phoenix Down: run_over should NOT fire, got %d" % run_over_log.size())
+	assert(gs.hp == 1,
+		"Phoenix Down: hp should be set to 1, got %d" % gs.hp)
+	assert(next_match_count[0] == 2,
+		"Phoenix Down: next match should start (next_match_ready fires again)")
+	var phoenix_count := 0
+	for p in gs.owned_powers:
+		if p.id == "phoenix_down":
+			phoenix_count += 1
+	assert(phoenix_count == 0, "Phoenix Down: power should be consumed from owned_powers")
+	rm.queue_free()
+
+func _test_survivor_heals_at_1hp_after_win(gs: Node) -> void:
+	gs.reset_run()
+	gs.hp = 1
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("survivor")]
+
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_power_offer.connect(func(_powers): rm.handle_power_offer_skipped())
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	rm.start_run()
+	rm.handle_match_won(false)
+
+	assert(gs.hp == 2,
+		"Survivor: hp should be 2 after threshold win at 1hp, got %d" % gs.hp)
+	rm.queue_free()
+
+func _test_survivor_no_heal_above_1hp_after_win(gs: Node) -> void:
+	gs.reset_run()
+	gs.hp = 3
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("survivor")]
+
+	var rm = RunManager.new()
+	get_root().add_child(rm)
+	rm.next_match_ready.connect(func(_box): pass)
+	rm.show_rotation_offer.connect(func(opts): rm.handle_rotation_pick(opts[0]))
+
+	rm.start_run()
+	rm.handle_match_won(false)
+
+	assert(gs.hp == 3,
+		"Survivor: hp should remain 3, not change at 3hp, got %d" % gs.hp)
+	rm.queue_free()
+
+func _test_coffee_break_adds_charge_at_match_start(gs: Node) -> void:
+	gs.reset_run()
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	gs.owned_powers = [power_lib.get_power("coffee_break")]
+	var lib = Engine.get_singleton("AbilityLibrary")
+	var ability = lib.get_ability("greater_1").duplicate()
+	var original_charges = ability.charges
+	gs.ability_hand = [null, null, ability]
+
+	var round_mgr = RoundManager.new()
+	get_root().add_child(round_mgr)
+	round_mgr.start_match(Engine.get_singleton("BoxLibrary").get_ordered()[0])
+
+	assert(ability.charges == original_charges + 1,
+		"Coffee Break: match start should add 1 charge, got %d (expected %d)" % [ability.charges, original_charges + 1])
+	round_mgr.queue_free()
