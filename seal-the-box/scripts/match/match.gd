@@ -907,7 +907,15 @@ func _refresh_powers_panel() -> void:
 		return
 	for child in _powers_vbox.get_children():
 		child.queue_free()
+	var counts: Dictionary = {}
+	var deduped: Array = []
 	for power in GameState.owned_powers:
+		if power.id in counts:
+			counts[power.id] += 1
+		else:
+			counts[power.id] = 1
+			deduped.append(power)
+	for power in deduped:
 		var pill = TooltipButton.new()
 		pill.custom_minimum_size = Vector2(0, 44)
 		pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -915,6 +923,22 @@ func _refresh_powers_panel() -> void:
 		pill.tooltip_text = power.name
 		pill._tooltip_title = power.name
 		pill._tooltip_body = power.description
+		var count = counts[power.id]
+		if count > 1:
+			var badge = Label.new()
+			badge.text = str(count)
+			badge.add_theme_font_size_override("font_size", 11)
+			badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			badge.anchor_left = 1.0
+			badge.anchor_right = 1.0
+			badge.anchor_top = 1.0
+			badge.anchor_bottom = 1.0
+			badge.offset_left = -18
+			badge.offset_right = -3
+			badge.offset_top = -16
+			badge.offset_bottom = -3
+			badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			pill.add_child(badge)
 		_powers_vbox.add_child(pill)
 
 func _on_show_rotation_offer(options: Array) -> void:
