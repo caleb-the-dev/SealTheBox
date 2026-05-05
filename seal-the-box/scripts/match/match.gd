@@ -543,10 +543,10 @@ func _setup_ui() -> void:
 	dev_overlay.add_child(dev_bg)
 
 	var dev_panel = VBoxContainer.new()
-	dev_panel.anchor_left = 0.35
-	dev_panel.anchor_right = 0.65
-	dev_panel.anchor_top = 0.3
-	dev_panel.anchor_bottom = 0.72
+	dev_panel.anchor_left = 0.3
+	dev_panel.anchor_right = 0.7
+	dev_panel.anchor_top = 0.05
+	dev_panel.anchor_bottom = 0.95
 	dev_panel.add_theme_constant_override("separation", 14)
 	dev_overlay.add_child(dev_panel)
 
@@ -562,46 +562,55 @@ func _setup_ui() -> void:
 	_dev_box_label.modulate = Color(0.7, 0.7, 0.7)
 	dev_panel.add_child(_dev_box_label)
 
+	var dev_scroll = ScrollContainer.new()
+	dev_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var dev_btns = VBoxContainer.new()
+	dev_btns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dev_btns.add_theme_constant_override("separation", 14)
+	dev_scroll.add_child(dev_btns)
+	dev_panel.add_child(dev_scroll)
+
 	var dev_win_match_btn = Button.new()
 	dev_win_match_btn.text = "Win Current Match"
 	dev_win_match_btn.custom_minimum_size = Vector2(0, 56)
 	dev_win_match_btn.add_theme_font_size_override("font_size", 17)
 	dev_win_match_btn.pressed.connect(_on_dev_win_match_pressed)
-	dev_panel.add_child(dev_win_match_btn)
+	dev_btns.add_child(dev_win_match_btn)
 
 	var dev_shut_box_btn = Button.new()
 	dev_shut_box_btn.text = "Shut the Box (Critical Win)"
 	dev_shut_box_btn.custom_minimum_size = Vector2(0, 56)
 	dev_shut_box_btn.add_theme_font_size_override("font_size", 17)
 	dev_shut_box_btn.pressed.connect(_on_dev_shut_box_pressed)
-	dev_panel.add_child(dev_shut_box_btn)
+	dev_btns.add_child(dev_shut_box_btn)
 
 	var dev_give_power_btn = Button.new()
 	dev_give_power_btn.text = "Give Power →"
 	dev_give_power_btn.custom_minimum_size = Vector2(0, 56)
 	dev_give_power_btn.add_theme_font_size_override("font_size", 17)
 	dev_give_power_btn.pressed.connect(_on_dev_give_power_menu_pressed)
-	dev_panel.add_child(dev_give_power_btn)
+	dev_btns.add_child(dev_give_power_btn)
 
 	var dev_win_series_btn = Button.new()
 	dev_win_series_btn.text = "Win Entire Series"
 	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
 	dev_win_series_btn.add_theme_font_size_override("font_size", 17)
 	dev_win_series_btn.pressed.connect(_on_dev_win_series_pressed)
-	dev_panel.add_child(dev_win_series_btn)
+	dev_btns.add_child(dev_win_series_btn)
 
 	var dev_restart_btn = Button.new()
 	dev_restart_btn.text = "Restart Run"
 	dev_restart_btn.custom_minimum_size = Vector2(0, 56)
 	dev_restart_btn.add_theme_font_size_override("font_size", 17)
 	dev_restart_btn.pressed.connect(_on_dev_restart_pressed)
-	dev_panel.add_child(dev_restart_btn)
+	dev_btns.add_child(dev_restart_btn)
 
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
 	dev_close_btn.custom_minimum_size = Vector2(0, 44)
 	dev_close_btn.pressed.connect(_on_dev_toggle_pressed)
-	dev_panel.add_child(dev_close_btn)
+	dev_btns.add_child(dev_close_btn)
 
 	root.add_child(dev_overlay)
 	_dev_overlay = dev_overlay
@@ -617,10 +626,10 @@ func _setup_ui() -> void:
 	dev_power_overlay.add_child(dev_power_bg)
 
 	var dev_power_panel = VBoxContainer.new()
-	dev_power_panel.anchor_left = 0.35
-	dev_power_panel.anchor_right = 0.65
-	dev_power_panel.anchor_top = 0.15
-	dev_power_panel.anchor_bottom = 0.9
+	dev_power_panel.anchor_left = 0.3
+	dev_power_panel.anchor_right = 0.7
+	dev_power_panel.anchor_top = 0.05
+	dev_power_panel.anchor_bottom = 0.95
 	dev_power_panel.add_theme_constant_override("separation", 12)
 	dev_power_overlay.add_child(dev_power_panel)
 
@@ -630,9 +639,14 @@ func _setup_ui() -> void:
 	dev_power_title.add_theme_font_size_override("font_size", 22)
 	dev_power_panel.add_child(dev_power_title)
 
+	var dev_power_scroll = ScrollContainer.new()
+	dev_power_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_power_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_dev_power_list = VBoxContainer.new()
+	_dev_power_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_dev_power_list.add_theme_constant_override("separation", 12)
-	dev_power_panel.add_child(_dev_power_list)
+	dev_power_scroll.add_child(_dev_power_list)
+	dev_power_panel.add_child(dev_power_scroll)
 
 	var dev_power_back_btn = Button.new()
 	dev_power_back_btn.text = "← Back"
