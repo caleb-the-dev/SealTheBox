@@ -11,6 +11,7 @@ var _match_ended: bool = false
 
 # ── ui references ───────────────────────────────────────────────────────────
 var _hp_label: Label
+var _hp_tween: Tween = null
 var _status_label: Label
 var _tab_buttons: Array[Button] = []
 var _dice_buttons: Array[Button] = []
@@ -1109,8 +1110,31 @@ func _on_end_round_pressed() -> void:
 	_round_manager.end_round()
 
 # ── ui refresh ───────────────────────────────────────────────────────────────
+func _stop_hp_pulse() -> void:
+	if _hp_tween:
+		_hp_tween.kill()
+		_hp_tween = null
+	_hp_label.scale = Vector2.ONE
+
 func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
+	match GameState.hp:
+		1:
+			_hp_label.add_theme_color_override("font_color", Color(1.0, 0.18, 0.18))
+			if _hp_tween == null or not _hp_tween.is_running():
+				_hp_label.pivot_offset = _hp_label.size / 2.0
+				_hp_tween = create_tween().set_loops()
+				_hp_tween.tween_property(_hp_label, "scale", Vector2(1.09, 1.09), 0.75).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+				_hp_tween.tween_property(_hp_label, "scale", Vector2(1.0, 1.0), 0.75).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+		2:
+			_hp_label.add_theme_color_override("font_color", Color(1.0, 0.52, 0.0))
+			_stop_hp_pulse()
+		3:
+			_hp_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.1))
+			_stop_hp_pulse()
+		_:
+			_hp_label.remove_theme_color_override("font_color")
+			_stop_hp_pulse()
 	_match_label.text = "Match: %d" % _run_manager.match_number
 	if GameState.current_box:
 		var remaining_sum := 0
