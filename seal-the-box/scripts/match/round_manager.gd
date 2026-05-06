@@ -127,6 +127,9 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			var tab_val = remaining[-1]
 			_tab_board.seal_tab(tab_val)
 			GameState.tabs = _tab_board.get_remaining()
+			if power_mgr:
+				power_mgr.apply_tab9_bounty([tab_val])
+				power_mgr.on_tabs_sealed(1)
 			tabs_sealed.emit([tab_val])
 			_check_win()
 		"auto_seal_lowest":
@@ -137,6 +140,9 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			var tab_val = remaining[0]
 			_tab_board.seal_tab(tab_val)
 			GameState.tabs = _tab_board.get_remaining()
+			if power_mgr:
+				power_mgr.apply_tab9_bounty([tab_val])
+				power_mgr.on_tabs_sealed(1)
 			tabs_sealed.emit([tab_val])
 			_check_win()
 		"multiply_2":
