@@ -13,4 +13,11 @@ roll_d20,Diabolic Card,Diabolic,,0,Roll 1 diabolic d20,1
 greater_2_diabolic,Diabolic Card,Diabolic,,1,Apply greater 2 to any 1 diabolic die,1
 x2_diabolic,Diabolic Card,Diabolic,Preroll,1,Apply x2 to any 1 diabolic die,1
 greater_1_diabolic,Diabolic Card,Diabolic,,0,Apply greater 1 to any 1 diabolic die,1
-put_down_highest,Diabolic Card,Diabolic,Non-Final,0,Put down the highest tab,1
+put_down_highest,Auto-Seal Highest,Mundane,Non-Final,0,Seal the highest open tab — no dice required. Cannot use when only one tab remains.,1
+auto_seal_lowest,Auto-Seal Lowest,Mundane,Non-Final,0,Seal the lowest open tab — no dice required. Cannot use when only one tab remains.,2
+multiply_2,Multiply x2,Mundane,,0,Double a rolled die's value — capped at its max face.,2
+multiply_3,Multiply x3,Mundane,,0,Triple a rolled die's value — capped at its max face.,1
+set_max,Set to Max,Mundane,,0,Set a rolled die to its maximum face value.,2
+set_min,Set to Min,Mundane,,0,Set a rolled die to 1.,3
+reroll_lucky,Reroll Lucky,Ethereal,,0,Reroll one die and keep whichever result is higher.,2
+drop_die,Drop Die,Ethereal,,0,Remove one rolled die from this round — its value no longer counts toward sealing.,2
