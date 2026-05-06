@@ -1103,6 +1103,8 @@ func _on_die_pressed(index: int) -> void:
 	if index >= hand.size():
 		return
 	var die = hand[index]
+	if die.dropped:
+		return
 
 	if _targeting_die and _selected_ability != null:
 		var used_ability = _selected_ability
@@ -1128,7 +1130,7 @@ func _on_die_pressed(index: int) -> void:
 	_update_roll_button_text()
 
 func _on_tab_pressed(tab_value: int) -> void:
-	var rolled = GameState.dice_hand.filter(func(d): return d.rolled)
+	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if rolled.is_empty():
 		_status_label.text = "Roll your dice first, then click tabs that sum to your total."
 		return
@@ -1192,7 +1194,7 @@ func _on_ability_pressed(index: int) -> void:
 	_status_label.text = "%s — click a die to target it." % ability.description
 
 func _on_end_round_pressed() -> void:
-	var rolled = GameState.dice_hand.filter(func(d): return d.rolled)
+	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if not _selected_tabs.is_empty() and not rolled.is_empty():
 		var rolled_total := 0
 		for d in rolled:
@@ -1306,14 +1308,20 @@ func _refresh_dice_display() -> void:
 		var face_lbl = _dice_face_labels[i] if i < _dice_face_labels.size() else null
 		if i < hand.size():
 			var die = hand[i]
-			btn.text = str(die.value) if die.rolled else "d%d" % die.faces
-			btn.disabled = false
-			if face_lbl:
-				if die.rolled:
-					face_lbl.text = "d%d" % die.faces
-					face_lbl.visible = true
-				else:
+			if die.dropped:
+				btn.text = "[X] %d" % die.value
+				btn.disabled = true
+				if face_lbl:
 					face_lbl.visible = false
+			else:
+				btn.text = str(die.value) if die.rolled else "d%d" % die.faces
+				btn.disabled = false
+				if face_lbl:
+					if die.rolled:
+						face_lbl.text = "d%d" % die.faces
+						face_lbl.visible = true
+					else:
+						face_lbl.visible = false
 		else:
 			btn.text = "—"
 			btn.disabled = true
@@ -1326,7 +1334,7 @@ func _refresh_dice_highlight() -> void:
 	for i in hand.size():
 		if i < _dice_buttons.size():
 			var die = hand[i]
-			if any_rolled and not die.rolled and _current_phase == "act":
+			if die.dropped or (any_rolled and not die.rolled and _current_phase == "act"):
 				_dice_buttons[i].modulate = Color(0.4, 0.4, 0.4)
 			elif die in _selected_dice:
 				_dice_buttons[i].modulate = Color(1.5, 1.5, 0.3)
@@ -1361,7 +1369,7 @@ func _refresh_ability_display() -> void:
 func _update_rolled_total() -> void:
 	var total = 0
 	for d in GameState.dice_hand:
-		if d.rolled:
+		if d.rolled and not d.dropped:
 			total += d.value
 	_status_label.text = "Rolled total: %d — click a tab to seal." % total
 
