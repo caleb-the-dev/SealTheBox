@@ -52,6 +52,7 @@ var _die_swap_confirm_btn: Button
 var _die_swap_offered_dice: Array = []
 var _selected_swap_offered_idx: int = -1
 var _selected_swap_pool_die = null
+var _dev_die_swap_mode: bool = false
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -592,6 +593,13 @@ func _setup_ui() -> void:
 	dev_give_power_btn.pressed.connect(_on_dev_give_power_menu_pressed)
 	dev_btns.add_child(dev_give_power_btn)
 
+	var dev_switch_dice_btn = Button.new()
+	dev_switch_dice_btn.text = "Switch Dice →"
+	dev_switch_dice_btn.custom_minimum_size = Vector2(0, 56)
+	dev_switch_dice_btn.add_theme_font_size_override("font_size", 17)
+	dev_switch_dice_btn.pressed.connect(_on_dev_switch_dice_pressed)
+	dev_btns.add_child(dev_switch_dice_btn)
+
 	var dev_win_series_btn = Button.new()
 	dev_win_series_btn.text = "Win Entire Series"
 	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
@@ -999,11 +1007,23 @@ func _update_die_swap_confirm_state() -> void:
 
 func _on_die_swap_confirm_pressed() -> void:
 	_die_swap_overlay.visible = false
-	_run_manager.handle_die_swap_confirm(_die_swap_offered_dice[_selected_swap_offered_idx], _selected_swap_pool_die)
+	if _dev_die_swap_mode:
+		_dev_die_swap_mode = false
+		var offered = _die_swap_offered_dice[_selected_swap_offered_idx]
+		var idx = GameState.dice_pool.find(_selected_swap_pool_die)
+		if idx >= 0:
+			GameState.dice_pool[idx] = offered
+		_dev_overlay.visible = true
+	else:
+		_run_manager.handle_die_swap_confirm(_die_swap_offered_dice[_selected_swap_offered_idx], _selected_swap_pool_die)
 
 func _on_die_swap_skip_pressed() -> void:
 	_die_swap_overlay.visible = false
-	_run_manager.handle_die_swap_skip()
+	if _dev_die_swap_mode:
+		_dev_die_swap_mode = false
+		_dev_overlay.visible = true
+	else:
+		_run_manager.handle_die_swap_skip()
 
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
@@ -1017,6 +1037,14 @@ func _on_dev_shut_box_pressed() -> void:
 	_dev_overlay.visible = false
 	if not _match_ended:
 		_round_manager.dev_critical_win()
+
+func _on_dev_switch_dice_pressed() -> void:
+	_dev_overlay.visible = false
+	_dev_die_swap_mode = true
+	var offered: Array = []
+	for f in RunManager.DIE_SWAP_FACES:
+		offered.append(Die.new(f))
+	_on_show_die_swap(offered)
 
 func _on_dev_give_power_menu_pressed() -> void:
 	for child in _dev_power_list.get_children():
