@@ -52,6 +52,7 @@ var _die_swap_confirm_btn: Button
 var _die_swap_offered_dice: Array = []
 var _selected_swap_offered_idx: int = -1
 var _selected_swap_pool_die = null
+var _selected_swap_pool_idx: int = -1
 var _dev_die_swap_mode: bool = false
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
@@ -972,6 +973,7 @@ func _on_show_die_swap(offered_dice: Array) -> void:
 	_die_swap_offered_dice = offered_dice
 	_selected_swap_offered_idx = -1
 	_selected_swap_pool_die = null
+	_selected_swap_pool_idx = -1
 	for i in _die_swap_offered_buttons.size():
 		_die_swap_offered_buttons[i].text = "d%d" % offered_dice[i].faces
 		_die_swap_offered_buttons[i].modulate = Color.WHITE
@@ -998,6 +1000,7 @@ func _on_die_swap_offered_pressed(index: int) -> void:
 
 func _on_die_swap_pool_pressed(index: int) -> void:
 	_selected_swap_pool_die = GameState.dice_pool[index]
+	_selected_swap_pool_idx = index
 	for i in _die_swap_pool_buttons.size():
 		_die_swap_pool_buttons[i].modulate = Color(1.5, 1.5, 0.3) if i == index else Color.WHITE
 	_update_die_swap_confirm_state()
@@ -1010,9 +1013,8 @@ func _on_die_swap_confirm_pressed() -> void:
 	if _dev_die_swap_mode:
 		_dev_die_swap_mode = false
 		var offered = _die_swap_offered_dice[_selected_swap_offered_idx]
-		var idx = GameState.dice_pool.find(_selected_swap_pool_die)
-		if idx >= 0:
-			GameState.dice_pool[idx] = offered
+		if _selected_swap_pool_idx >= 0:
+			GameState.dice_pool[_selected_swap_pool_idx] = offered
 		_dev_overlay.visible = true
 	else:
 		_run_manager.handle_die_swap_confirm(_die_swap_offered_dice[_selected_swap_offered_idx], _selected_swap_pool_die)
