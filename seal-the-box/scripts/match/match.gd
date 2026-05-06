@@ -52,6 +52,8 @@ var _die_swap_confirm_btn: Button
 var _die_swap_offered_dice: Array = []
 var _selected_swap_offered_idx: int = -1
 var _selected_swap_pool_die = null
+var _selected_swap_pool_idx: int = -1
+var _dev_die_swap_mode: bool = false
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -592,6 +594,13 @@ func _setup_ui() -> void:
 	dev_give_power_btn.pressed.connect(_on_dev_give_power_menu_pressed)
 	dev_btns.add_child(dev_give_power_btn)
 
+	var dev_switch_dice_btn = Button.new()
+	dev_switch_dice_btn.text = "Switch Dice →"
+	dev_switch_dice_btn.custom_minimum_size = Vector2(0, 56)
+	dev_switch_dice_btn.add_theme_font_size_override("font_size", 17)
+	dev_switch_dice_btn.pressed.connect(_on_dev_switch_dice_pressed)
+	dev_btns.add_child(dev_switch_dice_btn)
+
 	var dev_win_series_btn = Button.new()
 	dev_win_series_btn.text = "Win Entire Series"
 	dev_win_series_btn.custom_minimum_size = Vector2(0, 56)
@@ -964,6 +973,7 @@ func _on_show_die_swap(offered_dice: Array) -> void:
 	_die_swap_offered_dice = offered_dice
 	_selected_swap_offered_idx = -1
 	_selected_swap_pool_die = null
+	_selected_swap_pool_idx = -1
 	for i in _die_swap_offered_buttons.size():
 		_die_swap_offered_buttons[i].text = "d%d" % offered_dice[i].faces
 		_die_swap_offered_buttons[i].modulate = Color.WHITE
@@ -990,6 +1000,7 @@ func _on_die_swap_offered_pressed(index: int) -> void:
 
 func _on_die_swap_pool_pressed(index: int) -> void:
 	_selected_swap_pool_die = GameState.dice_pool[index]
+	_selected_swap_pool_idx = index
 	for i in _die_swap_pool_buttons.size():
 		_die_swap_pool_buttons[i].modulate = Color(1.5, 1.5, 0.3) if i == index else Color.WHITE
 	_update_die_swap_confirm_state()
@@ -999,11 +1010,22 @@ func _update_die_swap_confirm_state() -> void:
 
 func _on_die_swap_confirm_pressed() -> void:
 	_die_swap_overlay.visible = false
-	_run_manager.handle_die_swap_confirm(_die_swap_offered_dice[_selected_swap_offered_idx], _selected_swap_pool_die)
+	if _dev_die_swap_mode:
+		_dev_die_swap_mode = false
+		var offered = _die_swap_offered_dice[_selected_swap_offered_idx]
+		if _selected_swap_pool_idx >= 0:
+			GameState.dice_pool[_selected_swap_pool_idx] = offered
+		_dev_overlay.visible = true
+	else:
+		_run_manager.handle_die_swap_confirm(_die_swap_offered_dice[_selected_swap_offered_idx], _selected_swap_pool_die)
 
 func _on_die_swap_skip_pressed() -> void:
 	_die_swap_overlay.visible = false
-	_run_manager.handle_die_swap_skip()
+	if _dev_die_swap_mode:
+		_dev_die_swap_mode = false
+		_dev_overlay.visible = true
+	else:
+		_run_manager.handle_die_swap_skip()
 
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
@@ -1017,6 +1039,14 @@ func _on_dev_shut_box_pressed() -> void:
 	_dev_overlay.visible = false
 	if not _match_ended:
 		_round_manager.dev_critical_win()
+
+func _on_dev_switch_dice_pressed() -> void:
+	_dev_overlay.visible = false
+	_dev_die_swap_mode = true
+	var offered: Array = []
+	for f in RunManager.DIE_SWAP_FACES:
+		offered.append(Die.new(f))
+	_on_show_die_swap(offered)
 
 func _on_dev_give_power_menu_pressed() -> void:
 	for child in _dev_power_list.get_children():
@@ -1081,6 +1111,7 @@ func _on_die_pressed(index: int) -> void:
 		_selected_ability = null
 		_targeting_die = false
 		_refresh_ui()
+		_refresh_powers_panel()
 		if used_idx >= 0 and used_idx < _ability_buttons.size():
 			_flash_ability_used(used_idx)
 		return
@@ -1136,6 +1167,7 @@ func _on_action_pressed() -> void:
 			return
 		_round_manager.commit_roll(to_roll)
 		_selected_dice = []
+		_refresh_powers_panel()
 	else:
 		_on_end_round_pressed()
 
@@ -1152,6 +1184,7 @@ func _on_ability_pressed(index: int) -> void:
 			_selected_ability = null
 			_targeting_die = false
 			_refresh_ui()
+			_refresh_powers_panel()
 			_flash_ability_used(index)
 		return
 	_selected_ability = ability
