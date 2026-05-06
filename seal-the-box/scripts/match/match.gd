@@ -1111,6 +1111,7 @@ func _on_die_pressed(index: int) -> void:
 		_selected_ability = null
 		_targeting_die = false
 		_refresh_ui()
+		_refresh_powers_panel()
 		if used_idx >= 0 and used_idx < _ability_buttons.size():
 			_flash_ability_used(used_idx)
 		return
@@ -1166,6 +1167,7 @@ func _on_action_pressed() -> void:
 			return
 		_round_manager.commit_roll(to_roll)
 		_selected_dice = []
+		_refresh_powers_panel()
 	else:
 		_on_end_round_pressed()
 
@@ -1182,6 +1184,7 @@ func _on_ability_pressed(index: int) -> void:
 			_selected_ability = null
 			_targeting_die = false
 			_refresh_ui()
+			_refresh_powers_panel()
 			_flash_ability_used(index)
 		return
 	_selected_ability = ability
