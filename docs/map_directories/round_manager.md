@@ -35,19 +35,22 @@ func start_round() -> void
     # Sets phase to "roll".
 
 func commit_roll(dice: Array) -> void
-    # Rolls each provided die. Transitions phase to "act".
+    # Rolls each provided die, then calls PowerManager.on_die_rolled(die) per die.
+    # Transitions phase to "act".
 
 func attempt_seal(dice: Array, tabs: Array) -> bool
     # Validates dice sum == tab sum and all tabs are unsealed. Seals primary tabs.
     # Calls PowerManager.get_bonus_seals_if_ready() — fires only when bonus_seal counter==target (3);
     #   seals bonus tabs and resets counter. No cascade — called once on primary seals only.
     # Calls PowerManager.apply_tab9_bounty(all_sealed) — grants HP if 9 was sealed.
+    # Calls PowerManager.on_tabs_sealed(all_sealed.size()) — ticks Tab Counter (fires at 5 total seals).
     # Updates GameState.tabs, emits tabs_sealed(all_sealed), checks win condition.
     # Returns false if invalid.
 
 func use_ability(ability: AbilityData, target_die: Die) -> bool
     # Guards: returns false if match is over, ability.charges <= 0, or phase is "roll".
     # Applies ability effect (reroll_die / greater_N / lesser_N / reroll_all).
+    # For reroll_die and reroll_all: calls PowerManager.on_die_rolled(die) after each reroll.
     # Decrements ability.charges by 1 on success. Does NOT remove ability from hand.
     # Returns false if unknown ability id.
 
@@ -86,7 +89,9 @@ func get_discard_count() -> int
 | Bonus Seal (counter tick) | end_round() via on_round_end() | Every round — increments counter toward 3 |
 | Bonus Seal (fire) | attempt_seal() via get_bonus_seals_if_ready() | When counter==3 — bonus seals floor(N/2), resets counter |
 | Tab 9 Bounty | attempt_seal() | After all seals — grants HP if 9 in sealed set |
-| Counter reset (all powers) | accept_threshold_win, _check_win, end_round(loss), dev_win, dev_critical | Every match end via on_match_end() |
+| Diabolic Pact (tick) | commit_roll() and use_ability() via on_die_rolled() | Every d12 roll or reroll — increments counter toward 7 |
+| Tab Counter (tick + fire) | attempt_seal() via on_tabs_sealed() | After all seals — increments per tab; +1 charge to highest-charge ability at 5 |
+| Counter reset (bonus_seal only) | accept_threshold_win, _check_win, end_round(loss), dev_win, dev_critical | Every match end via on_match_end() |
 
 ## Key Internal State
 ```gdscript
@@ -122,6 +127,7 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | commit_roll() now calls PowerManager.on_die_rolled(die) per die after rolling (Diabolic Pact hook). use_ability() now calls on_die_rolled(die) for reroll_die and reroll_all (same hook). attempt_seal() now calls PowerManager.on_tabs_sealed(all_sealed.size()) after Tab 9 Bounty (Tab Counter hook). |
 | 2026-05-05 | Counter hooks added: end_round() now calls PowerManager.on_round_end() before round_ended; all 5 match-end paths (accept_threshold_win, _check_win critical, end_round loss, dev_win_match, dev_critical_win) now call PowerManager.on_match_end() before emitting. attempt_seal() now calls get_bonus_seals_if_ready() (was get_bonus_seals) — only fires when counter==target. |
 | 2026-05-05 | start_round(): added PowerManager.apply_coffee_break() call on round 1, immediately after apply_eager(). Ordering is intentional — Coffee Break fires after Eager. Lighter Box hook: threshold bonus now 1×count (was 3×count); this change is in PowerManager, not round_manager, but affects the value start_match() computes. |
 | 2026-05-04 | Added dev_critical_win() — emits match_won(true) for testing power offer + Box Shutter flow. |

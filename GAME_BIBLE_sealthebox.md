@@ -105,7 +105,7 @@ Powers are persistent run modifiers acquired between matches. They modify core g
 | Match-Start | Fires at the start of round 1 each match (e.g. Eager, Coffee Break) |
 | On-Seal | Fires when specific tabs are sealed (e.g. Tab 9 Bounty) |
 | Critical-Win | Fires on critical wins only (e.g. Box Shutter) |
-| Counter | Charges every N rounds; effect fires when counter reaches target, then resets (e.g. Bonus Seal — every 3 rounds, bonus-seals floor(N/2) of next sealed tab). Counter initializes to 1 at acquisition, fires on round 3, resets to 1 after each fire. |
+| Counter | Tracks a specific trigger event; fires when counter reaches its target, then resets to 0. Trigger varies by power: Bonus Seal counts rounds, Tax Collector counts critical wins, Diabolic Pact counts d12 rolls, Tab Counter counts tab seals. Counter initializes to 0 at acquisition and fires after exactly N events. Bonus Seal resets at match end; all other counters persist across matches and reset only on run reset. |
 
 **Power traits (design intent, not all implemented):**
 | Trait | Meaning |

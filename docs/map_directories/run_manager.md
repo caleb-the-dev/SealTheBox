@@ -27,7 +27,7 @@ func handle_match_won(critical: bool) -> void
     # Always increments match_number first.
     # Always calls PowerManager.apply_survivor() (heals if HP==1).
     # critical=false (threshold win): calls _do_rotation_offer() directly.
-    # critical=true  (shut the box):  calls PowerManager.apply_box_shutter(), then _do_power_offer().
+    # critical=true  (shut the box):  calls PowerManager.apply_box_shutter(), PowerManager.on_critical_win(), then _do_power_offer().
 
 func handle_match_lost() -> void
     # Checks PowerManager.try_phoenix_down() first.
@@ -81,6 +81,7 @@ Critical win (critical=true):
     → match_number += 1
     → PowerManager.apply_survivor()        (heals if HP==1)
     → PowerManager.apply_box_shutter()     (adds count×2 to pending_threshold_bonus)
+    → PowerManager.on_critical_win()       (increments Tax Collector counter; fires +1 HP at 3)
     → _do_power_offer()
          → if unowned powers exist: show_power_offer.emit([p1, p2, p3])
               → handle_power_offer_accepted(power) → PowerManager.add_power(power) → gs.owned_powers.append + counter init
@@ -123,6 +124,7 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | handle_match_won(true) now calls PowerManager.on_critical_win() after apply_box_shutter() — Tax Collector hook. |
 | 2026-05-05 | handle_power_offer_accepted() now routes through PowerManager.add_power() instead of direct gs.owned_powers.append() — ensures counter initialization for Counter-type powers. |
 | 2026-05-05 | show_power_offer signal changed from (power: PowerData) to (powers: Array) — now emits up to 3 candidates. _do_power_offer() uses PowerLibrary.get_random_unowned_multiple(owned, 3); skips overlay if result is empty. handle_match_won() now calls PowerManager.apply_survivor() on every win before the critical branch. handle_match_lost() now calls PowerManager.try_phoenix_down() before emitting run_over — if true, increments match_number and starts next match at HP=1. |
 | 2026-05-04 | Replaced dice reward with power offer. Removed: show_reward signal, REWARD_DIE_FACES const, handle_reward_picked(), _pick_reward_dice(). Added: show_power_offer(power: PowerData) signal, handle_power_offer_accepted(), handle_power_offer_skipped(), _do_power_offer(). Critical wins now call PowerManager.apply_box_shutter() then _do_power_offer(). |

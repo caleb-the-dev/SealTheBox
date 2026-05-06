@@ -58,6 +58,7 @@ RoundManager.threshold_reached  → _on_threshold_reached      (shows + animates
 RunManager.next_match_ready     → _on_next_match_ready       (resets UI, start_match, rebuilds tabs, refreshes powers panel)
 RunManager.show_power_offer     → _on_show_power_offer       (shows power offer overlay)
 RunManager.show_rotation_offer  → _on_show_rotation_offer    (shows rotation overlay with 3 picks)
+RunManager.show_die_swap        → _on_show_die_swap          (shows die swap overlay; also called directly in dev path)
 RunManager.run_over             → _on_run_over               (shows over overlay)
 ```
 
@@ -87,7 +88,7 @@ After every match win (threshold or critical, after power offer resolves):
 - Each pill is a `TooltipButton` showing the power name; hover shows description tooltip
 - When count > 1: a small Label badge (font_size=11) appears anchored to the bottom-right corner of the pill showing the stack count. `mouse_filter = MOUSE_FILTER_IGNORE` so it doesn't block the button.
 - **Counter powers show `"Name X/Y"` format** — if `power.counter_target > 0`, pill text becomes `"%s %d/%d" % [power.name, current_count, counter_target]`. Current count is read from `GameState.power_counters[power.id]`.
-- `_refresh_powers_panel()` called from: `_on_power_confirm_pressed()`, `_on_dev_give_power()`, `_on_next_match_ready()`, `_on_round_ended()` (so counter ticks update the display each round)
+- `_refresh_powers_panel()` called from: `_on_power_confirm_pressed()`, `_on_dev_give_power()`, `_on_next_match_ready()`, `_on_round_ended()` (counter ticks update each round), `_on_action_pressed()` after commit_roll (so Diabolic Pact counter updates immediately after rolling), and after ability rerolls (reroll_die and reroll_all paths in `_on_die_pressed` and `_on_ability_pressed`)
 
 ## Dev Menu
 Open with T key or the "DEV" button (top-right corner). Full-screen opaque overlay.
@@ -96,10 +97,13 @@ Open with T key or the "DEV" button (top-right corner). Full-screen opaque overl
 |--------|--------|
 | Win Current Match | `dev_win_match()` → threshold win; rotation overlay appears |
 | Shut the Box (Critical Win) | `dev_critical_win()` → power offer + rotation overlays |
-| Give Power → | Opens `_dev_power_overlay` with all 8 power buttons |
+| Give Power → | Opens `_dev_power_overlay` with all 11 power buttons |
+| Switch Dice → | Opens the die swap overlay mid-match in dev mode (see below) |
 | Win Entire Series | Loops threshold wins + auto-rotation until stuck; no power offers |
 | Restart Run | `start_run()` — resets everything including owned powers |
 | Close [T] | Hides overlay |
+
+**Switch Dice (dev):** Opens the standard die swap overlay (d2/d4/d8/d10/d12 offered). When the player confirms, the swap writes directly to `GameState.dice_pool[_selected_swap_pool_idx]` — no RunManager involvement, no match transition. The die swap overlay's Confirm/Skip handlers check `_dev_die_swap_mode: bool` to distinguish the dev path from the post-match path. Pool index is stored as `_selected_swap_pool_idx: int` at button-press time (not resolved via Array.find() at confirm time — avoids RefCounted identity edge cases). The swap affects the persistent pool; the dice are visible in the next match's draws.
 
 Both the main dev menu and the Give Power submenu are **scrollable** (mouse wheel + scrollbar). The button list lives inside a `ScrollContainer` with `SIZE_EXPAND_FILL`; title and Close/Back are pinned outside the scroll. Panels expand to 5%–95% of screen height so all buttons are reachable at any resolution.
 
@@ -153,6 +157,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | Added "Switch Dice →" dev menu button. Opens die swap overlay mid-match via _dev_die_swap_mode flag; confirm path writes directly to GameState.dice_pool using stored _selected_swap_pool_idx (not find()). Added _refresh_powers_panel() after commit_roll (_on_action_pressed), after reroll_die use (_on_die_pressed), and after reroll_all use (_on_ability_pressed) so counter powers like Diabolic Pact update immediately on roll. |
 | 2026-05-05 | Powers panel: counter powers (counter_target > 0) now display "Name X/Y" instead of just "Name" — reads GameState.power_counters[id] for current value. _on_round_ended() now calls _refresh_powers_panel() so counter ticks update the display each round. _on_dev_give_power() and handle_power_offer_accepted routing now go through PowerManager.add_power() to ensure counter initialization. |
 | 2026-05-05 | Power offer overlay rebuilt as 3-card selection: 3 card buttons (200×140, autowrap), disabled Confirm + Skip; player clicks card to highlight (yellow tint), Confirm enables. _on_show_power_offer now receives Array; _on_power_card_pressed, _on_power_confirm_pressed replace old _on_power_offer_accepted. Powers panel: _refresh_powers_panel() now deduplicates by id and adds a stack count badge (Label, font 11, bottom-right, MOUSE_FILTER_IGNORE) when count > 1. Dev menu: both main and Give Power panels are now scrollable (ScrollContainer + SIZE_EXPAND_FILL inner VBox); panels expanded to 5%–95% viewport height; Give Power now lists all 8 powers. |
 | 2026-05-04 | Removed _reward_overlay and all dice reward UI. Added _power_offer_overlay (Accept/Skip, opaque black). Added _powers_panel (right-side always-visible list of owned powers with TooltipButton pills). Added _refresh_powers_panel(). Dev menu: added "Shut the Box (Critical Win)" button → dev_critical_win(), "Give Power →" submenu (_dev_power_overlay, populated on open), "Restart Run" button. Fixed dice highlight: unrolled dice no longer grey during roll phase (Eager fix). Registered PowerLibrary + PowerManager singletons in _ready(). Signal wiring: show_power_offer replaces show_reward. |

@@ -16,7 +16,7 @@ func count_owned(power_id: String) -> int
 func add_power(power: PowerData) -> void
     # Appends power to GameState.owned_powers.
     # If power.counter_target > 0 AND no counter entry exists yet for power.id:
-    #   initializes GameState.power_counters[power.id] = 1.
+    #   initializes GameState.power_counters[power.id] = 0.
     # Second and subsequent copies of the same counter power share the existing counter entry.
     # Single entry point for power acquisition — called by both RunManager and match.gd dev menu.
 
@@ -26,6 +26,7 @@ func get_threshold_bonus() -> int
 
 func apply_eager(dice: Array) -> void
     # If eager is owned and dice is non-empty: picks one random die, sets value=die.faces, rolled=true.
+    # Also calls on_die_rolled(die) so Diabolic Pact counts the Eager pre-roll if it's a d12.
     # Called by RoundManager.start_round() on round 1 only, passing the drawn hand Array.
 
 func on_round_end() -> void
@@ -34,9 +35,30 @@ func on_round_end() -> void
     # Called by RoundManager.end_round() before round_ended is emitted.
 
 func on_match_end() -> void
-    # Resets the bonus_seal counter to 0.
+    # Resets the bonus_seal counter to 0 (match-scoped counter).
+    # Tax Collector, Diabolic Pact, and Tab Counter are NOT reset here — they persist across matches.
     # Called at every match-end path in RoundManager (critical win, threshold win, match lost,
     #   dev_win_match, dev_critical_win).
+
+func on_critical_win() -> void
+    # Increments the tax_collector counter by 1. Fires (+1 HP, counter resets to 0) when counter >= target (3).
+    # Counter persists across matches — NOT reset in on_match_end(). Resets only via reset_run().
+    # Called by RunManager.handle_match_won(true) after apply_box_shutter().
+
+func on_die_rolled(die: Die) -> void
+    # If die.faces != 12: immediate return (only d12 triggers Diabolic Pact).
+    # Increments the diabolic_pact counter by 1. Fires (+1 HP, resets to 0) when counter >= target (7).
+    # Counter persists across matches — NOT reset in on_match_end(). Resets only via reset_run().
+    # Called by: RoundManager.commit_roll() per die, RoundManager.use_ability() for reroll_die/reroll_all,
+    #   and apply_eager() if the Eager die is a d12.
+
+func on_tabs_sealed(count: int) -> void
+    # Increments the tab_counter counter by `count` (one increment per tab sealed, including bonus seals).
+    # Each increment that reaches or crosses the target (5) fires once: +1 charge to the
+    #   highest-charge non-null ability in GameState.ability_hand (tiebreaker: lowest slot index).
+    # If all ability slots are null, fires as no-op but still resets counter to 0.
+    # Counter persists across matches — NOT reset in on_match_end(). Resets only via reset_run().
+    # Called by RoundManager.attempt_seal() after all seals (primary + bonus) are resolved.
 
 func get_bonus_seals_if_ready(tab_board: TabBoard, primary_seals: Array) -> Array
     # If bonus_seal is owned AND GameState.power_counters["bonus_seal"] == counter_target (3):
@@ -77,8 +99,11 @@ func try_phoenix_down() -> bool
 | apply_eager() | RoundManager.start_round() | Round 1 of every match |
 | apply_coffee_break() | RoundManager.start_round() | Round 1 of every match, after apply_eager() |
 | on_round_end() | RoundManager.end_round() | Every round end (before round_ended signal) |
+| on_critical_win() | RunManager.handle_match_won(true) | Critical wins only, after apply_box_shutter() |
+| on_die_rolled(die) | RoundManager.commit_roll(), use_ability() rerolls, apply_eager() | Every die roll/reroll (d12 check inside) |
 | get_bonus_seals_if_ready() | RoundManager.attempt_seal() | After each successful primary seal |
 | apply_tab9_bounty() | RoundManager.attempt_seal() | After primary + bonus seals resolved |
+| on_tabs_sealed(count) | RoundManager.attempt_seal() | After all seals (primary + bonus) resolved |
 | on_match_end() | RoundManager (5 paths: accept_threshold_win, _check_win critical, end_round match_lost, dev_win_match, dev_critical_win) | Every match end, before match_won/match_lost emits |
 | apply_box_shutter() | RunManager.handle_match_won(true) | Critical wins only |
 | apply_survivor() | RunManager.handle_match_won() | Every win (before power/rotation offer) |
@@ -87,10 +112,11 @@ func try_phoenix_down() -> bool
 ## Gotchas
 - **No class_name** — starts with `extends Node` only. Adding `class_name PowerManager` causes a "Class hides an autoload singleton" parse error.
 - **No fields.** PowerManager holds no instance fields. All effect state lives in GameState (owned_powers, hp, pending_threshold_bonus, power_counters).
-- **Counter starts at 1, not 0.** `add_power()` initializes counter to 1 so Bonus Seal fires on round 3 (not round 4). After firing, `get_bonus_seals_if_ready` resets to 0, then `on_round_end` bumps back to 1 in that same round end — display stays consistent at 1/N.
+- **Counter starts at 0, not 1.** `add_power()` initializes the counter to 0. All counter powers fire after exactly N trigger events. Counter resets to 0 after firing.
 - **`get_bonus_seals_if_ready` receives a post-seal TabBoard.** Primary seals have already been applied before this is called, so `get_remaining()` reflects state after primary seals but before bonus seals. This prevents bonus-sealing a tab just primary-sealed.
 - **Bonus seals do not cascade.** `get_bonus_seals_if_ready` is called once on primary seals only. Its results are applied but NOT fed back into the method.
-- **`on_match_end()` must be called at ALL match-end paths.** RoundManager has 5 paths that end a match. Missing one would leave the counter non-zero at the start of the next match.
+- **Counter persistence varies by power.** Bonus Seal resets on `on_match_end()` — it is match-scoped. Tax Collector, Diabolic Pact, and Tab Counter persist across matches and reset only in `reset_run()`. Adding new counter powers: decide scope deliberately.
+- **`on_match_end()` must be called at ALL match-end paths.** RoundManager has 5 paths that end a match. Missing one would leave the bonus_seal counter non-zero at the start of the next match.
 - **Counter shared across copies.** If the player owns 2× Bonus Seal, there is still only one counter entry — `add_power()` only initializes if the key doesn't exist yet. Both copies share the same 1/3 → 3/3 rhythm.
 - **Callers guard with `Engine.has_singleton("PowerManager")`.** If PowerManager is not registered, all power effects are silently skipped. Existing tests without PowerManager registered continue to pass.
 - **In headless tests**, register PowerManager manually (no _ready() needed):
@@ -109,6 +135,7 @@ func try_phoenix_down() -> bool
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | Added on_critical_win() (Tax Collector: fires at 3 critical wins, +1 HP, persists across matches). Added on_die_rolled(die) (Diabolic Pact: fires at 7 d12 rolls, +1 HP, persists; d12 check is first guard so non-d12 calls return immediately). Added on_tabs_sealed(count) + _apply_tab_counter_charge() (Tab Counter: fires at 5 total tab seals including bonus seals; +1 charge to highest-charge ability, tiebreaker lowest slot; null hand is no-op). apply_eager() now calls on_die_rolled(die) for Diabolic Pact coverage of Eager pre-rolls. on_critical_win() called from RunManager.handle_match_won(true) after apply_box_shutter(). on_tabs_sealed() called from RoundManager.attempt_seal() after all seals resolved. Changed counter init from 1 → 0 (all counters now fire after exactly N events with no acquisition bonus). |
 | 2026-05-05 | Added counter infrastructure: add_power() (initializes counter to 1 on first acquisition), on_round_end() (increments bonus_seal counter each round, capped at target), on_match_end() (resets bonus_seal counter to 0), get_bonus_seals_if_ready() (replaces get_bonus_seals — only fires when counter == target, then resets). Counter starts at 1 so Bonus Seal fires on round 3. Fixed post-fire reset: resets to 0, end_round bumps to 1 → display stays at 1/N. |
 | 2026-05-05 | Tuned Lighter Box: get_threshold_bonus() now returns count (was count×3). Tuned Box Shutter: apply_box_shutter() now adds count×2 (was count×5). Added apply_coffee_break() — round-1 hook, charges a random below-max ability, capped at max_charges. Added apply_survivor() — match-win hook, heals at exactly 1 HP. Added try_phoenix_down() — match-loss intercept, consumes itself, sets HP=1. |
 | 2026-05-04 | Created. |
