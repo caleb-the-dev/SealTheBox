@@ -19,12 +19,25 @@ var current_box: BoxDefinition = null
 var owned_powers: Array = []
 var pending_threshold_bonus: int = 0
 var power_counters: Dictionary = {}
+var case_match_index: int = 1
+var run_won: bool = false
+
+var act: int:
+	get:
+		if case_match_index <= 9: return 1
+		elif case_match_index <= 21: return 2
+		else: return 3
+
+var location_index: int:
+	get: return act
 
 func reset_run() -> void:
 	hp = 6
 	owned_powers = []
 	pending_threshold_bonus = 0
 	power_counters = {}
+	case_match_index = 1
+	run_won = false
 	_setup_dice_pool()
 	reset_match()
 	_setup_ability_hand()

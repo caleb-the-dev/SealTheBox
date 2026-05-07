@@ -60,11 +60,12 @@ seal-the-box/
 **Data flow:** CSVs are parsed once at startup by Library autoloads (e.g., `AbilityLibrary`, `PowerLibrary`) into typed Resource objects. Game logic reads from these libraries; it never re-parses CSVs at runtime.
 
 **Globals / Autoloads:**
-- `GameState` — current run state (HP, round, tabs, dice pool, ability hand, current box)
+- `GameState` — current run state (HP, round, tabs, dice pool, ability hand, current box, case_match_index, run_won, act)
 - `AbilityLibrary` — all ability definitions indexed by id
-- `BoxLibrary` — all box definitions indexed by id; get_ordered() returns CSV row order
+- `BoxLibrary` — all box definitions indexed by id; get_ordered() returns CSV row order; get_by_tier(tier) filters by "easy"/"medium"/"hard"
+- `CaseManager` — owns the 27-match run sequence; reset_run() builds the list; get_box_for_match(idx) and get_act_for_match(idx) expose it; emits run_won signal
 
-**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player uses free one-time abilities → player assigns dice to seal tabs → check win/lose. A **run** is an infinite sequence of matches cycling through 5 boxes (Classic → Low Evens → High Odds → Compressed → Stairs → repeat), each with its own tabs/round_limit/win_threshold loaded from BoxDefinition. The run ends only when HP reaches 0.
+**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player uses free one-time abilities → player assigns dice to seal tabs → check win/lose. A **run** is a 27-match Case (9 easy / 12 medium / 6 hard) orchestrated by `CaseManager`; boxes are drawn randomly by tier each match. Win by sealing match 27; lose by reaching HP = 0.
 
 **Win condition:** `TabBoard.check_win(threshold)` — remaining tab sum ≤ threshold (not sealed sum ≥ threshold).
 
@@ -90,6 +91,19 @@ seal-the-box/
 - **No acquisition, only swapping.** Players never accumulate new dice. Reward flows offer a die to swap *into* the pool, replacing one currently in it. Pool size never grows organically.
 - **Why 5–7:** Pool > 7 produces dead weight without adding decisions. Mixed distributions (small + medium + large faces) outperform uniform pools — varied probability mass across tab values 1–9 is mathematically better than face concentration.
 
+## Game Bible — Run Structure
+
+- **A run is a Case.** The player tracks a single dark entity across three locations and seals 27 of its manifestations on the way to the Source.
+- **Length:** 27 matches per run, fixed. Acts of 9 / 12 / 6 (poetics nod — short setup, long middle, short climax). Total play time ~25–35 minutes for a winning run.
+- **Win condition:** seal match 27 (the Source). Lose condition: HP = 0 at any point.
+- **No branching paths.** Sequence is linear; variety comes from cadence and content, not navigation.
+- **Within-act cadence:** between matches, draw 50% silent / 30% vignette / 20% small event. Math game first; texture appears, doesn't dominate.
+- **Between-act crossroads:** after match 9 and match 21, player picks Rest (+2 HP) or Whetstone (swap one die). The only mid-run die-swap path.
+- **Box tiers:** each act draws from a difficulty tier — Act 1 easy, Act 2 medium, Act 3 hard. Match 27 is always a Source box themed to the run's entity.
+- **Entity:** at run start, randomly pick Diabolic / Cosmic / Ethereal. The entity controls flavor only — vignette/event deck, location names, Source skin. No mechanical asymmetry yet (reserved for future dice-vs-entity work).
+- **Theme:** dark, otherworldly, sparse. The unseen player-character is an exorcist-like figure traveling to seal what shouldn't be.
+- **No meta-progression yet.** Both wins and losses fully reset.
+
 ## Prototyping UI Rules
 
 - **All overlay backgrounds must be fully opaque** (`Color(0, 0, 0, 1.0)`). No semi-transparency on any overlay during prototyping — it makes text hard to read against the 3D scene behind it.
@@ -110,8 +124,11 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 
 **Working (committed to master):**
 - Full single-match loop playable end-to-end
-- Infinite match loop: Classic → Low Evens → High Odds → repeat; run ends only at HP = 0
-- BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv (columns: id, name, tabs, win_threshold)
+- **27-match Case structure** (feature/case-shape): infinite loop replaced with 3-act run (Act 1: 9 easy-tier matches, Act 2: 12 medium-tier, Act 3: 6 hard-tier); win on match 27; run-won overlay ("the entity is sealed" + "Begin a new case" button); periodic die swap every 5 matches still in place (will be removed in slice 2 / feature/crossroads)
+- BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv (columns: id, name, tabs, win_threshold, tier); BoxLibrary.get_by_tier(tier) added; boxes assigned tiers: Classic/Low Evens=easy, Stairs/High Odds=medium, Compressed=hard
+- CaseManager autoload (scripts/run/case_manager.gd): builds 27-match list on reset_run(); exposes get_box_for_match(idx) and get_act_for_match(idx); emits run_won signal via notify_run_won()
+- GameState: case_match_index (1..27, synced by RunManager), run_won (bool), act (derived property: 1/2/3), location_index (same as act for now); all reset by reset_run()
+- Top bar: "Match N / 27", "Act N", "Location N" labels (placeholder strings, no entity theming yet)
 - win_threshold is explicit per-box in CSV (Classic 20, Low Evens 17, High Odds 17); round_limit = ceili(tab_sum/15)+1 (all boxes: 4 rounds before overtime)
 - Abilities have charges; 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3; rolling dice is free (no AP)
 - 14 wired abilities in rotation pool: Reroll (2), Empower (3), Weaken (3), Empower II (2), Weaken II (2), Reroll All (1), Auto-Seal Highest (1), Auto-Seal Lowest (2), Multiply x2 (1, no ceiling), Set to Max (2), Set to Min (3), Reroll Lucky (2), Reroll Unlucky (2), Drop Die (2)
@@ -123,10 +140,9 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Phoenix Down: intercepts run-over, sets HP=1, self-consumes. Coffee Break: round-1 hook charges a random below-max ability (capped at max). Survivor: win-at-exactly-HP=1 heals +1.
 - Counter infrastructure: GameState.power_counters Dictionary; PowerManager.add_power() is the single acquisition entry point (initializes counter to 0 on first acquisition). Bonus Seal (target=3): counter ticks each round end, fires on next seal when counter==3, resets to 0 at match end. Tax Collector (target=3): ticks on critical wins, fires +1 HP, persists across matches. Diabolic Pact (target=7): ticks on every d12 roll (commit_roll, reroll abilities, Eager), fires +1 HP, persists. Tab Counter (target=5): ticks per tab sealed (primary + bonus), fires +1 charge to highest-charge ability, persists. Counter display in powers panel: "Name X/Y".
 - GameState: hp=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], power_counters={}, pending_threshold_bonus=0
-- Boxes: 5 boxes cycling (Classic → Low Evens → High Odds → Compressed → Stairs → repeat); die swap offered every 5 matches
 - Dev menu (T key or DEV button): scrollable panels; "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu (all 11 powers), "Give Ability →" submenu (all 14 pool abilities, fills first empty slot or overwrites slot 3), "Switch Dice →" (mid-match die swap, no match transition), "Win Entire Series", "Restart Run" shortcuts for playtesting
-- UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates, counter display "Name X/Y" for counter powers); power offer overlay (3-card pick) + rotation overlay + run-over overlay — all built in code in match.gd
-- Tests: test_run_manager.gd (48 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd (22 abilities) pass headless
+- UI: top bar (HP/Match N of 27/Act N/Location N); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates, counter display "Name X/Y" for counter powers); power offer overlay (3-card pick) + rotation overlay + run-over overlay + run-won overlay — all built in code in match.gd
+- Tests: test_run_manager.gd (48 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd (22 abilities) + test_case_manager.gd (10 tests) pass headless
 
 ## Git & GitHub
 

@@ -23,6 +23,9 @@ var _draw_label: Label
 var _discard_label: Label
 var _current_phase: String = ""
 var _match_label: Label
+var _act_label: Label
+var _location_label: Label
+var _run_won_overlay: Control
 var _dev_box_label: Label
 var _threshold_label: Label
 var _continue_button: Button
@@ -141,18 +144,31 @@ func _setup_ui() -> void:
 	_hp_label.add_theme_font_size_override("font_size", 28)
 	top_bar.add_child(_hp_label)
 
+	var top_left_vbox = VBoxContainer.new()
+	top_left_vbox.anchor_left = 0.0
+	top_left_vbox.anchor_right = 0.0
+	top_left_vbox.anchor_top = 0.0
+	top_left_vbox.anchor_bottom = 0.0
+	top_left_vbox.offset_left = 8
+	top_left_vbox.offset_right = 170
+	top_left_vbox.offset_top = 8
+	top_left_vbox.offset_bottom = 80
+	top_left_vbox.add_theme_constant_override("separation", 1)
+	root.add_child(top_left_vbox)
+
 	_match_label = Label.new()
-	_match_label.anchor_left = 0.0
-	_match_label.anchor_right = 0.0
-	_match_label.anchor_top = 0.0
-	_match_label.anchor_bottom = 0.0
-	_match_label.offset_left = 8
-	_match_label.offset_right = 130
-	_match_label.offset_top = 10
-	_match_label.offset_bottom = 42
-	_match_label.add_theme_font_size_override("font_size", 18)
-	_match_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	root.add_child(_match_label)
+	_match_label.add_theme_font_size_override("font_size", 17)
+	top_left_vbox.add_child(_match_label)
+
+	_act_label = Label.new()
+	_act_label.add_theme_font_size_override("font_size", 13)
+	_act_label.modulate = Color(0.75, 0.75, 0.75)
+	top_left_vbox.add_child(_act_label)
+
+	_location_label = Label.new()
+	_location_label.add_theme_font_size_override("font_size", 13)
+	_location_label.modulate = Color(0.75, 0.75, 0.75)
+	top_left_vbox.add_child(_location_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -800,6 +816,40 @@ func _setup_ui() -> void:
 	root.add_child(swap_overlay)
 	_die_swap_overlay = swap_overlay
 
+	# ── Run-won overlay ────────────────────────────────────────────────────────
+	var won_overlay = Control.new()
+	won_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	won_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	won_overlay.visible = false
+	var won_bg = ColorRect.new()
+	won_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	won_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	won_overlay.add_child(won_bg)
+
+	var won_center = VBoxContainer.new()
+	won_center.anchor_left = 0.2
+	won_center.anchor_right = 0.8
+	won_center.anchor_top = 0.3
+	won_center.anchor_bottom = 0.75
+	won_center.add_theme_constant_override("separation", 20)
+	won_overlay.add_child(won_center)
+
+	var won_title = Label.new()
+	won_title.text = "the entity is sealed"
+	won_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	won_title.add_theme_font_size_override("font_size", 30)
+	won_center.add_child(won_title)
+
+	var won_btn = Button.new()
+	won_btn.text = "Begin a new case"
+	won_btn.custom_minimum_size = Vector2(200, 52)
+	won_btn.add_theme_font_size_override("font_size", 18)
+	won_btn.pressed.connect(_on_run_won_new_case_pressed)
+	won_center.add_child(won_btn)
+
+	root.add_child(won_overlay)
+	_run_won_overlay = won_overlay
+
 	# ── Powers side panel (right side, always visible) ────────────────────────
 	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
 	powers_panel.anchor_left = 1.0
@@ -840,6 +890,8 @@ func _connect_signals() -> void:
 	_run_manager.run_over.connect(_on_run_over)
 	_run_manager.show_rotation_offer.connect(_on_show_rotation_offer)
 	_run_manager.show_die_swap.connect(_on_show_die_swap)
+	if Engine.has_singleton("CaseManager"):
+		Engine.get_singleton("CaseManager").run_won.connect(_on_run_won)
 
 # ── signal handlers ──────────────────────────────────────────────────────────
 func _on_phase_changed(phase: String) -> void:
@@ -917,6 +969,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_rotation_overlay.visible = false
 	if _die_swap_overlay:
 		_die_swap_overlay.visible = false
+	if _run_won_overlay:
+		_run_won_overlay.visible = false
 	_action_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
@@ -1175,6 +1229,13 @@ func _on_dev_win_series_pressed() -> void:
 func _on_play_again_pressed() -> void:
 	_run_manager.start_run()
 
+func _on_run_won() -> void:
+	_run_won_overlay.visible = true
+
+func _on_run_won_new_case_pressed() -> void:
+	_run_won_overlay.visible = false
+	_run_manager.start_run()
+
 func _on_tabs_sealed(_tabs: Array) -> void:
 	_selected_tabs = []
 	_selected_dice = []
@@ -1339,7 +1400,9 @@ func _refresh_ui() -> void:
 		_:
 			_hp_label.remove_theme_color_override("font_color")
 			_stop_hp_pulse()
-	_match_label.text = "Match: %d" % _run_manager.match_number
+	_match_label.text = "Match %d / 27" % _run_manager.match_number
+	_act_label.text = "Act %d" % GameState.act
+	_location_label.text = "Location %d" % GameState.location_index
 	if GameState.current_box:
 		var remaining_sum := 0
 		for t in GameState.tabs:

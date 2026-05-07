@@ -29,6 +29,11 @@ func _init() -> void:
 	get_root().add_child(pm)
 	Engine.register_singleton("PowerManager", pm)
 
+	var cm = load("res://scripts/run/case_manager.gd").new()
+	cm.name = "CaseManager"
+	get_root().add_child(cm)
+	Engine.register_singleton("CaseManager", cm)
+
 	_test_reset_run_sets_hp(gs)
 	_test_reset_run_sets_starting_dice_pool(gs)
 	_test_reset_match_preserves_hp(gs)
@@ -355,17 +360,19 @@ func _test_power_library_loads_all_powers() -> void:
 
 func _test_box_cycle_five_boxes(gs: Node) -> void:
 	gs.reset_run()
+	var cm = Engine.get_singleton("CaseManager")
 	var rm = RunManager.new()
 	get_root().add_child(rm)
-	rm.next_match_ready.connect(func(_box): pass)
+	var received_boxes: Array = []
+	rm.next_match_ready.connect(func(box): received_boxes.append(box))
 	rm.start_run()
 
-	assert(rm._boxes.size() == 5, "should have 5 boxes, got %d" % rm._boxes.size())
-	assert(rm._boxes[0].id == "classic",    "box 0 should be classic, got %s"    % rm._boxes[0].id)
-	assert(rm._boxes[1].id == "low_evens",  "box 1 should be low_evens, got %s"  % rm._boxes[1].id)
-	assert(rm._boxes[2].id == "high_odds",  "box 2 should be high_odds, got %s"  % rm._boxes[2].id)
-	assert(rm._boxes[3].id == "compressed", "box 3 should be compressed, got %s" % rm._boxes[3].id)
-	assert(rm._boxes[4].id == "stairs",     "box 4 should be stairs, got %s"     % rm._boxes[4].id)
+	assert(received_boxes.size() == 1, "start_run should emit next_match_ready once, got %d" % received_boxes.size())
+	assert(received_boxes[0].tier == "easy", "match 1 should be an easy-tier box, got tier '%s'" % received_boxes[0].tier)
+	assert(cm.get_box_for_match(1) != null, "CaseManager should have a box for match 1")
+	assert(cm.get_box_for_match(1).tier == "easy", "CaseManager match 1 should be easy tier")
+	assert(cm.get_box_for_match(10).tier == "medium", "CaseManager match 10 should be medium tier")
+	assert(cm.get_box_for_match(22).tier == "hard", "CaseManager match 22 should be hard tier")
 	rm.queue_free()
 
 func _test_die_swap_fires_after_match_5(gs: Node) -> void:

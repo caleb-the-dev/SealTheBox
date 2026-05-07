@@ -14,15 +14,20 @@ var _boxes: Array = []
 var _pending_rotation_options: Array = []
 
 func start_run() -> void:
-	var box_lib = Engine.get_singleton("BoxLibrary")
-	_boxes = box_lib.get_ordered()
 	match_number = 1
 	var gs = Engine.get_singleton("GameState")
 	gs.reset_run()
-	next_match_ready.emit(_boxes[0])
+	if Engine.has_singleton("CaseManager"):
+		Engine.get_singleton("CaseManager").reset_run()
+	_start_next_match()
 
 func handle_match_won(critical: bool) -> void:
+	var completed_match := match_number
 	match_number += 1
+	var gs = Engine.get_singleton("GameState")
+	gs.case_match_index = match_number
+	if completed_match == 27:
+		gs.run_won = true
 	if Engine.has_singleton("PowerManager"):
 		Engine.get_singleton("PowerManager").apply_survivor()
 	if critical:
@@ -88,7 +93,16 @@ func dev_skip_rotation() -> void:
 		handle_rotation_pick(_pending_rotation_options[0])
 
 func _start_next_match() -> void:
-	var next_box = _boxes[(match_number - 1) % _boxes.size()]
+	var gs = Engine.get_singleton("GameState")
+	if gs and gs.run_won:
+		if Engine.has_singleton("CaseManager"):
+			Engine.get_singleton("CaseManager").notify_run_won()
+		return
+	var next_box: BoxDefinition
+	if Engine.has_singleton("CaseManager"):
+		next_box = Engine.get_singleton("CaseManager").get_box_for_match(match_number)
+	else:
+		next_box = _boxes[(match_number - 1) % _boxes.size()]
 	next_match_ready.emit(next_box)
 
 func _do_power_offer() -> void:

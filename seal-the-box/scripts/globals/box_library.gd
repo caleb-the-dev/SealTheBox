@@ -23,6 +23,8 @@ func _load_csv() -> void:
         for part in row[2].split(";", false):
             data.tabs.append(part.strip_edges().to_int())
         data.win_threshold = row[3].strip_edges().to_int()
+        if row.size() >= 5:
+            data.tier = row[4].strip_edges()
         _boxes[data.id] = data
         _order.append(data.id)
     file.close()
@@ -35,3 +37,6 @@ func get_all() -> Array:
 
 func get_ordered() -> Array:
     return _order.map(func(id): return _boxes[id])
+
+func get_by_tier(tier: String) -> Array:
+    return _boxes.values().filter(func(b): return b.tier == tier)
