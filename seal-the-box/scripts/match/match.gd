@@ -43,6 +43,8 @@ var _current_rotation_options: Array = []
 var _dev_overlay: Control
 var _dev_power_overlay: Control
 var _dev_power_list: VBoxContainer
+var _dev_ability_overlay: Control
+var _dev_ability_list: VBoxContainer
 var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
 var _die_swap_offered_buttons: Array[Button] = []
@@ -594,6 +596,13 @@ func _setup_ui() -> void:
 	dev_give_power_btn.pressed.connect(_on_dev_give_power_menu_pressed)
 	dev_btns.add_child(dev_give_power_btn)
 
+	var dev_give_ability_btn = Button.new()
+	dev_give_ability_btn.text = "Give Ability →"
+	dev_give_ability_btn.custom_minimum_size = Vector2(0, 56)
+	dev_give_ability_btn.add_theme_font_size_override("font_size", 17)
+	dev_give_ability_btn.pressed.connect(_on_dev_give_ability_menu_pressed)
+	dev_btns.add_child(dev_give_ability_btn)
+
 	var dev_switch_dice_btn = Button.new()
 	dev_switch_dice_btn.text = "Switch Dice →"
 	dev_switch_dice_btn.custom_minimum_size = Vector2(0, 56)
@@ -665,6 +674,48 @@ func _setup_ui() -> void:
 
 	root.add_child(dev_power_overlay)
 	_dev_power_overlay = dev_power_overlay
+
+	# ── Dev ability picker sub-overlay ───────────────────────────────────────────
+	var dev_ability_overlay = Control.new()
+	dev_ability_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_ability_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_ability_overlay.visible = false
+	var dev_ability_bg = ColorRect.new()
+	dev_ability_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_ability_bg.color = Color(0, 0, 0, 1.0)
+	dev_ability_overlay.add_child(dev_ability_bg)
+
+	var dev_ability_panel = VBoxContainer.new()
+	dev_ability_panel.anchor_left = 0.3
+	dev_ability_panel.anchor_right = 0.7
+	dev_ability_panel.anchor_top = 0.05
+	dev_ability_panel.anchor_bottom = 0.95
+	dev_ability_panel.add_theme_constant_override("separation", 12)
+	dev_ability_overlay.add_child(dev_ability_panel)
+
+	var dev_ability_title = Label.new()
+	dev_ability_title.text = "— GIVE ABILITY —"
+	dev_ability_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_ability_title.add_theme_font_size_override("font_size", 22)
+	dev_ability_panel.add_child(dev_ability_title)
+
+	var dev_ability_scroll = ScrollContainer.new()
+	dev_ability_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_ability_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_dev_ability_list = VBoxContainer.new()
+	_dev_ability_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_dev_ability_list.add_theme_constant_override("separation", 12)
+	dev_ability_scroll.add_child(_dev_ability_list)
+	dev_ability_panel.add_child(dev_ability_scroll)
+
+	var dev_ability_back_btn = Button.new()
+	dev_ability_back_btn.text = "← Back"
+	dev_ability_back_btn.custom_minimum_size = Vector2(0, 44)
+	dev_ability_back_btn.pressed.connect(_on_dev_ability_back_pressed)
+	dev_ability_panel.add_child(dev_ability_back_btn)
+
+	root.add_child(dev_ability_overlay)
+	_dev_ability_overlay = dev_ability_overlay
 
 	# ── Die swap overlay ────────────────────────────────────────────────────────
 	var swap_overlay = Control.new()
@@ -858,6 +909,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_power_offer_overlay.visible = false
 	if _dev_power_overlay:
 		_dev_power_overlay.visible = false
+	if _dev_ability_overlay:
+		_dev_ability_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
 	if _rotation_overlay:
@@ -1074,6 +1127,39 @@ func _on_dev_power_back_pressed() -> void:
 	_dev_power_overlay.visible = false
 	_dev_overlay.visible = true
 
+func _on_dev_give_ability_menu_pressed() -> void:
+	for child in _dev_ability_list.get_children():
+		child.queue_free()
+	if Engine.has_singleton("AbilityLibrary"):
+		var lib = Engine.get_singleton("AbilityLibrary")
+		for id in GameState.ABILITY_POOL_IDS:
+			var ability = lib.get_ability(id)
+			if not ability:
+				continue
+			var abtn = Button.new()
+			abtn.text = "%s  [%d charges]" % [ability.flavor_name, ability.max_charges]
+			abtn.tooltip_text = ability.description
+			abtn.custom_minimum_size = Vector2(0, 52)
+			abtn.add_theme_font_size_override("font_size", 17)
+			abtn.pressed.connect(_on_dev_give_ability.bind(ability))
+			_dev_ability_list.add_child(abtn)
+	_dev_overlay.visible = false
+	_dev_ability_overlay.visible = true
+
+func _on_dev_give_ability(ability: AbilityData) -> void:
+	var gs = Engine.get_singleton("GameState")
+	for i in gs.ability_hand.size():
+		if gs.ability_hand[i] == null:
+			gs.ability_hand[i] = ability.duplicate()
+			_refresh_ui()
+			return
+	gs.ability_hand[2] = ability.duplicate()
+	_refresh_ui()
+
+func _on_dev_ability_back_pressed() -> void:
+	_dev_ability_overlay.visible = false
+	_dev_overlay.visible = true
+
 func _on_dev_restart_pressed() -> void:
 	_dev_overlay.visible = false
 	_run_manager.start_run()
@@ -1103,6 +1189,8 @@ func _on_die_pressed(index: int) -> void:
 	if index >= hand.size():
 		return
 	var die = hand[index]
+	if die.dropped:
+		return
 
 	if _targeting_die and _selected_ability != null:
 		var used_ability = _selected_ability
@@ -1128,7 +1216,7 @@ func _on_die_pressed(index: int) -> void:
 	_update_roll_button_text()
 
 func _on_tab_pressed(tab_value: int) -> void:
-	var rolled = GameState.dice_hand.filter(func(d): return d.rolled)
+	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if rolled.is_empty():
 		_status_label.text = "Roll your dice first, then click tabs that sum to your total."
 		return
@@ -1179,7 +1267,7 @@ func _on_ability_pressed(index: int) -> void:
 	if ability.charges <= 0:
 		_status_label.text = "%s is exhausted (0 charges)." % ability.flavor_name
 		return
-	if ability.id == "reroll_all":
+	if ability.id in ["reroll_all", "put_down_highest", "auto_seal_lowest"]:
 		if _round_manager.use_ability(ability, null):
 			_selected_ability = null
 			_targeting_die = false
@@ -1192,7 +1280,7 @@ func _on_ability_pressed(index: int) -> void:
 	_status_label.text = "%s — click a die to target it." % ability.description
 
 func _on_end_round_pressed() -> void:
-	var rolled = GameState.dice_hand.filter(func(d): return d.rolled)
+	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if not _selected_tabs.is_empty() and not rolled.is_empty():
 		var rolled_total := 0
 		for d in rolled:
@@ -1306,14 +1394,20 @@ func _refresh_dice_display() -> void:
 		var face_lbl = _dice_face_labels[i] if i < _dice_face_labels.size() else null
 		if i < hand.size():
 			var die = hand[i]
-			btn.text = str(die.value) if die.rolled else "d%d" % die.faces
-			btn.disabled = false
-			if face_lbl:
-				if die.rolled:
-					face_lbl.text = "d%d" % die.faces
-					face_lbl.visible = true
-				else:
+			if die.dropped:
+				btn.text = "[X] %d" % die.value
+				btn.disabled = true
+				if face_lbl:
 					face_lbl.visible = false
+			else:
+				btn.text = str(die.value) if die.rolled else "d%d" % die.faces
+				btn.disabled = false
+				if face_lbl:
+					if die.rolled:
+						face_lbl.text = "d%d" % die.faces
+						face_lbl.visible = true
+					else:
+						face_lbl.visible = false
 		else:
 			btn.text = "—"
 			btn.disabled = true
@@ -1326,7 +1420,7 @@ func _refresh_dice_highlight() -> void:
 	for i in hand.size():
 		if i < _dice_buttons.size():
 			var die = hand[i]
-			if any_rolled and not die.rolled and _current_phase == "act":
+			if die.dropped or (any_rolled and not die.rolled and _current_phase == "act"):
 				_dice_buttons[i].modulate = Color(0.4, 0.4, 0.4)
 			elif die in _selected_dice:
 				_dice_buttons[i].modulate = Color(1.5, 1.5, 0.3)
@@ -1361,7 +1455,7 @@ func _refresh_ability_display() -> void:
 func _update_rolled_total() -> void:
 	var total = 0
 	for d in GameState.dice_hand:
-		if d.rolled:
+		if d.rolled and not d.dropped:
 			total += d.value
 	_status_label.text = "Rolled total: %d — click a tab to seal." % total
 

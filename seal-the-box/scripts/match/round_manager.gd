@@ -60,7 +60,7 @@ func commit_roll(dice: Array) -> void:
 			power_mgr.on_die_rolled(die)
 	var total := 0
 	for die in GameState.dice_hand:
-		if die.rolled:
+		if die.rolled and not die.dropped:
 			total += die.value
 	_set_phase("act")
 	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
@@ -96,7 +96,7 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 	if _current_phase == "roll":
 		status_updated.emit("Use abilities after rolling dice.")
 		return false
-	if target_die == null and ability.id != "reroll_all":
+	if target_die == null and ability.id not in ["reroll_all", "put_down_highest", "auto_seal_lowest"]:
 		push_warning("RoundManager: target_die is null for ability: %s" % ability.id)
 		return false
 	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
@@ -106,10 +106,16 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			if power_mgr:
 				power_mgr.on_die_rolled(target_die)
 		"greater_1":
+			if target_die.value >= target_die.faces:
+				status_updated.emit("Die is already at or above its maximum — Empower can't apply.")
+				return false
 			_dice_pool.apply_greater(target_die, 1)
 		"lesser_1":
 			_dice_pool.apply_lesser(target_die, 1)
 		"greater_2":
+			if target_die.value >= target_die.faces:
+				status_updated.emit("Die is already at or above its maximum — Empower II can't apply.")
+				return false
 			_dice_pool.apply_greater(target_die, 2)
 		"lesser_2":
 			_dice_pool.apply_lesser(target_die, 2)
@@ -119,13 +125,63 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 					_dice_pool.reroll(die)
 					if power_mgr:
 						power_mgr.on_die_rolled(die)
+		"put_down_highest":
+			var remaining = _tab_board.get_remaining()
+			if remaining.size() <= 1:
+				return false
+			remaining.sort()
+			var tab_val = remaining[-1]
+			_tab_board.seal_tab(tab_val)
+			GameState.tabs = _tab_board.get_remaining()
+			if power_mgr:
+				power_mgr.apply_tab9_bounty([tab_val])
+				power_mgr.on_tabs_sealed(1)
+			tabs_sealed.emit([tab_val])
+			_check_win()
+		"auto_seal_lowest":
+			var remaining = _tab_board.get_remaining()
+			if remaining.size() <= 1:
+				return false
+			remaining.sort()
+			var tab_val = remaining[0]
+			_tab_board.seal_tab(tab_val)
+			GameState.tabs = _tab_board.get_remaining()
+			if power_mgr:
+				power_mgr.apply_tab9_bounty([tab_val])
+				power_mgr.on_tabs_sealed(1)
+			tabs_sealed.emit([tab_val])
+			_check_win()
+		"multiply_2":
+			if not target_die.rolled:
+				return false
+			_dice_pool.apply_multiply(target_die, 2)
+		"set_max":
+			if not target_die.rolled:
+				return false
+			_dice_pool.apply_set_max(target_die)
+		"set_min":
+			if not target_die.rolled:
+				return false
+			_dice_pool.apply_set_min(target_die)
+		"reroll_lucky":
+			if not target_die.rolled:
+				return false
+			_dice_pool.reroll_lucky(target_die)
+		"drop_die":
+			if not target_die.rolled:
+				return false
+			_dice_pool.drop_die(target_die)
+		"reroll_unlucky":
+			if not target_die.rolled:
+				return false
+			_dice_pool.reroll_unlucky(target_die)
 		_:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
 			return false
 	ability.charges -= 1
 	var total := 0
 	for die in GameState.dice_hand:
-		if die.rolled:
+		if die.rolled and not die.dropped:
 			total += die.value
 	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 	return true

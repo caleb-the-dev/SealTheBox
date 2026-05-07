@@ -1,6 +1,11 @@
 extends Node
 
-const ABILITY_POOL_IDS: Array[String] = ["reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all"]
+const ABILITY_POOL_IDS: Array[String] = [
+	"reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all",
+	"put_down_highest", "auto_seal_lowest",
+	"multiply_2", "set_max", "set_min",
+	"reroll_lucky", "reroll_unlucky", "drop_die"
+]
 
 var hp: int = 6
 var round: int = 0
