@@ -149,10 +149,6 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			if not target_die.rolled:
 				return false
 			_dice_pool.apply_multiply(target_die, 2)
-		"multiply_3":
-			if not target_die.rolled:
-				return false
-			_dice_pool.apply_multiply(target_die, 3)
 		"set_max":
 			if not target_die.rolled:
 				return false

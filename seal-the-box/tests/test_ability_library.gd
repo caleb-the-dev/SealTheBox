@@ -20,7 +20,7 @@ func _init() -> void:
 	assert(missing == null, "Missing ability should return null")
 
 	var all = lib.get_all()
-	assert(all.size() == 23, "Library should have exactly 23 abilities")
+	assert(all.size() == 22, "Library should have exactly 22 abilities")
 
 	print("AbilityLibrary tests passed!")
 	quit()
