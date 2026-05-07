@@ -106,10 +106,16 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			if power_mgr:
 				power_mgr.on_die_rolled(target_die)
 		"greater_1":
+			if target_die.value >= target_die.faces:
+				status_updated.emit("Die is already at or above its maximum — Empower can't apply.")
+				return false
 			_dice_pool.apply_greater(target_die, 1)
 		"lesser_1":
 			_dice_pool.apply_lesser(target_die, 1)
 		"greater_2":
+			if target_die.value >= target_die.faces:
+				status_updated.emit("Die is already at or above its maximum — Empower II can't apply.")
+				return false
 			_dice_pool.apply_greater(target_die, 2)
 		"lesser_2":
 			_dice_pool.apply_lesser(target_die, 2)
