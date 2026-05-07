@@ -4,7 +4,7 @@ const ABILITY_POOL_IDS: Array[String] = [
 	"reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all",
 	"put_down_highest", "auto_seal_lowest",
 	"multiply_2", "multiply_3", "set_max", "set_min",
-	"reroll_lucky", "drop_die"
+	"reroll_lucky", "reroll_unlucky", "drop_die"
 ]
 
 var hp: int = 6

@@ -56,7 +56,7 @@ func get_discard_count() -> int:
     return _discard.size()
 
 func apply_multiply(die: Die, factor: int) -> void:
-    die.value = min(die.value * factor, die.faces)
+    die.value = die.value * factor
 
 func apply_set_max(die: Die) -> void:
     die.value = die.faces
@@ -75,6 +75,15 @@ func reroll_lucky(die: Die) -> int:
 
 func drop_die(die: Die) -> void:
     die.dropped = true
+
+func reroll_unlucky(die: Die) -> int:
+    var old_value = die.value
+    die.rolled = false
+    die.roll()
+    if old_value < die.value:
+        die.value = old_value
+        die.rolled = true
+    return die.value
 
 func _reshuffle() -> void:
     _pool.append_array(_discard)

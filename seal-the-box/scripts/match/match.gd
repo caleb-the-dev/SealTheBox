@@ -1267,7 +1267,7 @@ func _on_ability_pressed(index: int) -> void:
 	if ability.charges <= 0:
 		_status_label.text = "%s is exhausted (0 charges)." % ability.flavor_name
 		return
-	if ability.id == "reroll_all":
+	if ability.id in ["reroll_all", "put_down_highest", "auto_seal_lowest"]:
 		if _round_manager.use_ability(ability, null):
 			_selected_ability = null
 			_targeting_die = false

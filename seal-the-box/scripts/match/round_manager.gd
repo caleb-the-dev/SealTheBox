@@ -169,6 +169,10 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			if not target_die.rolled:
 				return false
 			_dice_pool.drop_die(target_die)
+		"reroll_unlucky":
+			if not target_die.rolled:
+				return false
+			_dice_pool.reroll_unlucky(target_die)
 		_:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
 			return false
