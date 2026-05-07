@@ -49,12 +49,27 @@ var pending_threshold_bonus: int = 0
     # Carries the Box Shutter bonus from the previous match into the next start_match().
     # Consumed and reset to 0 inside RoundManager.start_match().
     # Cleared by reset_run(). Not touched by reset_match().
+var case_match_index: int = 1
+    # Current match number within the 27-match Case (1..27).
+    # Synced by RunManager.handle_match_won(): gs.case_match_index = match_number after increment.
+    # Reset to 1 by reset_run(). NOT reset by reset_match().
+var run_won: bool = false
+    # Set to true by RunManager.handle_match_won() when the completed match was #27.
+    # Checked by RunManager._start_next_match() — if true, emits CaseManager.notify_run_won() instead of starting match 28.
+    # Reset to false by reset_run().
+
+var act: int:       # derived — read-only computed property
+    get:
+        # 1 if case_match_index ≤ 9, 2 if ≤ 21, 3 otherwise
+var location_index: int:  # same as act — placeholder until entity-specific location names ship (slice 4)
+    get: return act
 ```
 
 ## Public Methods
 ```gdscript
 func reset_run() -> void
     # Resets hp=6, owned_powers=[], power_counters={}, pending_threshold_bonus=0,
+    # case_match_index=1, run_won=false,
     # rebuilds dice_pool (1d4+4d6+2d8 = 7 dice), calls reset_match(),
     # then always calls _setup_ability_hand() (no is_empty guard).
     # Does NOT set tabs/round_limit/win_threshold — those come from start_match(box).
@@ -84,6 +99,7 @@ func _setup_ability_hand() -> void
 ## Dependencies
 - `AbilityLibrary` — used by `_setup_ability_hand()` to look up ability definitions
 - `BoxDefinition` — type of `current_box`; values set by RoundManager, not GameState itself
+- (read by) `CaseManager` — reads `case_match_index` / `run_won` from GameState but does not own them
 
 ## Gotchas
 - **`owned_powers` persists across matches but NOT across runs.** reset_match() does not clear it; reset_run() does. Do not store ability-level state here — owned_powers holds PowerData objects only.
@@ -98,6 +114,7 @@ func _setup_ability_hand() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | Added case_match_index (int, default 1), run_won (bool, default false), act (computed getter: 1/2/3), location_index (alias for act). reset_run() now resets both case_match_index=1 and run_won=false. |
 | 2026-05-06 | ABILITY_POOL_IDS expanded from 6 to 14 abilities (added put_down_highest, auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die). |
 | 2026-05-05 | Added power_counters: Dictionary = {}. reset_run() clears it. reset_match() does not touch it. Individual values reset to 0 at match end via PowerManager.on_match_end(). |
 | 2026-05-04 | Added owned_powers: Array = [] and pending_threshold_bonus: int = 0. reset_run() clears both. reset_match() leaves both untouched. _setup_dice_pool() changed from 3d6+1d4+1d8 (5 dice) to 1d4+4d6+2d8 (7 dice). |

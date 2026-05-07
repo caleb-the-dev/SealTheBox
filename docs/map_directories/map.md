@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 8 |
+| Sessions since groom | 9 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -26,6 +26,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Power Manager (autoload) | [power_manager.md](power_manager.md) | Active |
 | Box Definition (Resource) | [box_definition.md](box_definition.md) | Active |
 | Power Data (Resource) | [power_data.md](power_data.md) | Active |
+| Case Manager (autoload) | [case_manager.md](case_manager.md) | Active |
 | Run Manager | [run_manager.md](run_manager.md) | Active |
 | Tab Board | [tab_board.md](tab_board.md) | Active |
 | Dice Pool | [dice_pool.md](dice_pool.md) | Active |
@@ -62,6 +63,7 @@ seal-the-box/
       tab_board.gd         # Tab sealing logic
       dice_pool.gd         # Dice draw/roll/discard
     run/
+      case_manager.gd      # Autoload: CaseManager — 27-match Case sequence, run_won signal
       run_manager.gd       # Series sequencing; power offer + rotation after critical wins
       power_manager.gd     # Autoload: PowerManager — applies power effects (no class_name)
   scenes/
@@ -71,6 +73,7 @@ seal-the-box/
     test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 48 tests
     test_power_effects.gd  # Tests for all 8 power effects via PowerManager (headless) — 30 tests
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
+    test_case_manager.gd   # Tests for CaseManager (headless) — 10 tests
 ```
 
 ---
@@ -91,6 +94,7 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-07 | feature/case-shape (slice 1 of the Case meta-flow). Replaced infinite match loop with 27-match Case structure: CaseManager autoload builds a 27-match list (9 easy / 12 medium / 6 hard via BoxLibrary.get_by_tier()); GameState gains case_match_index, run_won, act (computed), location_index; RunManager defers box selection to CaseManager and emits CaseManager.run_won after match 27 via notify_run_won(); match.gd top bar now shows "Match N / 27", "Act N", "Location N"; run_won_overlay added ("the entity is sealed" + "Begin a new case"). Periodic die swap every 5 matches still present (removed in slice 2). test_case_manager.gd: 10 new headless tests. |
 | 2026-05-06 | Implemented 8 new canonical abilities: Auto-Seal Highest, Auto-Seal Lowest (fire immediately, no die click; Non-Final; trigger power hooks), Multiply x2 (no ceiling, 1 charge), Set to Max, Set to Min, Reroll Lucky, Reroll Unlucky, Drop Die (dropped die shows [X], excluded from total + sealing, can't be targeted). Empower/Empower II now refuse to fire if die.value >= die.faces (prevents multiply-then-empower shrink). Die class gained dropped: bool. ABILITY_POOL_IDS expanded from 6 to 14. Give Ability dev menu added. All 14 abilities appear in rotation pool. test_ability_library.gd updated to 22 abilities. |
 | 2026-05-06 | Three new counter powers: Tax Collector (3 critical wins → +1 HP), Diabolic Pact (7 d12 rolls → +1 HP), Tab Counter (5 tab seals → +1 charge to highest-charge ability). All counters changed to start at 0 (was 1) for consistent behavior. PowerManager: on_critical_win(), on_die_rolled(), on_tabs_sealed(), _apply_tab_counter_charge() added; apply_eager() now calls on_die_rolled(). RunManager: on_critical_win() called from handle_match_won(true). RoundManager: commit_roll() and use_ability() call on_die_rolled(); attempt_seal() calls on_tabs_sealed(). match.gd: "Switch Dice →" dev menu button added (mid-match pool swap, no match transition; uses stored index, not find()); _refresh_powers_panel() now fires immediately after rolling (commit_roll and reroll ability paths). Powers.csv: 8→11 powers. Tests: 48 (11 new). |
 | 2026-05-05 | Counter infrastructure + Bonus Seal conversion. GameState: added power_counters Dictionary. PowerData: added counter_target field. powers.csv: 5th column counter_target (bonus_seal=3, all others=0). PowerManager: add_power() as unified acquisition entry point (initializes counter to 1); on_round_end() ticks bonus_seal counter each round; on_match_end() resets to 0; get_bonus_seals_if_ready() fires only when counter==target. RoundManager: on_round_end() hook in end_round(); on_match_end() at all 5 match-end paths. RunManager: handle_power_offer_accepted routes through PowerManager.add_power(). match.gd: powers panel shows "Name X/Y" for counter powers; _on_round_ended calls _refresh_powers_panel(). Counter starts at 1 (fires on round 3, then every 3 rounds). Tests: test_run_manager at 37 (7 new counter tests). |

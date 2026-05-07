@@ -15,7 +15,11 @@ match.tscn  (Node3D, script: match.gd)
   MeshInstance3D               # flat table plane — placeholder for 3D environment
   CanvasLayer
     Control (root UI)
-      top_bar (HBoxContainer)    — Round / HP / Match / Box labels
+      top_bar (HBoxContainer)    — HP label (centered)
+      top_left_vbox (VBoxContainer) — anchored top-left
+        _match_label             — "Match N / 27"
+        _act_label               — "Act N" (grey, smaller)
+        _location_label          — "Location N" (grey, smaller; same value as act for now)
       tabs_vbox (VBoxContainer)  — tab area
         tabs_lbl                 — "── TABS ──"
         tab_area (HBoxContainer)
@@ -31,7 +35,8 @@ match.tscn  (Node3D, script: match.gd)
           ability_panel          — 3 ability slots (TooltipButton)
       _power_offer_overlay       — hidden until critical win; shows power name/desc + Accept/Skip
       _rotation_overlay          — hidden until any match win; shows 3 ability pick buttons
-      _run_over_overlay          — hidden until run over (HP = 0)
+      _run_over_overlay          — hidden until run over (HP = 0); "Play Again" button → start_run()
+      _run_won_overlay           — hidden until match 27 won; "the entity is sealed" + "Begin a new case" → start_run()
       dev_toggle (Button)        — "DEV" button, top-right corner
       _dev_overlay               — dev menu (see Dev Menu section)
       _dev_power_overlay         — Give Power submenu; populated dynamically on open
@@ -61,6 +66,7 @@ RunManager.show_power_offer     → _on_show_power_offer       (shows power offe
 RunManager.show_rotation_offer  → _on_show_rotation_offer    (shows rotation overlay with 3 picks)
 RunManager.show_die_swap        → _on_show_die_swap          (shows die swap overlay; also called directly in dev path)
 RunManager.run_over             → _on_run_over               (shows over overlay)
+CaseManager.run_won             → _on_run_won                (shows run_won_overlay — wired only if CaseManager singleton is registered)
 ```
 
 ## Power Offer Overlay Flow
@@ -101,7 +107,7 @@ Open with T key or the "DEV" button (top-right corner). Full-screen opaque overl
 | Give Power → | Opens `_dev_power_overlay` with all 11 power buttons |
 | Give Ability → | Opens `_dev_ability_overlay` listing all 14 pool abilities; tapping one fills the first empty slot, or overwrites slot 3 if all are full |
 | Switch Dice → | Opens the die swap overlay mid-match in dev mode (see below) |
-| Win Entire Series | Loops threshold wins + auto-rotation until stuck; no power offers |
+| Win Entire Series | Loops threshold wins + auto-rotation; terminates at match 27 win (shows run_won_overlay); no power offers |
 | Restart Run | `start_run()` — resets everything including owned powers |
 | Close [T] | Hides overlay |
 
@@ -164,12 +170,13 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 - **Power offer uses `_current_power_offer` state.** The Confirm button is disabled until a card is clicked. If `_current_power_offer` is null when Confirm fires (shouldn't happen), it no-ops. Don't clear `_power_offer_options` before Confirm is handled.
 - **`_on_end_round_pressed` end_round guard:** After `attempt_seal()`, the code checks `_run_manager.match_number != match_before or _match_ended` before calling `end_round()`. Without this guard, the synchronous signal chain would start the next match and then `end_round()` would advance it to round 2 before the player acts.
 - **Tab display uses button.text.to_int()** to get tab values. Don't change button text formatting without updating `_refresh_tab_display()`.
-- **No run-won overlay.** The run-win overlay and `_on_run_won` handler were removed — there is no "run complete" state in the infinite loop.
+- **Run-won overlay exists.** `_run_won_overlay` shows after match 27 is won. CaseManager.run_won signal fires AFTER the rotation pick (not immediately on match win) — the normal rotation/power-offer flow completes first, then `_start_next_match()` detects `gs.run_won==true` and calls `notify_run_won()`. The overlay is hidden in `_on_next_match_ready()` (for "Begin a new case" flow).
 - **Dev "Win Entire Series"** calls `dev_win_match()` then `dev_skip_rotation()` in a loop. Always produces threshold wins (not critical), so the power offer overlay never appears in this path.
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | Top bar: _match_label now shows "Match N / 27"; added _act_label ("Act N") and _location_label ("Location N") in a VBoxContainer (top_left_vbox) replacing the old single match label. Added _run_won_overlay: opaque black, "the entity is sealed" text, "Begin a new case" button → _run_manager.start_run(). Added _on_run_won() handler; wired CaseManager.run_won signal in _connect_signals() (guarded with Engine.has_singleton). _on_next_match_ready() now hides _run_won_overlay. _refresh_ui() now updates _act_label and _location_label from GameState.act. |
 | 2026-05-06 | Added "Give Ability →" dev menu button (_dev_ability_overlay, lists all 14 pool abilities, fills first empty slot or overwrites slot 3). Dropped die UI: _refresh_dice_display shows "[X] value" + disabled; _refresh_dice_highlight greys dropped dice; _on_die_pressed returns early for dropped; rolled total filters exclude dropped (4 sites). Auto-seal abilities (put_down_highest, auto_seal_lowest) now fire immediately on click — no die targeting step needed. |
 | 2026-05-06 | Added "Switch Dice →" dev menu button. Opens die swap overlay mid-match via _dev_die_swap_mode flag; confirm path writes directly to GameState.dice_pool using stored _selected_swap_pool_idx (not find()). Added _refresh_powers_panel() after commit_roll (_on_action_pressed), after reroll_die use (_on_die_pressed), and after reroll_all use (_on_ability_pressed) so counter powers like Diabolic Pact update immediately on roll. |
 | 2026-05-05 | Powers panel: counter powers (counter_target > 0) now display "Name X/Y" instead of just "Name" — reads GameState.power_counters[id] for current value. _on_round_ended() now calls _refresh_powers_panel() so counter ticks update the display each round. _on_dev_give_power() and handle_power_offer_accepted routing now go through PowerManager.add_power() to ensure counter initialization. |

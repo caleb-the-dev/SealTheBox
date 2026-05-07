@@ -33,7 +33,7 @@ Each **match** is one game of advanced Shut the Box:
 - When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — rotation only) or keeps pushing to seal all tabs (critical win — power offer then rotation).
 - The run ends only when HP reaches 0.
 
-Each **run** is an infinite loop of matches cycling through 5 boxes (Classic → Low Evens → High Odds → Compressed → Stairs → repeat). After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins offer a power (Accept to add it to owned_powers, or Skip) before the rotation. Every 5 matches, a die swap is offered: player may swap one die in their pool for one of 5 offered dice [d2, d4, d8, d10, d12] or skip.
+Each **run** is a **27-match Case** divided into three acts (9 easy / 12 medium / 6 hard boxes drawn randomly by tier). The Case ends either by losing all HP or by winning match 27. After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins offer a power (Accept to add it to owned_powers, or Skip) before the rotation. *(Die swap every 5 matches is a temporary holdover — will be replaced by the Whetstone crossroads in slice 2.)*
 
 ---
 
@@ -117,15 +117,18 @@ Powers are persistent run modifiers acquired between matches. They modify core g
 
 ## Run Structure
 
-1. Player starts a run with a randomly generated dice pool (2d4, 3d6, 1d8 — types random) and starting abilities/powers based on dice type majority.
-2. Play a match → win → collect rewards (choose a new die from 3 random options; GP awarded).
-3. Shut the box → also collect a power.
-4. Repeat with progressively harder tab ranges.
-5. HP reaches 0 → run over.
+A run is a **Case** — 27 matches across three acts:
+- **Act 1 (matches 1–9):** easy-tier boxes (Classic, Low Evens — high repetition expected until more boxes are added)
+- **Act 2 (matches 10–21):** medium-tier boxes (Stairs, High Odds)
+- **Act 3 (matches 22–27):** hard-tier boxes (Compressed — repeats 6 times until more hard boxes exist)
 
-**Starting setup:** most-common dice type → 1 ability + 1 power; second-most-common → 1 ability.
+**Win:** seal match 27. **Lose:** HP reaches 0 at any point.
 
-**GP formula:** `(threshold − remaining_sum) × (15 − threshold)` (flush ranges only)
+**Between-act crossroads (slice 2, not yet implemented):** after match 9 and match 21, player chooses Rest (+2 HP) or Whetstone (die swap). Until slice 2 ships, a temporary periodic die swap fires every 5 matches instead.
+
+**Entity (slice 4, not yet implemented):** at run start, one of Diabolic / Cosmic / Ethereal is selected. Drives content flavor (vignette/event pools, location names, Source box skin) but no mechanical asymmetry.
+
+**Starting setup:** pool = 1d4 + 4d6 + 2d8 (7 dice fixed). Run starts with 1 random ability in slot 3; no starting powers.
 
 ---
 
@@ -152,5 +155,12 @@ Four types — Diabolic, Cosmic, Ethereal, Mundane — apply to both dice and ab
 ---
 
 ## Vertical Slice Status
-See `docs/superpowers/specs/2026-05-01-vertical-slice-design.md` for the current build target.
-Current slice: single match, tabs 1–9, hardcoded starting state, no run layer.
+See `docs/superpowers/specs/2026-05-06-game-flow-design.md` for the Case meta-flow spec and slice breakdown.
+
+| Slice | Branch | Status |
+|-------|--------|--------|
+| 1 — Case shape (27-match structure, tier boxes, run-won overlay) | feature/case-shape | ✅ Merged |
+| 2 — Crossroads (Rest/Whetstone after acts 1 and 2; remove periodic die swap) | feature/crossroads | Planned |
+| 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | Planned |
+| 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | Planned |
+| 5 — Source boxes (themed match-27 box per entity) | feature/source-boxes | Planned |

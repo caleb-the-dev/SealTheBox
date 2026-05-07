@@ -1,11 +1,11 @@
 # Run Manager
-*Orchestrates the infinite match loop. Owns box cycling, end-of-match power offers (critical wins), and mandatory ability rotation.*
+*Orchestrates the 27-match Case loop. Owns end-of-match power offers (critical wins) and mandatory ability rotation. Box selection delegated to CaseManager.*
 
 ## Location
 `scripts/run/run_manager.gd` (class_name RunManager, instantiated by match.gd)
 
 ## Responsibility
-Drive an infinite loop of matches: cycle through boxes in order, emit signals to advance the UI. After every match win (threshold or critical), run a mandatory ability rotation (player picks 1 of 3). Critical wins additionally fire a power offer before rotation. The run ends only when HP reaches 0.
+Drive a 27-match Case: ask CaseManager for the next box, emit signals to advance the UI. After every match win (threshold or critical), run a mandatory ability rotation (player picks 1 of 3). Critical wins additionally fire a power offer before rotation. The run ends when HP reaches 0 (lose) OR when match 27 is won (run_won path → CaseManager.run_won signal).
 
 ## Signals
 ```gdscript
@@ -21,10 +21,13 @@ signal run_over(match_number: int)              # emitted when player loses (HP 
 var match_number: int                           # 1-based, incremented in handle_match_won()
 
 func start_run() -> void
-    # Loads boxes from BoxLibrary, calls gs.reset_run(), emits next_match_ready(_boxes[0]).
+    # Resets match_number=1, calls gs.reset_run() (resets all GameState including case_match_index=1),
+    # calls CaseManager.reset_run() (builds 27-match list), then _start_next_match().
 
 func handle_match_won(critical: bool) -> void
-    # Always increments match_number first.
+    # Records completed_match = match_number, then increments match_number.
+    # Syncs gs.case_match_index = match_number (post-increment value).
+    # If completed_match == 27: sets gs.run_won = true (win path — _start_next_match will fire CaseManager.notify_run_won()).
     # Always calls PowerManager.apply_survivor() (heals if HP==1).
     # critical=false (threshold win): calls _do_rotation_offer() directly.
     # critical=true  (shut the box):  calls PowerManager.apply_box_shutter(), PowerManager.on_critical_win(), then _do_power_offer().
@@ -60,8 +63,11 @@ func dev_skip_rotation() -> void
     # Used by match.gd "Win Entire Series" to skip the rotation overlay in the dev loop.
 ```
 
-## Box Cycling
-Boxes are loaded from `BoxLibrary.get_ordered()` in `start_run()`. After each match win, the next box is `_boxes[(match_number - 1) % _boxes.size()]`. With 5 boxes: Classic → Low Evens → High Odds → Compressed → Stairs → Classic → ... indefinitely.
+## Box Selection
+Box selection is delegated to CaseManager. `_start_next_match()` calls `CaseManager.get_box_for_match(match_number)`. If `gs.run_won == true` (match 27 just won), `_start_next_match()` calls `CaseManager.notify_run_won()` instead of starting another match. `_boxes` is kept as a fallback Array but is always empty in normal play (CaseManager path covers all cases).
+
+## Die Swap Timing
+`handle_rotation_pick()` still checks `(match_number - 1) % 5 == 0` and fires `show_die_swap` every 5 matches. This logic is unchanged in slice 1 — it will be removed in slice 2 (feature/crossroads) when the Whetstone replaces the periodic swap.
 
 ## Match Win / Loss Flow
 ```
@@ -103,8 +109,8 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 ```
 
 ## Dependencies
-- `BoxLibrary` — loads ordered box list at start_run()
-- `GameState` — calls reset_run(), reset_run_end(); appends to owned_powers; shifts ability_hand slots
+- `CaseManager` — calls reset_run() in start_run(); get_box_for_match() in _start_next_match(); notify_run_won() when match 27 is won
+- `GameState` — calls reset_run(), reset_run_end(); syncs case_match_index; sets run_won; appends to owned_powers; shifts ability_hand slots
 - `AbilityLibrary` — used by _do_rotation_offer() to duplicate ability options
 - `PowerLibrary` — used by _do_power_offer() to get random unowned power
 - `PowerManager` — called in handle_match_won(true) for Box Shutter; in handle_power_offer_accepted() via add_power(); in handle_match_won() for apply_survivor(); in handle_match_lost() for try_phoenix_down()
@@ -124,6 +130,7 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | start_run() now calls CaseManager.reset_run() and uses _start_next_match() (no more _boxes[0]). handle_match_won() now records completed_match, syncs gs.case_match_index, sets gs.run_won=true when completed_match==27. _start_next_match() checks gs.run_won — if true, calls CaseManager.notify_run_won() and returns instead of starting match 28; otherwise calls CaseManager.get_box_for_match(match_number). |
 | 2026-05-06 | handle_match_won(true) now calls PowerManager.on_critical_win() after apply_box_shutter() — Tax Collector hook. |
 | 2026-05-05 | handle_power_offer_accepted() now routes through PowerManager.add_power() instead of direct gs.owned_powers.append() — ensures counter initialization for Counter-type powers. |
 | 2026-05-05 | show_power_offer signal changed from (power: PowerData) to (powers: Array) — now emits up to 3 candidates. _do_power_offer() uses PowerLibrary.get_random_unowned_multiple(owned, 3); skips overlay if result is empty. handle_match_won() now calls PowerManager.apply_survivor() on every win before the critical branch. handle_match_lost() now calls PowerManager.try_phoenix_down() before emitting run_over — if true, increments match_number and starts next match at HP=1. |

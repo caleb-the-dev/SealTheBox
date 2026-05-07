@@ -6,24 +6,27 @@
 `data/boxes.csv` (source data)
 
 ## Responsibility
-Parse boxes.csv once at _ready(). Index by id. Maintain insertion order for run sequencing.
-Does NOT decide which boxes a run uses — that's RunManager.
+Parse boxes.csv once at _ready(). Index by id. Maintain insertion order.
+Does NOT decide which boxes a run uses — that's CaseManager (uses `get_by_tier()`).
 
 ## Public API
 ```gdscript
-func get_box(id: String) -> BoxDefinition   # returns null if not found
-func get_all() -> Array                     # unordered
-func get_ordered() -> Array                 # CSV row order — used by RunManager for series sequencing
+func get_box(id: String) -> BoxDefinition          # returns null if not found
+func get_all() -> Array                            # unordered
+func get_ordered() -> Array                        # CSV row order (used rarely now — CaseManager drives selection)
+func get_by_tier(tier: String) -> Array            # filters all boxes by tier value ("easy", "medium", "hard")
 ```
 
 ## CSV Format
 ```
-id,name,tabs,win_threshold
-classic,Classic,1;2;3;4;5;6;7;8;9,20
-low_evens,Low Evens,2;3;4;5;6;7;8,17
-high_odds,High Odds,3;5;7;9;11,17
+id,name,tabs,win_threshold,tier
+classic,Classic,1;2;3;4;5;6;7;8;9,20,easy
+low_evens,Low Evens,2;3;4;5;6;7;8,17,easy
+high_odds,High Odds,3;5;7;9;11,17,medium
+compressed,Compressed,2;4;5;6;8,13,hard
+stairs,Stairs,1;3;5;6;7;9,15,medium
 ```
-All four columns are required (`row.size() < 4` rows are skipped). `win_threshold` is parsed as int and stored directly on BoxDefinition.
+First four columns are required (`row.size() < 4` rows are skipped). Column 5 (`tier`) is optional — if absent, `tier` defaults to `""`. `win_threshold` is parsed as int and stored directly on BoxDefinition.
 
 ## Dependencies
 - `BoxDefinition` — instantiated per CSV row
@@ -36,5 +39,6 @@ All four columns are required (`row.size() < 4` rows are skipped). `win_threshol
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | Added `tier` column (index 4) parsing (optional — skipped if row.size() < 5). Added `get_by_tier(tier)` — filters all boxes whose `tier` field matches. Used by CaseManager to build per-act pools. |
 | 2026-05-04 | Added `win_threshold` column (index 3) parsing. Row size check updated from `< 3` to `< 4`. |
 | 2026-05-02 | Created. |
