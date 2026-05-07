@@ -113,7 +113,10 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Infinite match loop: Classic → Low Evens → High Odds → repeat; run ends only at HP = 0
 - BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv (columns: id, name, tabs, win_threshold)
 - win_threshold is explicit per-box in CSV (Classic 20, Low Evens 17, High Odds 17); round_limit = ceili(tab_sum/15)+1 (all boxes: 4 rounds before overtime)
-- Abilities have charges (reroll_die=2, empower/weaken=3, reroll_all=1); 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3; rolling dice is free (no AP)
+- Abilities have charges; 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3; rolling dice is free (no AP)
+- 14 wired abilities in rotation pool: Reroll (2), Empower (3), Weaken (3), Empower II (2), Weaken II (2), Reroll All (1), Auto-Seal Highest (1), Auto-Seal Lowest (2), Multiply x2 (1, no ceiling), Set to Max (2), Set to Min (3), Reroll Lucky (2), Reroll Unlucky (2), Drop Die (2)
+- Empower/Empower II refuse to fire if die.value >= die.faces (prevents multiply-then-empower shrink); Drop Die marks die as excluded from totals and sealing (shown as [X])
+- Auto-Seal abilities (Highest/Lowest) fire immediately on click, no die targeting; Non-Final (blocked if only 1 tab remains); trigger Tab 9 Bounty + Tab Counter power hooks
 - Threshold win: "Continue →" button appears and animates when remaining sum ≤ threshold; player chooses when to advance, then picks a rotation ability
 - Critical win (shut the box): auto-ends match, fires 1-of-3 power card selection overlay (highlight + Confirm/Skip), then rotation ability pick
 - Powers: 11 powers in data/powers.csv (Lighter Box +1/copy, Eager, Tab 9 Bounty, Bonus Seal, Box Shutter +2/copy, Phoenix Down, Coffee Break, Survivor, Tax Collector, Diabolic Pact, Tab Counter); PowerData resource, PowerLibrary autoload, PowerManager autoload; owned_powers persist across matches within a run; powers stack (multiple copies show count badge in panel)
@@ -121,9 +124,9 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - Counter infrastructure: GameState.power_counters Dictionary; PowerManager.add_power() is the single acquisition entry point (initializes counter to 0 on first acquisition). Bonus Seal (target=3): counter ticks each round end, fires on next seal when counter==3, resets to 0 at match end. Tax Collector (target=3): ticks on critical wins, fires +1 HP, persists across matches. Diabolic Pact (target=7): ticks on every d12 roll (commit_roll, reroll abilities, Eager), fires +1 HP, persists. Tab Counter (target=5): ticks per tab sealed (primary + bonus), fires +1 charge to highest-charge ability, persists. Counter display in powers panel: "Name X/Y".
 - GameState: hp=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], power_counters={}, pending_threshold_bonus=0
 - Boxes: 5 boxes cycling (Classic → Low Evens → High Odds → Compressed → Stairs → repeat); die swap offered every 5 matches
-- Dev menu (T key or DEV button): scrollable panels; "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu (all 11 powers), "Switch Dice →" (mid-match die swap, no match transition), "Win Entire Series", "Restart Run" shortcuts for playtesting
+- Dev menu (T key or DEV button): scrollable panels; "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu (all 11 powers), "Give Ability →" submenu (all 14 pool abilities, fills first empty slot or overwrites slot 3), "Switch Dice →" (mid-match die swap, no match transition), "Win Entire Series", "Restart Run" shortcuts for playtesting
 - UI: top bar (Round/HP/Match/Box); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates, counter display "Name X/Y" for counter powers); power offer overlay (3-card pick) + rotation overlay + run-over overlay — all built in code in match.gd
-- Tests: test_run_manager.gd (48 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd pass headless
+- Tests: test_run_manager.gd (48 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd (22 abilities) pass headless
 
 ## Git & GitHub
 

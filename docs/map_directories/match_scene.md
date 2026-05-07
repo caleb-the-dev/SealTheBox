@@ -35,6 +35,7 @@ match.tscn  (Node3D, script: match.gd)
       dev_toggle (Button)        — "DEV" button, top-right corner
       _dev_overlay               — dev menu (see Dev Menu section)
       _dev_power_overlay         — Give Power submenu; populated dynamically on open
+      _dev_ability_overlay       — Give Ability submenu; populated dynamically on open
       _powers_panel              — always-visible right-side panel listing owned powers
 ```
 
@@ -98,6 +99,7 @@ Open with T key or the "DEV" button (top-right corner). Full-screen opaque overl
 | Win Current Match | `dev_win_match()` → threshold win; rotation overlay appears |
 | Shut the Box (Critical Win) | `dev_critical_win()` → power offer + rotation overlays |
 | Give Power → | Opens `_dev_power_overlay` with all 11 power buttons |
+| Give Ability → | Opens `_dev_ability_overlay` listing all 14 pool abilities; tapping one fills the first empty slot, or overwrites slot 3 if all are full |
 | Switch Dice → | Opens the die swap overlay mid-match in dev mode (see below) |
 | Win Entire Series | Loops threshold wins + auto-rotation until stuck; no power offers |
 | Restart Run | `start_run()` — resets everything including owned powers |
@@ -132,8 +134,19 @@ Each die button has a small child Label (`font_size=11`, anchored to bottom-righ
 - **Hidden** when die is unrolled (shows "d?" as button text instead)
 - **Visible** after rolling: shows "d6", "d4", etc. so player knows the max value for Empower
 
+## Dropped Die Rendering
+When a die has `die.dropped == true` (from the Drop Die ability):
+- `_refresh_dice_display()`: button text shows `"[X] <value>"`, button is **disabled**
+- `_refresh_dice_highlight()`: modulate set to `Color(0.4, 0.4, 0.4)` — same grey as inactive unrolled dice
+- `_on_die_pressed()`: early returns immediately if `die.dropped` — cannot be targeted by abilities or selected
+- `_on_tab_pressed()` and `_on_end_round_pressed()`: `rolled` filter is `d.rolled and not d.dropped` — dropped dice excluded from total and from dice passed to `attempt_seal()`
+- `_update_rolled_total()`: same exclusion filter
+
+## Auto-Seal Ability Firing
+`put_down_highest` and `auto_seal_lowest` fire **immediately** when the ability button is clicked — no die targeting step. They are listed alongside `reroll_all` in the immediate-fire check in `_on_ability_pressed()`.
+
 ## Dice Highlight Rules
-`_refresh_dice_highlight()` greys unrolled dice **only in "act" phase**. In "roll" phase all unrolled dice show at full brightness — this prevents the Eager pre-rolled die from making other dice look unclickable.
+`_refresh_dice_highlight()` greys unrolled dice **only in "act" phase**. In "roll" phase all unrolled dice show at full brightness — this prevents the Eager pre-rolled die from making other dice look unclickable. Dropped dice are also always greyed regardless of phase.
 
 ## Ability Slot Display
 See `ability_hand.md` for full detail. Summary:
@@ -157,6 +170,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | Added "Give Ability →" dev menu button (_dev_ability_overlay, lists all 14 pool abilities, fills first empty slot or overwrites slot 3). Dropped die UI: _refresh_dice_display shows "[X] value" + disabled; _refresh_dice_highlight greys dropped dice; _on_die_pressed returns early for dropped; rolled total filters exclude dropped (4 sites). Auto-seal abilities (put_down_highest, auto_seal_lowest) now fire immediately on click — no die targeting step needed. |
 | 2026-05-06 | Added "Switch Dice →" dev menu button. Opens die swap overlay mid-match via _dev_die_swap_mode flag; confirm path writes directly to GameState.dice_pool using stored _selected_swap_pool_idx (not find()). Added _refresh_powers_panel() after commit_roll (_on_action_pressed), after reroll_die use (_on_die_pressed), and after reroll_all use (_on_ability_pressed) so counter powers like Diabolic Pact update immediately on roll. |
 | 2026-05-05 | Powers panel: counter powers (counter_target > 0) now display "Name X/Y" instead of just "Name" — reads GameState.power_counters[id] for current value. _on_round_ended() now calls _refresh_powers_panel() so counter ticks update the display each round. _on_dev_give_power() and handle_power_offer_accepted routing now go through PowerManager.add_power() to ensure counter initialization. |
 | 2026-05-05 | Power offer overlay rebuilt as 3-card selection: 3 card buttons (200×140, autowrap), disabled Confirm + Skip; player clicks card to highlight (yellow tint), Confirm enables. _on_show_power_offer now receives Array; _on_power_card_pressed, _on_power_confirm_pressed replace old _on_power_offer_accepted. Powers panel: _refresh_powers_panel() now deduplicates by id and adds a stack count badge (Label, font 11, bottom-right, MOUSE_FILTER_IGNORE) when count > 1. Dev menu: both main and Give Power panels are now scrollable (ScrollContainer + SIZE_EXPAND_FILL inner VBox); panels expanded to 5%–95% viewport height; Give Power now lists all 8 powers. |

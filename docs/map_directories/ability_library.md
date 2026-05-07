@@ -28,17 +28,25 @@ var charges: int            # remaining charges on this instance (decremented on
 var max_charges: int        # base charge count from CSV; set once at load, never mutated at runtime
 ```
 
-## Current Abilities (abilities.csv) — Rotation Pool
-| id | flavor_name | charges |
-|----|-------------|---------|
-| reroll_die | Reroll | 2 |
-| greater_1 | Empower | 3 |
-| lesser_1 | Weaken | 3 |
-| greater_2 | Empower II | 2 |
-| lesser_2 | Weaken II | 2 |
-| reroll_all | Reroll All | 1 |
+## Current Abilities (abilities.csv) — Rotation Pool (14 abilities)
+| id | flavor_name | charges | notes |
+|----|-------------|---------|-------|
+| reroll_die | Reroll | 2 | targets a die |
+| greater_1 | Empower | 3 | targets a die; blocked if die.value >= die.faces |
+| lesser_1 | Weaken | 3 | targets a die |
+| greater_2 | Empower II | 2 | targets a die; blocked if die.value >= die.faces |
+| lesser_2 | Weaken II | 2 | targets a die |
+| reroll_all | Reroll All | 1 | no target; fires immediately on click |
+| put_down_highest | Auto-Seal Highest | 1 | no target; fires immediately; Non-Final |
+| auto_seal_lowest | Auto-Seal Lowest | 2 | no target; fires immediately; Non-Final |
+| multiply_2 | Multiply x2 | 1 | targets a die; no ceiling |
+| set_max | Set to Max | 2 | targets a die |
+| set_min | Set to Min | 3 | targets a die |
+| reroll_lucky | Reroll Lucky | 2 | targets a die; keeps higher result |
+| reroll_unlucky | Reroll Unlucky | 2 | targets a die; keeps lower result |
+| drop_die | Drop Die | 2 | targets a die; excludes from total + sealing |
 
-Additional card-type abilities (roll_d4, cosmic_coin, etc.) are in the CSV with charges=1 but are not in the current rotation pool.
+Non-pool stubs in the CSV (roll_d4, cosmic_coin, lesser_greater_1, lesser_2_cosmic, roll_d20, greater_2_diabolic, x2_diabolic, greater_1_diabolic) — placeholders for a future dice-type system; not wired in round_manager.gd.
 
 ## Dependencies
 None — loaded before any other system via Autoload order.
@@ -53,6 +61,7 @@ None — loaded before any other system via Autoload order.
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | CSV expanded from 15 to 22 rows: added put_down_highest (updated from stub), auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die. Rotation pool expanded from 6 to 14. multiply_3 was added then removed. test_ability_library.gd count assertion updated to 22. |
 | 2026-05-04 | Removed ap_cost field from AbilityData and abilities.csv. |
 | 2026-05-04 | Added `charges` (col 8) and `max_charges` fields to AbilityData. Library parses row[7] with safe fallback to 1; clamps to max(1, value). All 15 CSV rows updated with charge values. |
 | 2026-05-01 | Initial implementation. |

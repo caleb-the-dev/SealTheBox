@@ -36,6 +36,7 @@ func start_round() -> void
 
 func commit_roll(dice: Array) -> void
     # Rolls each provided die, then calls PowerManager.on_die_rolled(die) per die.
+    # Total displayed excludes dropped dice (die.rolled and not die.dropped).
     # Transitions phase to "act".
 
 func attempt_seal(dice: Array, tabs: Array) -> bool
@@ -49,9 +50,19 @@ func attempt_seal(dice: Array, tabs: Array) -> bool
 
 func use_ability(ability: AbilityData, target_die: Die) -> bool
     # Guards: returns false if match is over, ability.charges <= 0, or phase is "roll".
-    # Applies ability effect (reroll_die / greater_N / lesser_N / reroll_all).
+    # target_die may be null only for: reroll_all, put_down_highest, auto_seal_lowest.
+    # For die-targeting abilities: returns false if target_die.rolled == false.
+    # For Empower/Empower II: returns false if target_die.value >= target_die.faces (prevents shrink).
+    # Wired ability ids:
+    #   reroll_die, greater_1, lesser_1, greater_2, lesser_2, reroll_all  (original 6)
+    #   put_down_highest, auto_seal_lowest                                  (auto-seal; no die needed)
+    #   multiply_2, set_max, set_min                                        (die value setters)
+    #   reroll_lucky, reroll_unlucky, drop_die                              (reroll/drop)
     # For reroll_die and reroll_all: calls PowerManager.on_die_rolled(die) after each reroll.
+    # reroll_lucky/reroll_unlucky do NOT call on_die_rolled (refinements, not new roll events).
+    # Auto-seal abilities call PowerManager.apply_tab9_bounty() and on_tabs_sealed(1) after sealing.
     # Decrements ability.charges by 1 on success. Does NOT remove ability from hand.
+    # Returns false (charge NOT spent) if: unknown id, pre-roll guard fails, Non-Final guard fails.
     # Returns false if unknown ability id.
 
 func end_round() -> void
@@ -119,6 +130,10 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 - **Unrolled dice in roll phase are NOT greyed.** The UI greys unrolled dice only in "act" phase. The Eager pre-rolled die shows its value while other dice remain bright and clickable during roll phase.
 - **`use_ability` does NOT remove abilities from the hand.** It decrements `ability.charges`. The ability stays in its slot (visible, greyed out at 0 charges) until the rotation discards it.
 - **0-charge abilities are blocked early.** The `charges <= 0` check is the second guard in `use_ability` (before the phase check), so exhausted abilities return false regardless of game phase.
+- **Empower/Empower II will not fire if die.value >= die.faces.** This guards against the multiply-then-empower shrink: a d6 at 8 (via Multiply x2) would clamp back to 6 without this check. The guard returns false (charge NOT spent) and emits a status message.
+- **Dropped dice are excluded from the total.** Both `commit_roll()` and `use_ability()` compute total as `if die.rolled and not die.dropped`. Same filter in match.gd UI.
+- **Auto-seal Non-Final guard:** `put_down_highest` and `auto_seal_lowest` return false (charge NOT spent) if only 1 tab remains open.
+- **Auto-seal abilities trigger power hooks** (apply_tab9_bounty, on_tabs_sealed), same as attempt_seal(). Tab Counter and Tab 9 Bounty react to auto-sealed tabs.
 - **`start_match(box)` sets box fields BEFORE calling `reset_match()`** so the fields survive the reset. Change this order and tabs/round_limit will be wiped.
 - **Threshold win is NOT automatic.** `_check_win` emits `threshold_reached` (once) and stops. The match stays live. The player clicks Continue → `accept_threshold_win()` → `match_won.emit(false)`.
 - **`_threshold_notified` must be reset in `start_match()`** or the Continue button will never appear in subsequent matches.
@@ -127,6 +142,7 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | use_ability() wired for 8 new ability IDs: put_down_highest, auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die. Auto-seal abilities fire power hooks (apply_tab9_bounty + on_tabs_sealed). Empower/Empower II guard added: return false if die.value >= die.faces (prevents multiply-then-empower shrink). Total calculations in commit_roll() and use_ability() now exclude dropped dice (die.rolled and not die.dropped). |
 | 2026-05-06 | commit_roll() now calls PowerManager.on_die_rolled(die) per die after rolling (Diabolic Pact hook). use_ability() now calls on_die_rolled(die) for reroll_die and reroll_all (same hook). attempt_seal() now calls PowerManager.on_tabs_sealed(all_sealed.size()) after Tab 9 Bounty (Tab Counter hook). |
 | 2026-05-05 | Counter hooks added: end_round() now calls PowerManager.on_round_end() before round_ended; all 5 match-end paths (accept_threshold_win, _check_win critical, end_round loss, dev_win_match, dev_critical_win) now call PowerManager.on_match_end() before emitting. attempt_seal() now calls get_bonus_seals_if_ready() (was get_bonus_seals) — only fires when counter==target. |
 | 2026-05-05 | start_round(): added PowerManager.apply_coffee_break() call on round 1, immediately after apply_eager(). Ordering is intentional — Coffee Break fires after Eager. Lighter Box hook: threshold bonus now 1×count (was 3×count); this change is in PowerManager, not round_manager, but affects the value start_match() computes. |

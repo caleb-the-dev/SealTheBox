@@ -11,10 +11,15 @@ Does NOT own game logic — it stores data, never drives phase transitions.
 ## Constants
 ```gdscript
 const ABILITY_POOL_IDS: Array[String] = [
-    "reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all"
+    "reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all",
+    "put_down_highest", "auto_seal_lowest",
+    "multiply_2", "set_max", "set_min",
+    "reroll_lucky", "reroll_unlucky", "drop_die"
 ]
-# The 6 abilities eligible for rotation offers and as the run starter.
+# The 14 abilities eligible for rotation offers and as the run starter.
 # Also read by RunManager._do_rotation_offer() via gs.ABILITY_POOL_IDS.
+# Stub-type abilities in the CSV (roll_d4, cosmic_coin, etc.) are NOT in this list
+# — they are placeholders for a future dice-type system.
 ```
 
 ## Public Fields
@@ -88,11 +93,12 @@ func _setup_ability_hand() -> void
 - **`reset_match()` does NOT reset tabs, round_limit, or win_threshold.** Those are set by `RoundManager.start_match(box)` before `reset_match()` is called.
 - **Charges persist across matches.** An ability with 1 charge left in match 1 enters match 2 with 1 charge. Charges only reset if the ability is discarded and a fresh duplicate is picked in rotation.
 - **`ABILITY_POOL_IDS` is the single source of truth for the rotation pool.** RunManager reads it via `gs.ABILITY_POOL_IDS` rather than maintaining its own copy.
-- Die objects in `dice_pool` are shared references. `reset_match()` mutates them in place (value=0, rolled=false) rather than replacing them.
+- Die objects in `dice_pool` are shared references. `reset_match()` mutates them in place (value=0, rolled=false) rather than replacing them. `dropped` is NOT reset by `reset_match()` — it is reset by `DicePool.discard_hand()` at round end.
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-06 | ABILITY_POOL_IDS expanded from 6 to 14 abilities (added put_down_highest, auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die). |
 | 2026-05-05 | Added power_counters: Dictionary = {}. reset_run() clears it. reset_match() does not touch it. Individual values reset to 0 at match end via PowerManager.on_match_end(). |
 | 2026-05-04 | Added owned_powers: Array = [] and pending_threshold_bonus: int = 0. reset_run() clears both. reset_match() leaves both untouched. _setup_dice_pool() changed from 3d6+1d4+1d8 (5 dice) to 1d4+4d6+2d8 (7 dice). |
 | 2026-05-04 | Removed ap variable and spend_ap(). Rolling dice is now free. |
