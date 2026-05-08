@@ -9,7 +9,7 @@ const ABILITY_POOL_IDS: Array[String] = [
 	"reroll_lucky", "reroll_unlucky", "drop_die"
 ]
 
-var hp: int = 6
+var hp: int = MAX_HP
 var round: int = 0
 var round_limit: int = 3
 var win_threshold: int = 13
