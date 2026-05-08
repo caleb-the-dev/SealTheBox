@@ -40,7 +40,7 @@ func handle_match_lost() -> void
 
 func handle_power_offer_accepted(power: PowerData) -> void
     # Routes through PowerManager.add_power(power) — appends to owned_powers and initializes
-    #   any counter (bonus_seal gets counter initialized to 1 on first acquisition).
+    #   any counter (bonus_seal gets counter initialized to 0 on first acquisition).
     # Then calls _do_rotation_offer().
 
 func handle_power_offer_skipped() -> void

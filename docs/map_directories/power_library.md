@@ -28,7 +28,7 @@ func get_random_unowned_multiple(owned_powers: Array, count: int) -> Array
 
 ## Data Source
 `seal-the-box/data/powers.csv` — columns: `id, name, type, description, counter_target`
-Currently 8 rows: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor.
+Currently 11 rows: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor, tax_collector, diabolic_pact, tab_counter.
 `counter_target` defaults to 0 (no counter) if the column is missing or empty.
 
 ## Gotchas

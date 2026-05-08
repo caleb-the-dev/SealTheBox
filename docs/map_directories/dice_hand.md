@@ -2,7 +2,7 @@
 *Renders the 3 drawn dice for the current round; handles roll selection.*
 
 ## Location
-`scripts/ui/dice_hand.gd` / `scenes/match/match.tscn` (CanvasLayer child)
+**Not yet created.** `scripts/ui/dice_hand.gd` does not exist. Dice hand UI is currently built inline in `scripts/match/match.gd`. This file documents the planned standalone script.
 
 ## Responsibility
 Show the 3 drawn dice. Let player select which to roll (highlighted). Show rolled values after commit.

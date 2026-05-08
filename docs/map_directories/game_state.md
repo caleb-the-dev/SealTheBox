@@ -47,7 +47,7 @@ var owned_powers: Array = []      # Array of PowerData — powers earned during 
     # Cleared by reset_run() at the start of each new run.
 var power_counters: Dictionary = {}
     # Keyed by power id (e.g. "bonus_seal"). Tracks charge state for Counter-type powers.
-    # Initialized to 1 by PowerManager.add_power() on first acquisition of a counter power.
+    # Initialized to 0 by PowerManager.add_power() on first acquisition of a counter power.
     # Incremented by PowerManager.on_round_end(). Reset to 0 by PowerManager.on_match_end().
     # Cleared entirely by reset_run(). Not touched by reset_match().
 var pending_threshold_bonus: int = 0

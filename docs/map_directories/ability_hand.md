@@ -27,7 +27,7 @@ All slots can be null (empty). Empty = dimmed, disabled button with no label tex
 1. Player clicks ability button → `_on_ability_pressed(index)`
 2. Guard: if `hand[index] == null` → return (no-op)
 3. Guard: if `ability.charges <= 0` → show "exhausted" status message, return
-4. If `reroll_all`: immediately calls `use_ability(ability, null)`, flashes green
+4. If `reroll_all`, `put_down_highest` (auto_seal_highest), or `auto_seal_lowest`: immediately calls `use_ability(ability, null)`, flashes green — no die targeting needed
 5. Otherwise: sets `_selected_ability` + `_targeting_die = true`, prompts player to click a die
 6. Player clicks die → `_on_die_pressed(index)` calls `use_ability(ability, die)`
 7. Flash green → `_refresh_ability_display()` (handles grey-out if now at 0 charges)

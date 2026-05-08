@@ -80,7 +80,7 @@ RunManager._start_next_match()
 - Entity selection (slice 4) — picking Diabolic/Cosmic/Ethereal at run start
 - Forced Source box at match 27 (slice 5) — currently match 27 is just a random hard-tier box
 - Within-act texture (slice 3) — silent/vignette/event rolls between matches
-- Crossroads after match 9 and 21 (slice 2) — Rest/Whetstone choice
+- ~~Crossroads after match 9 and 21 (slice 2) — Rest/Whetstone choice~~ **Implemented (feature/crossroads)**
 
 ## Recent Changes
 | Date | Change |

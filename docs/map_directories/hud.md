@@ -10,12 +10,18 @@ Display round counter, HP, match progress, active box name, remaining-sum counte
 ## UI Elements (top to bottom, left to right)
 
 ### Top Bar (HBoxContainer, anchored top)
+The `top_bar` HBoxContainer contains only `_hp_label` ("❤  X"), centered.
+
+Match/act/location info lives in `top_left_vbox` (VBoxContainer, anchored top-left), not in `top_bar`:
+
 | Label | Content | Field |
 |-------|---------|-------|
-| Round label | "Round: X / Y" | `_round_label` |
-| HP label | "❤  X" | `_hp_label` |
-| Match label | "Match: X" (no denominator — infinite loop) | `_match_label` |
-| Box label | "Box: Classic" | `_box_label` |
+| HP label | "❤  X" | `_hp_label` (in top_bar) |
+| Match label | "Match N / 27" | `_match_label` (in top_left_vbox) |
+| Act label | "Act N" (grey, smaller) | `_act_label` (in top_left_vbox) |
+| Location label | "Location N" (grey, smaller) | `_location_label` (in top_left_vbox) |
+
+Note: There is no `_round_label` in the HUD. Round info is in `_status_label` only. There is no `_box_label` in the main HUD; box name appears only in the dev panel as `_dev_box_label`.
 
 ### Tab Area
 | Element | Content | Field |

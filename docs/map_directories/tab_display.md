@@ -2,7 +2,7 @@
 *Renders the 9 tab buttons; handles dice-sum-to-tab assignment.*
 
 ## Location
-`scripts/ui/tab_display.gd` / `scenes/match/match.tscn` (CanvasLayer child)
+**Not yet created.** `scripts/ui/tab_display.gd` does not exist. Tab display UI is currently built inline in `scripts/match/match.gd`. This file documents the planned standalone script.
 
 ## Responsibility
 Show tabs 1–9. Dim sealed tabs. Let player select rolled dice (showing running sum) and confirm seal when sum matches a tab.

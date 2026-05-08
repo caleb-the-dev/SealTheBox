@@ -62,10 +62,13 @@ seal-the-box/
       round_manager.gd     # Match-level orchestration + power effect hooks
       tab_board.gd         # Tab sealing logic
       dice_pool.gd         # Dice draw/roll/discard
+      die.gd               # Die class (class_name Die) — single die object with faces, value, rolled, dropped
     run/
       case_manager.gd      # Autoload: CaseManager — 27-match Case sequence, run_won signal
       run_manager.gd       # Series sequencing; power offer + rotation after critical wins
       power_manager.gd     # Autoload: PowerManager — applies power effects (no class_name)
+    ui/
+      tooltip_button.gd    # TooltipButton class — custom Button with hover tooltip; used for ability and power pills
   scenes/
     match/
       match.tscn           # Main scene (script: match.gd)
@@ -75,6 +78,8 @@ seal-the-box/
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
     test_case_manager.gd   # Tests for CaseManager (headless) — 10 tests
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap, periodic swap removal (headless) — 8 tests
+    test_tab_board.gd      # Tests for TabBoard sealing logic (headless)
+    test_dice_pool.gd      # Tests for DicePool draw/roll/discard (headless)
 ```
 
 ---
