@@ -49,6 +49,10 @@ func start_round() -> void:
 		if power_mgr:
 			power_mgr.apply_eager(hand)
 			power_mgr.apply_coffee_break()
+	# For boxes with a win-condition override that returns a numeric threshold
+	# (e.g. escalating_threshold), update GameState.win_threshold each round start
+	# so the UI label and _check_win() both see the current round's value.
+	_apply_win_condition_threshold_update()
 	_set_phase("roll")
 	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
@@ -212,14 +216,42 @@ func accept_threshold_win() -> void:
 	match_won.emit(false)
 
 func _check_win() -> void:
-	if _tab_board.check_critical_win():
+	# Consult the win-condition override registry for the current box.
+	# The registry callable can return:
+	#   null  → no override; fall through to default critical/threshold checks
+	#   true  → win (treat as critical win — heals, power offer, rotation)
+	#   false → suppress threshold-win; only a critical win (tab_count==0) can win
+	#   int   → use this value as the threshold override
+	#
+	# IMPORTANT: GDScript 4 raises a type error if you compare int to bool with ==.
+	# Use `is bool` before comparing to true/false, and `is int` before using as threshold.
+	var box_override: Variant = null
+	if GameState.current_box != null and BoxWinConditions.has_override(GameState.current_box.id):
+		box_override = BoxWinConditions.evaluate(
+			GameState.current_box.id, _tab_board, GameState.round, GameState.win_threshold)
+
+	# Determine if the override explicitly signals a win (returns bool true).
+	var override_is_win: bool = (box_override is bool) and (box_override == true)
+	# Determine if the override suppresses the threshold path (returns bool false).
+	var override_suppresses_threshold: bool = (box_override is bool) and (box_override == false)
+
+	# Critical win path: override signals win OR tabs all sealed (standard logic).
+	if override_is_win or _tab_board.check_critical_win():
 		_match_over = true
 		GameState.hp = min(GameState.hp + 1, GameState.MAX_HP)
 		var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 		if power_mgr:
 			power_mgr.on_match_end()
 		match_won.emit(true)
-	elif _tab_board.check_win(GameState.win_threshold) and not _threshold_notified:
+		return
+
+	# If override suppresses threshold (e.g. crit_only when tabs remain), stop here.
+	if override_suppresses_threshold:
+		return
+
+	# Threshold win path: use the override threshold if it's an int, else GameState value.
+	var effective_threshold: int = box_override if box_override is int else GameState.win_threshold
+	if _tab_board.check_win(effective_threshold) and not _threshold_notified:
 		_threshold_notified = true
 		threshold_reached.emit()
 
@@ -251,6 +283,20 @@ func dev_critical_win() -> void:
 func _set_phase(phase: String) -> void:
 	_current_phase = phase
 	phase_changed.emit(phase)
+
+# Update GameState.win_threshold for boxes whose win-condition override returns a
+# per-round threshold (e.g. escalating_threshold). Called at the start of each round.
+# No-op if the current box has no win-condition override, or if the override does not
+# return an int (e.g. crit_only returns true/false, not a threshold value).
+func _apply_win_condition_threshold_update() -> void:
+	if GameState.current_box == null:
+		return
+	if not BoxWinConditions.has_override(GameState.current_box.id):
+		return
+	var override = BoxWinConditions.evaluate(
+		GameState.current_box.id, _tab_board, GameState.round, GameState.win_threshold)
+	if override is int:
+		GameState.win_threshold = override
 
 # Apply dice-mutation modifiers (heavy_dice, weak_dice, exploding_ones, pair_swallows)
 # once per roll. Called from commit_roll after all dice are rolled.
