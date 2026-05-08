@@ -75,6 +75,8 @@ func _ready() -> void:
 		Engine.register_singleton("PowerLibrary", PowerLibrary)
 	if not Engine.has_singleton("PowerManager"):
 		Engine.register_singleton("PowerManager", PowerManager)
+	if not Engine.has_singleton("CaseManager"):
+		Engine.register_singleton("CaseManager", CaseManager)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
