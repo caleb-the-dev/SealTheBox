@@ -5,6 +5,7 @@ signal next_match_ready(box: BoxDefinition)
 signal show_power_offer(powers: Array)
 signal show_rotation_offer(options: Array)
 signal show_die_swap(offered_dice: Array)
+signal show_crossroads(after_match: int)
 signal run_over(match_number: int)
 
 const DIE_SWAP_FACES: Array[int] = [2, 4, 8, 10, 12]
@@ -67,12 +68,9 @@ func handle_rotation_pick(chosen: AbilityData) -> void:
 	gs.ability_hand[2] = chosen
 	_pending_rotation_options = []
 	gs.reset_run_end()
-	# match_number is already post-incremented here; condition fires after matches 5, 10, 15, ...
-	if (match_number - 1) % 5 == 0:
-		var offered: Array = []
-		for f in DIE_SWAP_FACES:
-			offered.append(Die.new(f))
-		show_die_swap.emit(offered)
+	var completed := match_number - 1   # match_number was already incremented
+	if completed == 9 or completed == 21:
+		show_crossroads.emit(completed)
 	else:
 		_start_next_match()
 
@@ -87,6 +85,21 @@ func handle_die_swap_confirm(offered_die: Die, pool_die: Die) -> void:
 
 func handle_die_swap_skip() -> void:
 	_start_next_match()
+
+func handle_crossroads_rest() -> void:
+	var gs = Engine.get_singleton("GameState")
+	gs.hp = min(gs.hp + 2, GameState.MAX_HP)
+	_start_next_match()
+
+func handle_crossroads_whetstone() -> void:
+	var offered: Array = []
+	for f in DIE_SWAP_FACES:
+		offered.append(Die.new(f))
+	show_die_swap.emit(offered)
+	# _start_next_match() is called by handle_die_swap_confirm or handle_die_swap_skip
+
+func dev_skip_crossroads() -> void:
+	handle_crossroads_rest()   # auto-pick Rest in the dev fast-forward path
 
 func dev_skip_rotation() -> void:
 	if _pending_rotation_options.size() > 0:

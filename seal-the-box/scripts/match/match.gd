@@ -50,6 +50,7 @@ var _dev_ability_overlay: Control
 var _dev_ability_list: VBoxContainer
 var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
+var _crossroads_overlay: Control
 var _die_swap_offered_buttons: Array[Button] = []
 var _die_swap_pool_row: HBoxContainer
 var _die_swap_pool_buttons: Array[Button] = []
@@ -74,6 +75,8 @@ func _ready() -> void:
 		Engine.register_singleton("PowerLibrary", PowerLibrary)
 	if not Engine.has_singleton("PowerManager"):
 		Engine.register_singleton("PowerManager", PowerManager)
+	if not Engine.has_singleton("CaseManager"):
+		Engine.register_singleton("CaseManager", CaseManager)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
@@ -850,6 +853,60 @@ func _setup_ui() -> void:
 	root.add_child(won_overlay)
 	_run_won_overlay = won_overlay
 
+	# ── Crossroads overlay ─────────────────────────────────────────────────────
+	var crossroads_overlay = Control.new()
+	crossroads_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	crossroads_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	crossroads_overlay.visible = false
+	var crossroads_bg = ColorRect.new()
+	crossroads_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	crossroads_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	crossroads_overlay.add_child(crossroads_bg)
+
+	var crossroads_center = VBoxContainer.new()
+	crossroads_center.anchor_left = 0.2
+	crossroads_center.anchor_right = 0.8
+	crossroads_center.anchor_top = 0.25
+	crossroads_center.anchor_bottom = 0.80
+	crossroads_center.add_theme_constant_override("separation", 24)
+	crossroads_overlay.add_child(crossroads_center)
+
+	var crossroads_title = Label.new()
+	crossroads_title.text = "Crossroads"
+	crossroads_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	crossroads_title.add_theme_font_size_override("font_size", 30)
+	crossroads_center.add_child(crossroads_title)
+
+	var crossroads_sub = Label.new()
+	crossroads_sub.text = "Choose your path"
+	crossroads_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	crossroads_sub.add_theme_font_size_override("font_size", 16)
+	crossroads_sub.modulate = Color(0.75, 0.75, 0.75)
+	crossroads_center.add_child(crossroads_sub)
+
+	var crossroads_btn_row = HBoxContainer.new()
+	crossroads_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	crossroads_btn_row.add_theme_constant_override("separation", 32)
+	crossroads_btn_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	crossroads_center.add_child(crossroads_btn_row)
+
+	var rest_btn = Button.new()
+	rest_btn.text = "Rest\n+2 HP"
+	rest_btn.custom_minimum_size = Vector2(200, 100)
+	rest_btn.add_theme_font_size_override("font_size", 20)
+	rest_btn.pressed.connect(_on_crossroads_rest_pressed)
+	crossroads_btn_row.add_child(rest_btn)
+
+	var whetstone_btn = Button.new()
+	whetstone_btn.text = "Whetstone\nswap one die"
+	whetstone_btn.custom_minimum_size = Vector2(200, 100)
+	whetstone_btn.add_theme_font_size_override("font_size", 20)
+	whetstone_btn.pressed.connect(_on_crossroads_whetstone_pressed)
+	crossroads_btn_row.add_child(whetstone_btn)
+
+	root.add_child(crossroads_overlay)
+	_crossroads_overlay = crossroads_overlay
+
 	# ── Powers side panel (right side, always visible) ────────────────────────
 	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
 	powers_panel.anchor_left = 1.0
@@ -890,6 +947,7 @@ func _connect_signals() -> void:
 	_run_manager.run_over.connect(_on_run_over)
 	_run_manager.show_rotation_offer.connect(_on_show_rotation_offer)
 	_run_manager.show_die_swap.connect(_on_show_die_swap)
+	_run_manager.show_crossroads.connect(_on_show_crossroads)
 	if Engine.has_singleton("CaseManager"):
 		Engine.get_singleton("CaseManager").run_won.connect(_on_run_won)
 
@@ -971,6 +1029,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_die_swap_overlay.visible = false
 	if _run_won_overlay:
 		_run_won_overlay.visible = false
+	if _crossroads_overlay:
+		_crossroads_overlay.visible = false
 	_action_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
@@ -1134,6 +1194,17 @@ func _on_die_swap_skip_pressed() -> void:
 	else:
 		_run_manager.handle_die_swap_skip()
 
+func _on_show_crossroads(_after_match: int) -> void:
+	_crossroads_overlay.visible = true
+
+func _on_crossroads_rest_pressed() -> void:
+	_crossroads_overlay.visible = false
+	_run_manager.handle_crossroads_rest()
+
+func _on_crossroads_whetstone_pressed() -> void:
+	_crossroads_overlay.visible = false
+	_run_manager.handle_crossroads_whetstone()
+
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
 
@@ -1225,6 +1296,7 @@ func _on_dev_win_series_pressed() -> void:
 		safety += 1
 		_round_manager.dev_win_match()
 		_run_manager.dev_skip_rotation()
+		_run_manager.dev_skip_crossroads()
 
 func _on_play_again_pressed() -> void:
 	_run_manager.start_run()
