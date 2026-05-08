@@ -23,6 +23,7 @@ var pending_threshold_bonus: int = 0
 var power_counters: Dictionary = {}
 var case_match_index: int = 1
 var run_won: bool = false
+var entity_id: String = ""
 
 var act: int:
 	get:
@@ -40,6 +41,7 @@ func reset_run() -> void:
 	power_counters = {}
 	case_match_index = 1
 	run_won = false
+	entity_id = ""  # CaseManager sets this after reset_run() via its own reset_run()
 	_setup_dice_pool()
 	reset_match()
 	_setup_ability_hand()

@@ -2,3 +2,9 @@ id,pool_id,text
 v_fog,default,the fog thickens — you cannot see ten paces ahead
 v_bell,default,a bell tolls in the distance, slow and wrong
 v_cold,default,the air goes cold for no reason you can name
+v_sulfur_1,vig_diabolic,the smell of sulfur seeps up through the floorboards
+v_sulfur_2,vig_diabolic,the walls are warm to the touch — warmer than they should be
+v_deep_1,vig_cosmic,a sound beneath sound hums through the stone, felt more than heard
+v_deep_2,vig_cosmic,the angles of the room do not agree with themselves
+v_echo_1,vig_ethereal,somewhere a door opens that should not be here
+v_echo_2,vig_ethereal,the silence has weight — it presses against your ears like water

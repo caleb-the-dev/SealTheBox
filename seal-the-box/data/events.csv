@@ -1,2 +1,5 @@
 id,pool_id,prompt,option_a_label,option_a_effect,option_b_label,option_b_effect
 e_coin,default,a stranger offers a cursed coin,Accept,hp-1;charge_random+1,Refuse,none
+e_brand,evt_diabolic,a sigil burns itself into the door ahead — cross it or wait,Cross,hp-1,Wait,none
+e_whisper,evt_cosmic,something vast notices you — you feel its attention like pressure behind your eyes,Endure,hp-1;charge_random+1,Retreat,none
+e_cold_room,evt_ethereal,the room ahead is much colder than it should be — you find an old flask left behind,Take the flask,hp+1,Leave it,none

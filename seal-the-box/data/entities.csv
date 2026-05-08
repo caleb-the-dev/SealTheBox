@@ -1,0 +1,4 @@
+id,display_name,location_names,vignette_pool_id,event_pool_id
+diabolic,"the devil","sulfur manor;bone catacombs;pact tower",vig_diabolic,evt_diabolic
+cosmic,"a cosmic horror","wrong-angled house;the deep mine;the silent observatory",vig_cosmic,evt_cosmic
+ethereal,"an apparition","quiet hospice;the drowned chapel;the asylum gallery",vig_ethereal,evt_ethereal

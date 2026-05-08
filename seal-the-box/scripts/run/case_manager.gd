@@ -10,6 +10,11 @@ var _case_list: Array = []  # Array of BoxDefinition, length 27
 
 func reset_run() -> void:
 	_case_list = []
+	# Pick a random entity and store on GameState
+	if Engine.has_singleton("EntityLibrary"):
+		var entity = Engine.get_singleton("EntityLibrary").get_random()
+		if entity and Engine.has_singleton("GameState"):
+			Engine.get_singleton("GameState").entity_id = entity.id
 	var box_lib = Engine.get_singleton("BoxLibrary")
 	var easy = box_lib.get_by_tier("easy")
 	var medium = box_lib.get_by_tier("medium")
@@ -34,6 +39,17 @@ func get_act_for_match(idx: int) -> int:
 		return 2
 	else:
 		return 3
+
+func get_location_name(act: int) -> String:
+	if not Engine.has_singleton("EntityLibrary") or not Engine.has_singleton("GameState"):
+		return "Location %d" % act
+	var gs = Engine.get_singleton("GameState")
+	if gs.entity_id.is_empty():
+		return "Location %d" % act
+	var entity = Engine.get_singleton("EntityLibrary").get_entity(gs.entity_id)
+	if entity == null or entity.location_names.size() < act:
+		return "Location %d" % act
+	return entity.location_names[act - 1]
 
 func notify_run_won() -> void:
 	run_won.emit()
