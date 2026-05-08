@@ -678,6 +678,20 @@ func _setup_ui() -> void:
 	dev_hp_btn.pressed.connect(_on_dev_give_hp_pressed)
 	dev_btns.add_child(dev_hp_btn)
 
+	var dev_force_bounty_btn = Button.new()
+	dev_force_bounty_btn.text = "Force Bounty Box →"
+	dev_force_bounty_btn.custom_minimum_size = Vector2(0, 56)
+	dev_force_bounty_btn.add_theme_font_size_override("font_size", 17)
+	dev_force_bounty_btn.pressed.connect(_on_dev_force_bounty_box_pressed)
+	dev_btns.add_child(dev_force_bounty_btn)
+
+	var dev_reset_marquee_btn = Button.new()
+	dev_reset_marquee_btn.text = "Reset Marquee Set"
+	dev_reset_marquee_btn.custom_minimum_size = Vector2(0, 56)
+	dev_reset_marquee_btn.add_theme_font_size_override("font_size", 17)
+	dev_reset_marquee_btn.pressed.connect(_on_dev_reset_marquee_pressed)
+	dev_btns.add_child(dev_reset_marquee_btn)
+
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
 	dev_close_btn.custom_minimum_size = Vector2(0, 44)
@@ -1328,6 +1342,25 @@ func _on_dev_restart_pressed() -> void:
 func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
 	_refresh_ui()
+
+func _on_dev_force_bounty_box_pressed() -> void:
+	# Force the next match to be bounty_box regardless of the run sequence.
+	_dev_overlay.visible = false
+	var bounty = Engine.get_singleton("BoxLibrary").get_box("bounty_box") if Engine.has_singleton("BoxLibrary") else null
+	if bounty == null:
+		push_warning("Dev: bounty_box not found in BoxLibrary")
+		return
+	if not _match_ended:
+		_round_manager.dev_win_match()
+	# Override: start the match directly with bounty_box.
+	_round_manager.start_match(bounty)
+	_rebuild_tab_buttons()
+	_refresh_ui()
+
+func _on_dev_reset_marquee_pressed() -> void:
+	# Clear the marquee_seen set so bounty_box can grant its entry power again.
+	GameState.marquee_seen.clear()
+	_dev_overlay.visible = false
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false
