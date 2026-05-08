@@ -34,6 +34,12 @@ func _init() -> void:
 	el._ready()
 	Engine.register_singleton("EventLibrary", el)
 
+	var entity_lib = load("res://scripts/globals/entity_library.gd").new()
+	entity_lib.name = "EntityLibrary"
+	get_root().add_child(entity_lib)
+	entity_lib._ready()
+	Engine.register_singleton("EntityLibrary", entity_lib)
+
 	gs.reset_run()
 
 	# ── Run tests ──────────────────────────────────────────────────────────────
@@ -77,12 +83,30 @@ func _test_distribution() -> void:
 # ── Empty-pool fallback ───────────────────────────────────────────────────────
 
 func _test_empty_pool_fallback() -> void:
-	# Roll many times with a non-existent pool_id; should never return vignette or event
+	# When entity_id references pools that don't exist, TextureRoller should fall back to silent.
+	# We simulate this by setting entity_id to a fake value whose pool ids won't be in any library.
+	var gs = Engine.get_singleton("GameState")
+	var saved_entity_id = gs.entity_id
+	# Inject a fake entity with nonexistent pool ids directly into the library's dict
+	var entity_lib = Engine.get_singleton("EntityLibrary")
+	var EntityDataScript = load("res://resources/entity_data.gd")
+	var fake = EntityDataScript.new()
+	fake.id = "fake_entity"
+	fake.display_name = "test entity"
+	fake.location_names.append("loc1")
+	fake.location_names.append("loc2")
+	fake.location_names.append("loc3")
+	fake.vignette_pool_id = "vig_nonexistent"
+	fake.event_pool_id = "evt_nonexistent"
+	entity_lib._entities["fake_entity"] = fake
+	gs.entity_id = "fake_entity"
 	const ROLLS := 200
 	for i in ROLLS:
-		var result = TextureRollerScript.roll("nonexistent_pool")
+		var result = TextureRollerScript.roll()
 		assert(result["type"] == "silent",
-			"With empty pool, roll should return silent, got: %s" % result["type"])
+			"With empty/nonexistent pool, roll should return silent, got: %s" % result["type"])
+	# Restore
+	gs.entity_id = saved_entity_id
 
 # ── Effect-string parser tests ────────────────────────────────────────────────
 

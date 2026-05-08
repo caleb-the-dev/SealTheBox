@@ -25,7 +25,9 @@ var _current_phase: String = ""
 var _match_label: Label
 var _act_label: Label
 var _location_label: Label
+var _case_label: Label
 var _run_won_overlay: Control
+var _run_won_title_label: Label
 var _dev_box_label: Label
 var _threshold_label: Label
 var _continue_button: Button
@@ -83,6 +85,8 @@ func _ready() -> void:
 		Engine.register_singleton("VignetteLibrary", VignetteLibrary)
 	if not Engine.has_singleton("EventLibrary"):
 		Engine.register_singleton("EventLibrary", EventLibrary)
+	if not Engine.has_singleton("EntityLibrary"):
+		Engine.register_singleton("EntityLibrary", EntityLibrary)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
@@ -178,6 +182,11 @@ func _setup_ui() -> void:
 	_location_label.add_theme_font_size_override("font_size", 13)
 	_location_label.modulate = Color(0.75, 0.75, 0.75)
 	top_left_vbox.add_child(_location_label)
+
+	_case_label = Label.new()
+	_case_label.add_theme_font_size_override("font_size", 11)
+	_case_label.modulate = Color(0.55, 0.55, 0.55)
+	top_left_vbox.add_child(_case_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -848,6 +857,7 @@ func _setup_ui() -> void:
 	won_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	won_title.add_theme_font_size_override("font_size", 30)
 	won_center.add_child(won_title)
+	_run_won_title_label = won_title
 
 	var won_btn = Button.new()
 	won_btn.text = "Begin a new case"
@@ -1359,6 +1369,13 @@ func _on_play_again_pressed() -> void:
 	_run_manager.start_run()
 
 func _on_run_won() -> void:
+	if _run_won_title_label:
+		var entity_name := "the entity"
+		if Engine.has_singleton("EntityLibrary") and not GameState.entity_id.is_empty():
+			var entity = Engine.get_singleton("EntityLibrary").get_entity(GameState.entity_id)
+			if entity:
+				entity_name = entity.display_name
+		_run_won_title_label.text = "%s is sealed" % entity_name
 	_run_won_overlay.visible = true
 
 func _on_run_won_new_case_pressed() -> void:
@@ -1531,7 +1548,15 @@ func _refresh_ui() -> void:
 			_stop_hp_pulse()
 	_match_label.text = "Match %d / 27" % _run_manager.match_number
 	_act_label.text = "Act %d" % GameState.act
-	_location_label.text = "Location %d" % GameState.location_index
+	if Engine.has_singleton("CaseManager"):
+		_location_label.text = Engine.get_singleton("CaseManager").get_location_name(GameState.act)
+	else:
+		_location_label.text = "Location %d" % GameState.location_index
+	if Engine.has_singleton("EntityLibrary") and not GameState.entity_id.is_empty():
+		var entity = Engine.get_singleton("EntityLibrary").get_entity(GameState.entity_id)
+		_case_label.text = "Case: %s" % entity.display_name if entity else ""
+	else:
+		_case_label.text = ""
 	if GameState.current_box:
 		var remaining_sum := 0
 		for t in GameState.tabs:
