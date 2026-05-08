@@ -124,7 +124,7 @@ A run is a **Case** — 27 matches across three acts:
 
 **Win:** seal match 27. **Lose:** HP reaches 0 at any point.
 
-**Between-act crossroads (slice 2, not yet implemented):** after match 9 and match 21, player chooses Rest (+2 HP) or Whetstone (die swap). Until slice 2 ships, a temporary periodic die swap fires every 5 matches instead.
+**Between-act crossroads:** after match 9 (Act 1 end) and match 21 (Act 2 end), player chooses Rest (+2 HP, capped at MAX_HP=6) or Whetstone (one die swap). Periodic die swap removed. Implemented in feature/crossroads (slice 2).
 
 **Entity (slice 4, not yet implemented):** at run start, one of Diabolic / Cosmic / Ethereal is selected. Drives content flavor (vignette/event pools, location names, Source box skin) but no mechanical asymmetry.
 
@@ -160,7 +160,7 @@ See `docs/superpowers/specs/2026-05-06-game-flow-design.md` for the Case meta-fl
 | Slice | Branch | Status |
 |-------|--------|--------|
 | 1 — Case shape (27-match structure, tier boxes, run-won overlay) | feature/case-shape | ✅ Merged |
-| 2 — Crossroads (Rest/Whetstone after acts 1 and 2; remove periodic die swap) | feature/crossroads | Planned |
+| 2 — Crossroads (Rest/Whetstone after acts 1 and 2; remove periodic die swap) | feature/crossroads | ✅ Merged |
 | 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | Planned |
 | 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | Planned |
 | 5 — Source boxes (themed match-27 box per entity) | feature/source-boxes | Planned |

@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 9 |
+| Sessions since groom | 10 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -70,10 +70,11 @@ seal-the-box/
     match/
       match.tscn           # Main scene (script: match.gd)
   tests/
-    test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 48 tests
+    test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 46 tests
     test_power_effects.gd  # Tests for all 8 power effects via PowerManager (headless) — 30 tests
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
     test_case_manager.gd   # Tests for CaseManager (headless) — 10 tests
+    test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap, periodic swap removal (headless) — 8 tests
 ```
 
 ---
@@ -87,13 +88,16 @@ Engine.register_singleton("AbilityLibrary", lib)
 ```
 Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_ready()` call.
 
-**Critical:** Autoload scripts that are also registered as singletons must NOT have a `class_name` declaration — GDScript will raise "Class hides an autoload singleton" parse error. Affected files: box_library.gd, power_library.gd, power_manager.gd.
+**Critical:** Autoload scripts that are also registered as singletons must NOT have a `class_name` declaration — GDScript will raise "Class hides an autoload singleton" parse error. Affected files: box_library.gd, power_library.gd, power_manager.gd, case_manager.gd.
+
+**Critical:** Autoload scripts without `class_name` are NOT auto-registered as engine singletons — `Engine.has_singleton()` returns false for them unless `match.gd._ready()` explicitly calls `Engine.register_singleton()`. Omitting this causes a modulo-by-zero crash in `RunManager._start_next_match()` (the `_boxes` fallback array is empty). All 6 autoloads are registered in match.gd._ready().
 
 ---
 
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-07 | feature/crossroads (slice 2 of the Case meta-flow). Replaced periodic die swap (every 5 matches) with Crossroads decision at act boundaries: after match 9 and 21 the player picks Rest (+2 HP, capped at MAX_HP=6) or Whetstone (die swap). RunManager: added show_crossroads signal, handle_crossroads_rest(), handle_crossroads_whetstone(), dev_skip_crossroads(). GameState: added MAX_HP=6 const; hp field and reset_run() use MAX_HP. match.gd: added _crossroads_overlay, wired show_crossroads signal, added crossroads button handlers, registered CaseManager singleton in _ready() (fixes launch crash). test_crossroads.gd: 8 new headless tests. 2 stale periodic-swap tests removed from test_run_manager.gd (now 46 tests). Also caught and fixed: CaseManager was never registered as engine singleton in match.gd, causing modulo-by-zero on launch. |
 | 2026-05-07 | feature/case-shape (slice 1 of the Case meta-flow). Replaced infinite match loop with 27-match Case structure: CaseManager autoload builds a 27-match list (9 easy / 12 medium / 6 hard via BoxLibrary.get_by_tier()); GameState gains case_match_index, run_won, act (computed), location_index; RunManager defers box selection to CaseManager and emits CaseManager.run_won after match 27 via notify_run_won(); match.gd top bar now shows "Match N / 27", "Act N", "Location N"; run_won_overlay added ("the entity is sealed" + "Begin a new case"). Periodic die swap every 5 matches still present (removed in slice 2). test_case_manager.gd: 10 new headless tests. |
 | 2026-05-06 | Implemented 8 new canonical abilities: Auto-Seal Highest, Auto-Seal Lowest (fire immediately, no die click; Non-Final; trigger power hooks), Multiply x2 (no ceiling, 1 charge), Set to Max, Set to Min, Reroll Lucky, Reroll Unlucky, Drop Die (dropped die shows [X], excluded from total + sealing, can't be targeted). Empower/Empower II now refuse to fire if die.value >= die.faces (prevents multiply-then-empower shrink). Die class gained dropped: bool. ABILITY_POOL_IDS expanded from 6 to 14. Give Ability dev menu added. All 14 abilities appear in rotation pool. test_ability_library.gd updated to 22 abilities. |
 | 2026-05-06 | Three new counter powers: Tax Collector (3 critical wins → +1 HP), Diabolic Pact (7 d12 rolls → +1 HP), Tab Counter (5 tab seals → +1 charge to highest-charge ability). All counters changed to start at 0 (was 1) for consistent behavior. PowerManager: on_critical_win(), on_die_rolled(), on_tabs_sealed(), _apply_tab_counter_charge() added; apply_eager() now calls on_die_rolled(). RunManager: on_critical_win() called from handle_match_won(true). RoundManager: commit_roll() and use_ability() call on_die_rolled(); attempt_seal() calls on_tabs_sealed(). match.gd: "Switch Dice →" dev menu button added (mid-match pool swap, no match transition; uses stored index, not find()); _refresh_powers_panel() now fires immediately after rolling (commit_roll and reroll ability paths). Powers.csv: 8→11 powers. Tests: 48 (11 new). |

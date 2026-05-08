@@ -37,6 +37,7 @@ match.tscn  (Node3D, script: match.gd)
       _rotation_overlay          — hidden until any match win; shows 3 ability pick buttons
       _run_over_overlay          — hidden until run over (HP = 0); "Play Again" button → start_run()
       _run_won_overlay           — hidden until match 27 won; "the entity is sealed" + "Begin a new case" → start_run()
+      _crossroads_overlay        — hidden until act boundary (after match 9 or 21); "Crossroads" + "Choose your path" + Rest/Whetstone buttons
       dev_toggle (Button)        — "DEV" button, top-right corner
       _dev_overlay               — dev menu (see Dev Menu section)
       _dev_power_overlay         — Give Power submenu; populated dynamically on open
@@ -46,7 +47,7 @@ match.tscn  (Node3D, script: match.gd)
 
 ## Responsibilities
 - Instantiates and owns RoundManager and RunManager
-- Registers all 5 singletons (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager)
+- Registers all 6 singletons (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager)
 - Builds all UI in code (_setup_ui()) — no UI child nodes in the .tscn
 - Wires signals from both managers in _connect_signals()
 - Rebuilds tab buttons dynamically per match (_rebuild_tab_buttons()) since tab values vary by box
@@ -65,6 +66,7 @@ RunManager.next_match_ready     → _on_next_match_ready       (resets UI, start
 RunManager.show_power_offer     → _on_show_power_offer       (shows power offer overlay)
 RunManager.show_rotation_offer  → _on_show_rotation_offer    (shows rotation overlay with 3 picks)
 RunManager.show_die_swap        → _on_show_die_swap          (shows die swap overlay; also called directly in dev path)
+RunManager.show_crossroads      → _on_show_crossroads        (shows crossroads overlay; _after_match param intentionally unused for now)
 RunManager.run_over             → _on_run_over               (shows over overlay)
 CaseManager.run_won             → _on_run_won                (shows run_won_overlay — wired only if CaseManager singleton is registered)
 ```
@@ -78,6 +80,17 @@ After every **critical win** (shut the box):
 5. **Confirm** → `_run_manager.handle_power_offer_accepted(_current_power_offer)` → power added → `_refresh_powers_panel()` → rotation follows
 6. **Skip** → `_run_manager.handle_power_offer_skipped()` → rotation overlay follows
 7. If no unowned powers remain: overlay is skipped entirely, rotation fires immediately
+
+## Crossroads Overlay Flow
+After completing match 9 (Act 1 end) or match 21 (Act 2 end), immediately following the rotation pick:
+1. `_on_show_crossroads(_after_match)` fires — `_after_match` is unused (no per-act copy yet)
+2. Crossroads overlay appears (opaque black, `Color(0,0,0,1.0)`, `MOUSE_FILTER_STOP`)
+3. Header "Crossroads" (font_size 30), subheader "Choose your path" (font_size 16, grey)
+4. Two buttons (200×100 min, font_size 20): **"Rest\n+2 HP"** and **"Whetstone\nswap one die"**
+5. No skip/cancel — player must pick one
+6. **Rest** → `_on_crossroads_rest_pressed()` → hides overlay → `_run_manager.handle_crossroads_rest()` → HP+2 capped at MAX_HP → next match starts
+7. **Whetstone** → `_on_crossroads_whetstone_pressed()` → hides overlay → `_run_manager.handle_crossroads_whetstone()` → die swap overlay appears → confirm/skip → next match starts
+8. Overlay also hidden in `_on_next_match_ready()` (safeguard for any programmatic advance)
 
 ## Rotation Overlay Flow
 After every match win (threshold or critical, after power offer resolves):
@@ -107,7 +120,7 @@ Open with T key or the "DEV" button (top-right corner). Full-screen opaque overl
 | Give Power → | Opens `_dev_power_overlay` with all 11 power buttons |
 | Give Ability → | Opens `_dev_ability_overlay` listing all 14 pool abilities; tapping one fills the first empty slot, or overwrites slot 3 if all are full |
 | Switch Dice → | Opens the die swap overlay mid-match in dev mode (see below) |
-| Win Entire Series | Loops threshold wins + auto-rotation; terminates at match 27 win (shows run_won_overlay); no power offers |
+| Win Entire Series | Loops threshold wins + auto-rotation + auto-crossroads (Rest); terminates at match 27 win (shows run_won_overlay); no power offers |
 | Restart Run | `start_run()` — resets everything including owned powers |
 | Close [T] | Hides overlay |
 
@@ -125,7 +138,7 @@ Tab buttons are dynamic. `_rebuild_tab_buttons()` clears `_tab_row` children and
 if not Engine.has_singleton("PowerLibrary"):
     Engine.register_singleton("PowerLibrary", PowerLibrary)
 ```
-Done in `_ready()` for all 5 autoloads. Necessary because `Engine.get_singleton()` requires explicit registration even when the autoload is declared in project.godot.
+Done in `_ready()` for all 6 autoloads (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager). Necessary because autoload scripts without `class_name` are not auto-registered as engine singletons — only those with `class_name` get that treatment. `Engine.get_singleton()` requires explicit registration in `_ready()` as a fallback.
 
 ## Continue Button Flow
 `_continue_button` is hidden at match start. When `threshold_reached` fires:
@@ -171,12 +184,14 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 - **`_on_end_round_pressed` end_round guard:** After `attempt_seal()`, the code checks `_run_manager.match_number != match_before or _match_ended` before calling `end_round()`. Without this guard, the synchronous signal chain would start the next match and then `end_round()` would advance it to round 2 before the player acts.
 - **Tab display uses button.text.to_int()** to get tab values. Don't change button text formatting without updating `_refresh_tab_display()`.
 - **Run-won overlay exists.** `_run_won_overlay` shows after match 27 is won. CaseManager.run_won signal fires AFTER the rotation pick (not immediately on match win) — the normal rotation/power-offer flow completes first, then `_start_next_match()` detects `gs.run_won==true` and calls `notify_run_won()`. The overlay is hidden in `_on_next_match_ready()` (for "Begin a new case" flow).
-- **Dev "Win Entire Series"** calls `dev_win_match()` then `dev_skip_rotation()` in a loop. Always produces threshold wins (not critical), so the power offer overlay never appears in this path.
+- **Dev "Win Entire Series"** calls `dev_win_match()`, `dev_skip_rotation()`, and `dev_skip_crossroads()` in a loop. Always produces threshold wins (not critical), so the power offer overlay never appears. `dev_skip_crossroads()` auto-picks Rest unconditionally — it fires on every iteration (not only at boundaries), but this is safe since `handle_crossroads_rest()` calling `_start_next_match()` when no crossroads is pending is harmless.
+- **CaseManager must be registered before start_run().** It has no `class_name`, so it's not auto-registered. `_ready()` now explicitly registers it alongside the other 5 autoloads. Omitting this causes a modulo-by-zero error in `_start_next_match()` when the `_boxes` fallback array is empty.
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
-| 2026-05-07 | Top bar: _match_label now shows "Match N / 27"; added _act_label ("Act N") and _location_label ("Location N") in a VBoxContainer (top_left_vbox) replacing the old single match label. Added _run_won_overlay: opaque black, "the entity is sealed" text, "Begin a new case" button → _run_manager.start_run(). Added _on_run_won() handler; wired CaseManager.run_won signal in _connect_signals() (guarded with Engine.has_singleton). _on_next_match_ready() now hides _run_won_overlay. _refresh_ui() now updates _act_label and _location_label from GameState.act. |
+| 2026-05-07 | feature/crossroads: Added _crossroads_overlay (opaque black, "Crossroads" header, "Choose your path" sub, Rest/Whetstone buttons). Wired RunManager.show_crossroads → _on_show_crossroads. Added _on_crossroads_rest_pressed(), _on_crossroads_whetstone_pressed(). _on_next_match_ready() now hides _crossroads_overlay. "Win Entire Series" loop now also calls dev_skip_crossroads(). CaseManager added to singleton registration block in _ready() (fixes modulo-by-zero on launch). |
+| 2026-05-07 | feature/case-shape: Top bar: _match_label now shows "Match N / 27"; added _act_label ("Act N") and _location_label ("Location N") in a VBoxContainer (top_left_vbox) replacing the old single match label. Added _run_won_overlay: opaque black, "the entity is sealed" text, "Begin a new case" button → _run_manager.start_run(). Added _on_run_won() handler; wired CaseManager.run_won signal in _connect_signals() (guarded with Engine.has_singleton). _on_next_match_ready() now hides _run_won_overlay. _refresh_ui() now updates _act_label and _location_label from GameState.act. |
 | 2026-05-06 | Added "Give Ability →" dev menu button (_dev_ability_overlay, lists all 14 pool abilities, fills first empty slot or overwrites slot 3). Dropped die UI: _refresh_dice_display shows "[X] value" + disabled; _refresh_dice_highlight greys dropped dice; _on_die_pressed returns early for dropped; rolled total filters exclude dropped (4 sites). Auto-seal abilities (put_down_highest, auto_seal_lowest) now fire immediately on click — no die targeting step needed. |
 | 2026-05-06 | Added "Switch Dice →" dev menu button. Opens die swap overlay mid-match via _dev_die_swap_mode flag; confirm path writes directly to GameState.dice_pool using stored _selected_swap_pool_idx (not find()). Added _refresh_powers_panel() after commit_roll (_on_action_pressed), after reroll_die use (_on_die_pressed), and after reroll_all use (_on_ability_pressed) so counter powers like Diabolic Pact update immediately on roll. |
 | 2026-05-05 | Powers panel: counter powers (counter_target > 0) now display "Name X/Y" instead of just "Name" — reads GameState.power_counters[id] for current value. _on_round_ended() now calls _refresh_powers_panel() so counter ticks update the display each round. _on_dev_give_power() and handle_power_offer_accepted routing now go through PowerManager.add_power() to ensure counter initialization. |

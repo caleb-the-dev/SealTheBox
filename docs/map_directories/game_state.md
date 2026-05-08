@@ -10,6 +10,11 @@ Does NOT own game logic — it stores data, never drives phase transitions.
 
 ## Constants
 ```gdscript
+const MAX_HP := 6
+# Hard cap on HP. Used by reset_run() (hp = MAX_HP) and by
+# RunManager.handle_crossroads_rest() (gs.hp = min(gs.hp + 2, GameState.MAX_HP)).
+# Change here to adjust the HP ceiling — no other sites hardcode 6.
+
 const ABILITY_POOL_IDS: Array[String] = [
     "reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all",
     "put_down_highest", "auto_seal_lowest",
@@ -24,7 +29,7 @@ const ABILITY_POOL_IDS: Array[String] = [
 
 ## Public Fields
 ```gdscript
-var hp: int = 6
+var hp: int = MAX_HP     # starts at 6; capped at MAX_HP by handle_crossroads_rest()
 var round: int = 0
 var round_limit: int = 3          # set per match by RoundManager.start_match(box)
 var win_threshold: int = 13       # set per match by RoundManager.start_match(box); may be boosted by powers
@@ -68,7 +73,7 @@ var location_index: int:  # same as act — placeholder until entity-specific lo
 ## Public Methods
 ```gdscript
 func reset_run() -> void
-    # Resets hp=6, owned_powers=[], power_counters={}, pending_threshold_bonus=0,
+    # Resets hp=MAX_HP, owned_powers=[], power_counters={}, pending_threshold_bonus=0,
     # case_match_index=1, run_won=false,
     # rebuilds dice_pool (1d4+4d6+2d8 = 7 dice), calls reset_match(),
     # then always calls _setup_ability_hand() (no is_empty guard).
@@ -114,7 +119,8 @@ func _setup_ability_hand() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
-| 2026-05-07 | Added case_match_index (int, default 1), run_won (bool, default false), act (computed getter: 1/2/3), location_index (alias for act). reset_run() now resets both case_match_index=1 and run_won=false. |
+| 2026-05-07 | feature/crossroads: added const MAX_HP := 6. hp field initializer and reset_run() both updated to use MAX_HP. |
+| 2026-05-07 | feature/case-shape: Added case_match_index (int, default 1), run_won (bool, default false), act (computed getter: 1/2/3), location_index (alias for act). reset_run() now resets both case_match_index=1 and run_won=false. |
 | 2026-05-06 | ABILITY_POOL_IDS expanded from 6 to 14 abilities (added put_down_highest, auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die). |
 | 2026-05-05 | Added power_counters: Dictionary = {}. reset_run() clears it. reset_match() does not touch it. Individual values reset to 0 at match end via PowerManager.on_match_end(). |
 | 2026-05-04 | Added owned_powers: Array = [] and pending_threshold_bonus: int = 0. reset_run() clears both. reset_match() leaves both untouched. _setup_dice_pool() changed from 3d6+1d4+1d8 (5 dice) to 1d4+4d6+2d8 (7 dice). |

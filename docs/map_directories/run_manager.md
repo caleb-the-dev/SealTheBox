@@ -9,10 +9,11 @@ Drive a 27-match Case: ask CaseManager for the next box, emit signals to advance
 
 ## Signals
 ```gdscript
-signal next_match_ready(box: BoxDefinition)     # emitted at run start and after rotation is resolved
+signal next_match_ready(box: BoxDefinition)     # emitted at run start and after rotation (or crossroads) is resolved
 signal show_power_offer(powers: Array)          # emitted only on critical wins; Array of up to 3 PowerData
 signal show_rotation_offer(options: Array)      # emitted after every match win (3 AbilityData options)
-signal show_die_swap(offered_dice: Array)       # emitted every 5 matches; Array of Die options
+signal show_die_swap(offered_dice: Array)       # emitted by handle_crossroads_whetstone() or dev Switch Dice; Array of Die options
+signal show_crossroads(after_match: int)        # emitted after matches 9 and 21; after_match is the just-completed match number
 signal run_over(match_number: int)              # emitted when player loses (HP = 0) and no Phoenix Down
 ```
 
@@ -49,7 +50,8 @@ func handle_rotation_pick(chosen: AbilityData) -> void
     # Shifts ability_hand slots: [0]=old[1], [1]=old[2], [2]=chosen.
     # Old slot 0 is discarded regardless of remaining charges.
     # Clears _pending_rotation_options, calls gs.reset_run_end().
-    # If (match_number - 1) % 5 == 0: emits show_die_swap instead of starting next match.
+    # var completed = match_number - 1 (match_number already post-incremented).
+    # If completed == 9 or 21: emits show_crossroads(completed) — crossroads must be resolved before next match.
     # Otherwise: calls _start_next_match() directly.
 
 func handle_die_swap_confirm(offered_die: Die, pool_die: Die) -> void
@@ -58,16 +60,32 @@ func handle_die_swap_confirm(offered_die: Die, pool_die: Die) -> void
 func handle_die_swap_skip() -> void
     # No state change. Starts next match.
 
+func handle_crossroads_rest() -> void
+    # Adds +2 HP capped at GameState.MAX_HP (6). Then starts next match.
+
+func handle_crossroads_whetstone() -> void
+    # Emits show_die_swap with all DIE_SWAP_FACES dice offered.
+    # _start_next_match() is deferred to handle_die_swap_confirm() or handle_die_swap_skip().
+
 func dev_skip_rotation() -> void
     # Dev tool: auto-picks _pending_rotation_options[0] if options are available.
     # Used by match.gd "Win Entire Series" to skip the rotation overlay in the dev loop.
+
+func dev_skip_crossroads() -> void
+    # Dev tool: unconditionally calls handle_crossroads_rest() (auto-picks Rest).
+    # Used by match.gd "Win Entire Series" loop to skip the crossroads overlay at act boundaries.
 ```
 
 ## Box Selection
 Box selection is delegated to CaseManager. `_start_next_match()` calls `CaseManager.get_box_for_match(match_number)`. If `gs.run_won == true` (match 27 just won), `_start_next_match()` calls `CaseManager.notify_run_won()` instead of starting another match. `_boxes` is kept as a fallback Array but is always empty in normal play (CaseManager path covers all cases).
 
-## Die Swap Timing
-`handle_rotation_pick()` still checks `(match_number - 1) % 5 == 0` and fires `show_die_swap` every 5 matches. This logic is unchanged in slice 1 — it will be removed in slice 2 (feature/crossroads) when the Whetstone replaces the periodic swap.
+## Crossroads Timing
+After completing match 9 (end of Act 1) or match 21 (end of Act 2), `handle_rotation_pick()` emits `show_crossroads(completed)` instead of calling `_start_next_match()`. The player must pick Rest or Whetstone before the next match starts.
+
+- **Rest** → `handle_crossroads_rest()` → HP +2 (capped at MAX_HP=6) → `_start_next_match()`
+- **Whetstone** → `handle_crossroads_whetstone()` → emits `show_die_swap` → player confirms/skips → `_start_next_match()` from die-swap handlers
+
+The periodic "die swap every 5 matches" was removed. `DIE_SWAP_FACES`, `show_die_swap`, `handle_die_swap_confirm()`, and `handle_die_swap_skip()` are kept because Whetstone reuses them.
 
 ## Match Win / Loss Flow
 ```
@@ -79,7 +97,9 @@ Threshold win (critical=false):
          → show_rotation_offer.emit([optionA, optionB, optionC])
     → handle_rotation_pick(chosen)
          → hand shifts, gs.reset_run_end()
-         → if match 5/10/15…: show_die_swap.emit(offered_dice)
+         → if completed == 9 or 21: show_crossroads.emit(completed)
+              → handle_crossroads_rest()   → hp = min(hp+2, MAX_HP) → _start_next_match()
+              OR handle_crossroads_whetstone() → show_die_swap.emit(offered) → (confirm/skip → _start_next_match())
          → else: _start_next_match()
 
 Critical win (critical=true):
@@ -123,6 +143,7 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 - **`_do_rotation_offer` picks 3 UNIQUE abilities** (without replacement from ABILITY_POOL_IDS). Duplicates within the offer are impossible. Duplicates with currently-held abilities are allowed and intentional.
 - **Signals emit synchronously in Godot 4.** By the time `handle_match_won()` returns for a threshold win with auto-rotation connected, the next match may already be mid-start.
 - **`dev_skip_rotation()` only works for threshold wins** via the dev loop — it auto-picks immediately after `dev_win_match()` fires. Critical wins (dev_critical_win) require manual interaction with the power offer and rotation overlays.
+- **`dev_skip_crossroads()` is unconditional** — it always calls `handle_crossroads_rest()`, which calls `_start_next_match()`. In the "Win Entire Series" loop this fires every iteration, but `_start_next_match()` is safe to call when no crossroads is pending (it just emits `next_match_ready` again, which the `_match_ended` guard in the loop catches).
 - **PowerManager and PowerLibrary calls are guarded** with `Engine.has_singleton()` so tests that don't register these singletons still pass.
 - **Phoenix Down is consumed on use.** `try_phoenix_down()` removes one copy from `owned_powers`. The powers panel will reflect this immediately after the next `_refresh_powers_panel()` call.
 - **apply_survivor() fires on every win** — before the power offer branch. A player at HP=1 who wins a critical match gets the survivor heal AND then gets to pick a power.
@@ -130,7 +151,8 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 ## Recent Changes
 | Date | Change |
 |------|--------|
-| 2026-05-07 | start_run() now calls CaseManager.reset_run() and uses _start_next_match() (no more _boxes[0]). handle_match_won() now records completed_match, syncs gs.case_match_index, sets gs.run_won=true when completed_match==27. _start_next_match() checks gs.run_won — if true, calls CaseManager.notify_run_won() and returns instead of starting match 28; otherwise calls CaseManager.get_box_for_match(match_number). |
+| 2026-05-07 | feature/crossroads: added show_crossroads signal; handle_rotation_pick() now emits show_crossroads at completed==9 or 21 instead of the old periodic % 5 die swap. Added handle_crossroads_rest() (+2 HP capped at MAX_HP, then next match), handle_crossroads_whetstone() (emits show_die_swap, delegates _start_next_match to die-swap handlers), dev_skip_crossroads() (auto-Rest for dev loop). Periodic die swap removed. |
+| 2026-05-07 | feature/case-shape: start_run() now calls CaseManager.reset_run() and uses _start_next_match() (no more _boxes[0]). handle_match_won() now records completed_match, syncs gs.case_match_index, sets gs.run_won=true when completed_match==27. _start_next_match() checks gs.run_won — if true, calls CaseManager.notify_run_won() and returns instead of starting match 28; otherwise calls CaseManager.get_box_for_match(match_number). |
 | 2026-05-06 | handle_match_won(true) now calls PowerManager.on_critical_win() after apply_box_shutter() — Tax Collector hook. |
 | 2026-05-05 | handle_power_offer_accepted() now routes through PowerManager.add_power() instead of direct gs.owned_powers.append() — ensures counter initialization for Counter-type powers. |
 | 2026-05-05 | show_power_offer signal changed from (power: PowerData) to (powers: Array) — now emits up to 3 candidates. _do_power_offer() uses PowerLibrary.get_random_unowned_multiple(owned, 3); skips overlay if result is empty. handle_match_won() now calls PowerManager.apply_survivor() on every win before the critical branch. handle_match_lost() now calls PowerManager.try_phoenix_down() before emitting run_over — if true, increments match_number and starts next match at HP=1. |
