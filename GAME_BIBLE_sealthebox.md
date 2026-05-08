@@ -28,7 +28,7 @@ Roll your dice, play your cards, and seal the box — round by round, match by m
 
 Each **match** is one game of advanced Shut the Box:
 - Tabs (numbered tiles) sit in the box. The goal is to reduce the sum of remaining tabs below the win threshold.
-- Each round the player draws a hand of 3 dice from their pool, rolls them, then assigns dice combinations to seal matching tabs.
+- Each round the player draws a hand of 2 dice from their pool, rolls them, then assigns dice combinations to seal matching tabs.
 - Ability cards modify dice values, add rerolls, or grant special effects.
 - When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — rotation only) or keeps pushing to seal all tabs (critical win — power offer then rotation).
 - The run ends only when HP reaches 0.
@@ -41,8 +41,8 @@ Each **run** is a **27-match Case** divided into three acts (9 easy / 12 medium 
 
 - A **tab range** is the set of numbers present in the box. Default: [1–9].
 - Tab ranges are flexible and can be non-flush (e.g., [1,2,4,7,9]).
-- **Win threshold**: explicit per-box value in boxes.csv (tuned for playtesting). Current values: Classic 20, Low Evens 17, High Odds 17. Target feel: threshold achievable most rounds; shut the box requires skill or luck.
-- **Round limit**: `ceili(tab_sum / 15) + 1`. Current values: all boxes 4 rounds.
+- **Win threshold**: explicit per-box value in boxes.csv (tuned for playtesting). Current values: Classic 15, Low Evens 13, High Odds 13, Stairs 12, Compressed 10, boss boxes 14/15/17. Target feel: must seal most tabs to reach threshold; shut the box requires skill or luck.
+- **Round limit**: `ceili(tab_sum / 15) + 1`. Current values: all boxes 4 rounds (unchanged from original formula).
 - Exceeding the round limit costs 1 HP per extra round until the match ends.
 - **Shut the box** = all tabs sealed (sum = 0) → critical win, offers a power (Accept or Skip) + mandatory ability rotation pick.
 
@@ -51,7 +51,7 @@ Each **run** is a **27-match Case** divided into three acts (9 easy / 12 medium 
 ## Match Structure
 
 Each round has three phases:
-1. **Roll phase:** Draw 3 dice from your pool. Select which to roll. All drawn dice are discarded at end of round.
+1. **Roll phase:** Draw 2 dice from your pool. Select which to roll. All drawn dice are discarded at end of round.
 2. **Ability phase:** Play ability cards — modify dice values, reroll, etc.
 3. **Seal phase:** Assign rolled dice whose sum equals an unsealed tab to seal it. Runs concurrently with the ability phase.
 
@@ -117,18 +117,23 @@ Powers are persistent run modifiers acquired between matches. They modify core g
 
 ## Run Structure
 
-A run is a **Case** — 27 matches across three acts:
-- **Act 1 (matches 1–9):** easy-tier boxes (Classic, Low Evens — high repetition expected until more boxes are added)
-- **Act 2 (matches 10–21):** medium-tier boxes (Stairs, High Odds)
-- **Act 3 (matches 22–27):** hard-tier boxes (Compressed — repeats 6 times until more hard boxes exist)
+A run is a **Case** — 27 matches across three acts with a boss match closing each act:
+- **Matches 1–8:** easy-tier boxes (Classic, Low Evens)
+- **Match 9:** boss-tier (act 1 finale — one of the 3 Source boxes, shuffled per run)
+- **Matches 10–20:** medium-tier boxes (Stairs, High Odds)
+- **Match 21:** boss-tier (act 2 finale)
+- **Matches 22–26:** hard-tier boxes (Compressed)
+- **Match 27:** boss-tier (run finale / Source)
+
+The 3 boss boxes (the Pact, the Veil, the Anchor) are shuffled at run start — each boss match gets a different one, no repeats. The top bar shows the current match's tier (easy / medium / hard / BOSS).
 
 **Win:** seal match 27. **Lose:** HP reaches 0 at any point.
 
-**Between-act crossroads:** after match 9 (Act 1 end) and match 21 (Act 2 end), player chooses Rest (+2 HP, capped at MAX_HP=6) or Whetstone (one die swap). Periodic die swap removed. Implemented in feature/crossroads (slice 2).
+**Between-act crossroads:** after match 9 (Act 1 end) and match 21 (Act 2 end), player chooses Rest (+2 HP, capped at MAX_HP=6) or Whetstone (one die swap). This is the only way to swap dice mid-run.
 
-**Entity (implemented in feature/entity-types):** at run start, one of Diabolic / Cosmic / Ethereal is selected at random. Drives content flavor (vignette/event pools, location names, run-won overlay copy) but no mechanical asymmetry. Entity id stored on GameState.entity_id. Each entity has 2 vignettes and 1 event in its pool; location names shown in top bar.
+**Entity types:** designed but cut for prototyping (2026-05-08). Three entity flavors (Diabolic / Cosmic / Ethereal) will eventually drive vignette/event pool theming and run-won copy. No mechanical asymmetry planned yet.
 
-**Source boxes (implemented in feature/source-boxes):** each entity has one themed Source box used exclusively at match 27. source_devil = "the Pact" (tabs 1–9, threshold 18); source_cosmic = "the Veil" (tabs 2–10, threshold 20); source_ghost = "the Anchor" (tabs 1,3,5,6,7,8,9,11,13, threshold 22). Source boxes are excluded from regular tier draws. Match 27 is forced to the entity's Source; matches 22–26 draw from regular hard-tier boxes only. Run-won overlay reads "[display_name] is sealed at [source_name]".
+**Within-act texture:** designed but cut for prototyping (2026-05-08). 50/30/20 silent/vignette/event beat between matches will return once the core difficulty curve is validated.
 
 **Starting setup:** pool = 1d4 + 4d6 + 2d8 (7 dice fixed). Run starts with 1 random ability in slot 3; no starting powers.
 
@@ -163,6 +168,6 @@ See `docs/superpowers/specs/2026-05-06-game-flow-design.md` for the Case meta-fl
 |-------|--------|--------|
 | 1 — Case shape (27-match structure, tier boxes, run-won overlay) | feature/case-shape | ✅ Merged |
 | 2 — Crossroads (Rest/Whetstone after acts 1 and 2; remove periodic die swap) | feature/crossroads | ✅ Merged |
-| 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | ✅ Merged |
-| 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | ✅ Merged |
-| 5 — Source boxes (themed match-27 box per entity) | feature/source-boxes | ✅ Merged |
+| 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | ✅ Merged → ⏸ Cut for prototyping 2026-05-08 |
+| 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | ✅ Merged → ⏸ Cut for prototyping 2026-05-08 |
+| 5 — Source boxes (boss tier; 3 boxes shuffled across matches 9/21/27) | feature/source-boxes | ✅ Merged + redesigned 2026-05-08 |

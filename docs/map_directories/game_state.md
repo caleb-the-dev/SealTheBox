@@ -62,16 +62,11 @@ var run_won: bool = false
     # Set to true by RunManager.handle_match_won() when the completed match was #27.
     # Checked by RunManager._start_next_match() — if true, emits CaseManager.notify_run_won() instead of starting match 28.
     # Reset to false by reset_run().
-var entity_id: String = ""
-    # ID of the active entity for this run ("diabolic", "cosmic", or "ethereal").
-    # Set to "" by reset_run() first, then overwritten by CaseManager.reset_run().
-    # Read by CaseManager.get_location_name(), TextureRoller._get_pool_ids(), and match.gd UI.
-    # Empty string during the brief window between GameState.reset_run() and CaseManager.reset_run().
 
 var act: int:       # derived — read-only computed property
     get:
         # 1 if case_match_index ≤ 9, 2 if ≤ 21, 3 otherwise
-var location_index: int:  # same as act — remains for backward compat; use CaseManager.get_location_name(act) for entity-themed names
+var location_index: int:  # alias for act
     get: return act
 ```
 
@@ -79,11 +74,10 @@ var location_index: int:  # same as act — remains for backward compat; use Cas
 ```gdscript
 func reset_run() -> void
     # Resets hp=MAX_HP, owned_powers=[], power_counters={}, pending_threshold_bonus=0,
-    # case_match_index=1, run_won=false, entity_id="",
+    # case_match_index=1, run_won=false,
     # rebuilds dice_pool (1d4+4d6+2d8 = 7 dice), calls reset_match(),
     # then always calls _setup_ability_hand() (no is_empty guard).
     # Does NOT set tabs/round_limit/win_threshold — those come from start_match(box).
-    # entity_id is set to "" here; CaseManager.reset_run() (called next by RunManager) writes the actual entity id.
 
 func reset_match() -> void
     # Resets round=0, dice_hand=[]. Resets all dice in pool to value=0/rolled=false.
@@ -125,7 +119,8 @@ func _setup_ability_hand() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
-| 2026-05-07 | feature/entity-types: Added entity_id: String = "". reset_run() now also clears entity_id to "". location_index comment updated to note CaseManager.get_location_name() as the entity-themed alternative. |
+| 2026-05-08 | Playtest refactor: removed entity_id field entirely. location_index comment simplified (no longer references CaseManager.get_location_name). |
+| 2026-05-07 | feature/entity-types: Added entity_id (removed 2026-05-08). |
 | 2026-05-07 | feature/crossroads: added const MAX_HP := 6. hp field initializer and reset_run() both updated to use MAX_HP. |
 | 2026-05-07 | feature/case-shape: Added case_match_index (int, default 1), run_won (bool, default false), act (computed getter: 1/2/3), location_index (alias for act). reset_run() now resets both case_match_index=1 and run_won=false. |
 | 2026-05-06 | ABILITY_POOL_IDS expanded from 6 to 14 abilities (added put_down_highest, auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die). |

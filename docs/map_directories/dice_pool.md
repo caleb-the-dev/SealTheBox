@@ -5,13 +5,13 @@
 `scripts/match/dice_pool.gd`
 
 ## Responsibility
-Own the pool (deck) of Die objects, draw a hand of 3 each round, roll selected dice, apply modifiers.
-Pool reshuffles (discards returned to draw) when fewer than 3 dice remain.
+Own the pool (deck) of Die objects, draw a hand of 2 each round, roll selected dice, apply modifiers.
+Pool reshuffles (discards returned to draw) when fewer than 2 dice remain.
 
 ## Public API
 ```gdscript
 func setup(pool: Array) -> void          # initialise from GameState.dice_pool.duplicate()
-func draw_hand() -> Array                # draw up to 3 dice into hand
+func draw_hand() -> Array                # draw up to 2 dice into hand; reshuffles discard into pool when fewer than 2 remain
 func roll_die(die: Die) -> void          # randomise die.value, set die.rolled = true
 func apply_greater(die: Die, x: int) -> void   # add x to die.value (capped at die.faces)
 func apply_lesser(die: Die, x: int) -> void    # subtract x from die.value (floor 1)
@@ -52,4 +52,5 @@ Set by `GameState._setup_dice_pool()`: **1×d4 + 4×d6 + 2×d8 = 7 dice total**.
 | Date | Change |
 |------|--------|
 | 2026-05-06 | Added apply_multiply (no ceiling), apply_set_max, apply_set_min, reroll_lucky, reroll_unlucky, drop_die methods. discard_hand() now resets die.dropped = false. Die class gained var dropped: bool = false. |
+| 2026-05-08 | draw_hand() changed from draw-3 to draw-2 (playtest tuning — game was too easy with 3 dice). Reshuffle threshold lowered from < 3 to < 2. |
 | 2026-05-01 | Initial implementation. |
