@@ -19,7 +19,8 @@ match.tscn  (Node3D, script: match.gd)
       top_left_vbox (VBoxContainer) — anchored top-left
         _match_label             — "Match N / 27"
         _act_label               — "Act N" (grey, smaller)
-        _location_label          — "Location N" (grey, smaller; same value as act for now)
+        _location_label          — entity-themed location name (e.g. "sulfur manor"); falls back to "Location N" if entity not set
+        _case_label              — "Case: [entity display_name]" (dimmer grey, font_size=11; empty before first reset_run)
       tabs_vbox (VBoxContainer)  — tab area
         tabs_lbl                 — "── TABS ──"
         tab_area (HBoxContainer)
@@ -36,7 +37,7 @@ match.tscn  (Node3D, script: match.gd)
       _power_offer_overlay       — hidden until critical win; shows power name/desc + Accept/Skip
       _rotation_overlay          — hidden until any match win; shows 3 ability pick buttons
       _run_over_overlay          — hidden until run over (HP = 0); "Play Again" button → start_run()
-      _run_won_overlay           — hidden until match 27 won; "the entity is sealed" + "Begin a new case" → start_run()
+      _run_won_overlay           — hidden until match 27 won; "[display_name] is sealed" (e.g. "the devil is sealed") + "Begin a new case" → start_run()
       _crossroads_overlay        — hidden until act boundary (after match 9 or 21); "Crossroads" + "Choose your path" + Rest/Whetstone buttons
       _vignette_overlay          — hidden until a vignette beat fires; opaque black; one-line text; click anywhere to dismiss
       _event_overlay             — hidden until an event beat fires; opaque black; prompt + two choice buttons; applies effects on pick
@@ -49,7 +50,7 @@ match.tscn  (Node3D, script: match.gd)
 
 ## Responsibilities
 - Instantiates and owns RoundManager and RunManager
-- Registers all 8 singletons (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary)
+- Registers all 9 singletons (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary, EntityLibrary)
 - Builds all UI in code (_setup_ui()) — no UI child nodes in the .tscn
 - Wires signals from both managers in _connect_signals()
 - Rebuilds tab buttons dynamically per match (_rebuild_tab_buttons()) since tab values vary by box
@@ -154,10 +155,10 @@ Tab buttons are dynamic. `_rebuild_tab_buttons()` clears `_tab_row` children and
 
 ## Singleton Registration Pattern
 ```gdscript
-if not Engine.has_singleton("VignetteLibrary"):
-    Engine.register_singleton("VignetteLibrary", VignetteLibrary)
+if not Engine.has_singleton("EntityLibrary"):
+    Engine.register_singleton("EntityLibrary", EntityLibrary)
 ```
-Done in `_ready()` for all 8 autoloads (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary). Necessary because autoload scripts without `class_name` are not auto-registered as engine singletons — only those with `class_name` get that treatment. `Engine.get_singleton()` requires explicit registration in `_ready()` as a fallback.
+Done in `_ready()` for all 9 autoloads (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary, EntityLibrary). Necessary because autoload scripts without `class_name` are not auto-registered as engine singletons — only those with `class_name` get that treatment. `Engine.get_singleton()` requires explicit registration in `_ready()` as a fallback.
 
 ## Continue Button Flow
 `_continue_button` is hidden at match start. When `threshold_reached` fires:
@@ -202,16 +203,19 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 - **Power offer uses `_current_power_offer` state.** The Confirm button is disabled until a card is clicked. If `_current_power_offer` is null when Confirm fires (shouldn't happen), it no-ops. Don't clear `_power_offer_options` before Confirm is handled.
 - **`_on_end_round_pressed` end_round guard:** After `attempt_seal()`, the code checks `_run_manager.match_number != match_before or _match_ended` before calling `end_round()`. Without this guard, the synchronous signal chain would start the next match and then `end_round()` would advance it to round 2 before the player acts.
 - **Tab display uses button.text.to_int()** to get tab values. Don't change button text formatting without updating `_refresh_tab_display()`.
+- **Run-won overlay title is dynamic.** `_on_run_won()` reads EntityLibrary.get_entity(GameState.entity_id).display_name and sets `_run_won_title_label.text` to "[display_name] is sealed". Falls back to "the entity is sealed" if EntityLibrary is missing or entity_id is empty. `_run_won_title_label` is stored as a field (set once during _setup_ui()) so _on_run_won() can mutate it without rebuilding the overlay.
 - **Run-won overlay exists.** `_run_won_overlay` shows after match 27 is won. CaseManager.run_won signal fires AFTER the rotation pick (not immediately on match win) — the normal rotation/power-offer flow completes first, then `_start_next_match()` detects `gs.run_won==true` and calls `notify_run_won()`. The overlay is hidden in `_on_next_match_ready()` (for "Begin a new case" flow).
 - **Dev "Win Entire Series"** calls `dev_win_match()`, `dev_skip_rotation()`, and `dev_skip_crossroads()` in a loop. Always produces threshold wins (not critical), so the power offer overlay never appears. `dev_skip_crossroads()` auto-picks Rest unconditionally — it fires on every iteration (not only at boundaries), but this is safe since `handle_crossroads_rest()` calling `_start_next_match()` when no crossroads is pending is harmless.
 - **CaseManager must be registered before start_run().** It has no `class_name`, so it's not auto-registered. `_ready()` now explicitly registers it alongside the other autoloads. Omitting this causes a modulo-by-zero error in `_start_next_match()` when the `_boxes` fallback array is empty.
 - **VignetteLibrary and EventLibrary must also be registered** in `_ready()`. Without them, TextureRoller falls back to "silent" for all rolls (pools are considered empty). The game will still run, but no vignettes or events will appear.
+- **EntityLibrary must also be registered** in `_ready()` (now 9 total). Without it, entity_id is never set, location names show "Location N", the case label is empty, and the run-won overlay shows "the entity is sealed" instead of the entity's name. The game runs correctly but without entity flavor.
 - **Texture overlays are instantiated by loading the script directly** (`load("res://scripts/ui/vignette_overlay.gd").new()`) rather than instancing the .tscn. The .tscn files exist for future scene-tree usage but aren't currently loaded. All UI is built in the script's `_ready()`.
 - **`_on_show_texture_beat()` uses untyped locals** for vignette_data and event_data. GDScript type hints on VignetteData / EventData cause parse-time errors in headless mode before import. Access only the fields you need (`.text`, `.prompt`, etc.).
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | feature/entity-types: Registered EntityLibrary in _ready() (now 9 total). Added _case_label (font_size=11, dimmer grey) below _location_label in top_left_vbox — shows "Case: [display_name]". _refresh_ui() updated: _location_label now calls CaseManager.get_location_name(GameState.act) instead of "Location N"; _case_label set from EntityLibrary.get_entity(entity_id).display_name (empty if entity not set). _on_run_won() now reads entity display_name and sets _run_won_title_label.text to "[name] is sealed". Added _run_won_title_label: Label field (assigned during _setup_ui()). |
 | 2026-05-07 | feature/within-act-texture: Added _vignette_overlay and _event_overlay (both instantiated via `load(...).new()` in _setup_ui()). Connected show_texture_beat signal → _on_show_texture_beat(). Added _on_show_texture_beat(), _on_vignette_dismissed(), _on_event_resolved() handlers. Both overlays force-hidden in _on_next_match_ready(). Registered VignetteLibrary and EventLibrary in _ready() (now 8 total singleton registrations). Dev "Win Entire Series" loop now calls dev_skip_texture() between dev_skip_rotation() and dev_skip_crossroads(). |
 | 2026-05-07 | feature/crossroads: added crossroads overlay + Rest/Whetstone handlers; registered CaseManager singleton in _ready() (fixes launch crash). |
 | 2026-05-07 | feature/case-shape: added 27-match top-bar labels (_match_label, _act_label, _location_label) and run_won_overlay. |

@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 11 |
+| Sessions since groom | 12 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -27,9 +27,11 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Box Definition (Resource) | [box_definition.md](box_definition.md) | Active |
 | Power Data (Resource) | [power_data.md](power_data.md) | Active |
 | Case Manager (autoload) | [case_manager.md](case_manager.md) | Active |
+| Entity Library (autoload) | [entity_library.md](entity_library.md) | Active |
 | Vignette Library (autoload) | [vignette_library.md](vignette_library.md) | Active |
 | Event Library (autoload) | [event_library.md](event_library.md) | Active |
 | Texture Roller (static class) | [texture_roller.md](texture_roller.md) | Active |
+| Entity Data (Resource) | [entity_data.md](entity_data.md) | Active |
 | Vignette Overlay (UI) | [vignette_overlay.md](vignette_overlay.md) | Active |
 | Event Overlay (UI) | [event_overlay.md](event_overlay.md) | Active |
 | Run Manager | [run_manager.md](run_manager.md) | Active |
@@ -52,12 +54,14 @@ seal-the-box/
     abilities.csv          # ability definitions (22 abilities; 14 in rotation pool with charges 1–3)
     boxes.csv              # box definitions (5 boxes: classic, low_evens, high_odds, compressed, stairs)
     powers.csv             # power definitions (11 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor, tax_collector, diabolic_pact, tab_counter)
-    vignettes.csv          # vignette definitions (3 entries in pool_id="default": v_fog, v_bell, v_cold)
-    events.csv             # event definitions (1 entry in pool_id="default": e_coin with hp-1;charge_random+1 / none)
+    entities.csv           # entity definitions (3 rows: diabolic, cosmic, ethereal; location_names semicolon-separated)
+    vignettes.csv          # vignette definitions (3 default + 2 per entity = 9 total; pools: default, vig_diabolic, vig_cosmic, vig_ethereal)
+    events.csv             # event definitions (1 default + 1 per entity = 4 total; pools: default, evt_diabolic, evt_cosmic, evt_ethereal)
   resources/
     ability_data.gd        # AbilityData Resource subclass
     box_definition.gd      # BoxDefinition Resource subclass (class_name BoxDefinition)
     power_data.gd          # PowerData Resource subclass (class_name PowerData)
+    entity_data.gd         # EntityData Resource subclass (class_name EntityData): id, display_name, location_names[3], vignette_pool_id, event_pool_id
     vignette_data.gd       # VignetteData Resource subclass (class_name VignetteData): id, pool_id, text
     event_data.gd          # EventData Resource subclass (class_name EventData): id, pool_id, prompt, option_a/b labels + effects
   scripts/
@@ -66,6 +70,7 @@ seal-the-box/
       box_library.gd       # Autoload: BoxLibrary (no class_name — conflicts with autoload name)
       game_state.gd        # Autoload: GameState
       power_library.gd     # Autoload: PowerLibrary (no class_name — conflicts with autoload name)
+      entity_library.gd    # Autoload: EntityLibrary — parses entities.csv; get_entity(id), get_all(), get_random()
       vignette_library.gd  # Autoload: VignetteLibrary — parses vignettes.csv; get_pool(pool_id) -> Array
       event_library.gd     # Autoload: EventLibrary — parses events.csv; get_pool(pool_id) -> Array
     match/
@@ -95,6 +100,7 @@ seal-the-box/
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
     test_case_manager.gd   # Tests for CaseManager (headless) — 10 tests
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap, periodic swap removal (headless) — 8 tests
+    test_entity.gd         # Tests for EntityLibrary, EntityData, entity variety in reset_run(), get_location_name(), TextureRoller entity-pool integration (headless) — 9 tests
     test_texture_roller.gd # Tests for TextureRoller distribution + empty-pool fallback + effect-string DSL parser (headless) — 9 tests
     test_tab_board.gd      # Tests for TabBoard sealing logic (headless)
     test_dice_pool.gd      # Tests for DicePool draw/roll/discard (headless)
@@ -113,13 +119,14 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 
 **Critical:** Autoload scripts that are also registered as singletons must NOT have a `class_name` declaration — GDScript will raise "Class hides an autoload singleton" parse error. Affected files: box_library.gd, power_library.gd, power_manager.gd, case_manager.gd.
 
-**Critical:** Autoload scripts without `class_name` are NOT auto-registered as engine singletons — `Engine.has_singleton()` returns false for them unless `match.gd._ready()` explicitly calls `Engine.register_singleton()`. Omitting this causes a modulo-by-zero crash in `RunManager._start_next_match()` (the `_boxes` fallback array is empty). All 8 autoloads are registered in match.gd._ready() (AbilityLibrary, BoxLibrary, GameState, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary).
+**Critical:** Autoload scripts without `class_name` are NOT auto-registered as engine singletons — `Engine.has_singleton()` returns false for them unless `match.gd._ready()` explicitly calls `Engine.register_singleton()`. Omitting this causes a modulo-by-zero crash in `RunManager._start_next_match()` (the `_boxes` fallback array is empty). All 9 autoloads are registered in match.gd._ready() (AbilityLibrary, BoxLibrary, GameState, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary, EntityLibrary).
 
 ---
 
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-07 | feature/entity-types (slice 4 of the Case meta-flow). Three entity types (Diabolic, Cosmic, Ethereal) randomized per run. New: EntityData resource (id, display_name, location_names[3], vignette_pool_id, event_pool_id); EntityLibrary autoload (parses entities.csv, get_entity/get_all/get_random); data/entities.csv (3 rows, location_names semicolon-separated). Content: 2 vignettes per entity (6 new entries: v_sulfur_1/2, v_deep_1/2, v_echo_1/2) + 1 event per entity (e_brand, e_whisper, e_cold_room) in per-entity pool_ids. CaseManager.reset_run() now picks a random entity and writes GameState.entity_id; get_location_name(act) added. TextureRoller._get_pool_ids() added — reads entity from GameState instead of using caller-supplied pool_id param. match.gd: registered EntityLibrary (now 9 singletons); _location_label now shows entity-themed name via CaseManager.get_location_name(); _case_label added ("Case: [display_name]"); _run_won_title_label field added, _on_run_won() sets "[display_name] is sealed". GameState: entity_id field added, reset_run() clears it. New bucket files: entity_library.md, entity_data.md. test_entity.gd: 9 tests. test_texture_roller.gd: updated empty-pool-fallback test for entity-based pool resolution. |
 | 2026-05-07 | feature/within-act-texture (slice 3 of the Case meta-flow). Between-match texture beat system: TextureRoller (static class) rolls 50% silent / 30% vignette / 20% event using VignetteLibrary and EventLibrary (both new autoloads). New resources: VignetteData (id, pool_id, text), EventData (id, pool_id, prompt, option_a/b_label/effect). New CSVs: vignettes.csv (3 entries: v_fog, v_bell, v_cold), events.csv (1 entry: e_coin — hp-1;charge_random+1 / none). New overlays: VignetteOverlay (click-to-dismiss), EventOverlay (two-button choice, applies effect DSL). Effect DSL: none, hp±N, charge_random+1; unknowns push_error and skip. Texture fires AFTER rotation/power-offer, BEFORE crossroads (crossroads matches 9 and 21 skip texture entirely). RunManager: added show_texture_beat signal, _do_texture_beat(), handle_texture_done(), dev_skip_texture(). match.gd: registered 2 new singletons (now 8 total), wired show_texture_beat, added overlay instances and handlers, dev "Win Entire Series" skips texture. test_texture_roller.gd: 9 headless tests (distribution, empty-pool fallback, effect DSL). New bucket files: vignette_library.md, event_library.md, texture_roller.md, vignette_overlay.md, event_overlay.md. |
 | 2026-05-07 | feature/crossroads (slice 2 of the Case meta-flow). Replaced periodic die swap (every 5 matches) with Crossroads decision at act boundaries: after match 9 and 21 the player picks Rest (+2 HP, capped at MAX_HP=6) or Whetstone (die swap). RunManager: added show_crossroads signal, handle_crossroads_rest(), handle_crossroads_whetstone(), dev_skip_crossroads(). GameState: added MAX_HP=6 const; hp field and reset_run() use MAX_HP. match.gd: added _crossroads_overlay, wired show_crossroads signal, added crossroads button handlers, registered CaseManager singleton in _ready() (fixes launch crash). test_crossroads.gd: 8 new headless tests. 2 stale periodic-swap tests removed from test_run_manager.gd (now 46 tests). Also caught and fixed: CaseManager was never registered as engine singleton in match.gd, causing modulo-by-zero on launch. |
 | 2026-05-07 | feature/case-shape (slice 1 of the Case meta-flow). Replaced infinite match loop with 27-match Case structure: CaseManager autoload builds a 27-match list (9 easy / 12 medium / 6 hard via BoxLibrary.get_by_tier()); GameState gains case_match_index, run_won, act (computed), location_index; RunManager defers box selection to CaseManager and emits CaseManager.run_won after match 27 via notify_run_won(); match.gd top bar now shows "Match N / 27", "Act N", "Location N"; run_won_overlay added ("the entity is sealed" + "Begin a new case"). Periodic die swap every 5 matches still present (removed in slice 2). test_case_manager.gd: 10 new headless tests. |

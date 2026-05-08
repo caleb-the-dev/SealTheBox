@@ -33,7 +33,7 @@ Each **match** is one game of advanced Shut the Box:
 - When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — rotation only) or keeps pushing to seal all tabs (critical win — power offer then rotation).
 - The run ends only when HP reaches 0.
 
-Each **run** is a **27-match Case** divided into three acts (9 easy / 12 medium / 6 hard boxes drawn randomly by tier). The Case ends either by losing all HP or by winning match 27. After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins offer a power (Accept to add it to owned_powers, or Skip) before the rotation. *(Die swap every 5 matches is a temporary holdover — will be replaced by the Whetstone crossroads in slice 2.)*
+Each **run** is a **27-match Case** divided into three acts (9 easy / 12 medium / 6 hard boxes drawn randomly by tier), for a randomly chosen entity (Diabolic, Cosmic, or Ethereal). The Case ends either by losing all HP or by winning match 27. After **every** match win: player picks 1 of 3 new abilities (mandatory rotation — slot 1 discards, slots shift, pick lands in slot 3). Additionally, critical wins offer a power (Accept to add it to owned_powers, or Skip) before the rotation. Between acts, a Crossroads choice fires (Rest: +2 HP, capped at MAX_HP; or Whetstone: one die swap) — the only way to swap dice mid-run.
 
 ---
 
@@ -126,7 +126,7 @@ A run is a **Case** — 27 matches across three acts:
 
 **Between-act crossroads:** after match 9 (Act 1 end) and match 21 (Act 2 end), player chooses Rest (+2 HP, capped at MAX_HP=6) or Whetstone (one die swap). Periodic die swap removed. Implemented in feature/crossroads (slice 2).
 
-**Entity (slice 4, not yet implemented):** at run start, one of Diabolic / Cosmic / Ethereal is selected. Drives content flavor (vignette/event pools, location names, Source box skin) but no mechanical asymmetry.
+**Entity (implemented in feature/entity-types):** at run start, one of Diabolic / Cosmic / Ethereal is selected at random. Drives content flavor (vignette/event pools, location names, run-won overlay copy) but no mechanical asymmetry. Entity id stored on GameState.entity_id. Each entity has 2 vignettes and 1 event in its pool; location names shown in top bar. Source box per entity is deferred to slice 5.
 
 **Starting setup:** pool = 1d4 + 4d6 + 2d8 (7 dice fixed). Run starts with 1 random ability in slot 3; no starting powers.
 
@@ -161,6 +161,6 @@ See `docs/superpowers/specs/2026-05-06-game-flow-design.md` for the Case meta-fl
 |-------|--------|--------|
 | 1 — Case shape (27-match structure, tier boxes, run-won overlay) | feature/case-shape | ✅ Merged |
 | 2 — Crossroads (Rest/Whetstone after acts 1 and 2; remove periodic die swap) | feature/crossroads | ✅ Merged |
-| 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | Planned |
-| 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | Planned |
+| 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | ✅ Merged |
+| 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | ✅ Merged |
 | 5 — Source boxes (themed match-27 box per entity) | feature/source-boxes | Planned |

@@ -21,6 +21,8 @@ func reset_run() -> void
     #   Matches  1–9  → 9 random draws (with replacement) from easy-tier boxes
     #   Matches 10–21 → 12 random draws from medium-tier boxes
     #   Matches 22–27 → 6 random draws from hard-tier boxes
+    # Also picks a random entity via EntityLibrary.get_random() and writes its id to
+    # GameState.entity_id. If EntityLibrary singleton is missing, entity_id is left unchanged.
     # Called by RunManager.start_run() after GameState.reset_run().
 
 func get_box_for_match(idx: int) -> BoxDefinition
@@ -29,6 +31,11 @@ func get_box_for_match(idx: int) -> BoxDefinition
 
 func get_act_for_match(idx: int) -> int
     # Returns 1 (idx ≤ 9), 2 (idx ≤ 21), or 3 (idx > 21). Does not require reset_run() first.
+
+func get_location_name(act: int) -> String
+    # Returns the entity-themed location name for the given act (1/2/3).
+    # Looks up EntityLibrary.get_entity(GameState.entity_id).location_names[act - 1].
+    # Fallback to "Location N" if entity_id is empty, EntityLibrary is missing, or entity is null.
 
 func notify_run_won() -> void
     # Emits run_won. Called by RunManager._start_next_match() when gs.run_won == true.
@@ -48,6 +55,8 @@ var _case_list: Array   # Array of BoxDefinition, length 27; built by reset_run(
 
 ## Dependencies
 - `BoxLibrary` — calls `get_by_tier("easy"/"medium"/"hard")` in reset_run()
+- `EntityLibrary` — calls `get_random()` in reset_run(); calls `get_entity(entity_id)` in get_location_name()
+- `GameState` — writes `entity_id` in reset_run(); reads `entity_id` in get_location_name()
 
 ## How RunManager Uses CaseManager
 ```
@@ -73,16 +82,19 @@ RunManager._start_next_match()
 - **Box draws are with replacement.** The same box can appear multiple times within an act. With only 2 easy-tier boxes, each of the 9 act-1 slots is 50/50 between them. High repetition is acknowledged as acceptable for slice 1 — adding more boxes per tier is deferred.
 - **`run_won` fires AFTER the rotation pick, not immediately on match win.** RunManager completes the full power-offer → rotation flow before calling `notify_run_won()`. This is intentional: the player gets their end-of-match rewards even on the winning match.
 - **`get_act_for_match()` is stateless** — it derives purely from the index, no _case_list needed. Safe to call any time.
-- **Headless test setup requires CaseManager registration.** Tests calling RunManager.start_run() must register CaseManager (see test_run_manager.gd _init() pattern).
+- **`get_location_name()` depends on EntityLibrary and GameState singletons.** If EntityLibrary is not registered, it returns the plain "Location N" fallback. Safe to call any time but returns placeholder text if entity_id is "".
+- **Entity is picked during `reset_run()`.** GameState.entity_id is set to "" by GameState.reset_run() first, then CaseManager.reset_run() writes the chosen entity id. The order of calls in RunManager.start_run() is GameState.reset_run() then CaseManager.reset_run() — if this order is ever swapped, entity_id will be "" for the entire run.
+- **Headless test setup requires CaseManager registration.** Tests calling RunManager.start_run() must register CaseManager (see test_run_manager.gd _init() pattern). Tests using CaseManager directly must also register EntityLibrary (see test_entity.gd).
 - **No class_name declaration.** Adding class_name CaseManager would cause "hides an autoload singleton" parse error. Access via `Engine.get_singleton("CaseManager")`.
 
 ## Out of Scope (deferred to future slices)
-- Entity selection (slice 4) — picking Diabolic/Cosmic/Ethereal at run start
 - Forced Source box at match 27 (slice 5) — currently match 27 is just a random hard-tier box
-- Within-act texture (slice 3) — silent/vignette/event rolls between matches
+- ~~Entity selection (slice 4) — picking Diabolic/Cosmic/Ethereal at run start~~ **Implemented (feature/entity-types)**
+- ~~Within-act texture (slice 3) — silent/vignette/event rolls between matches~~ **Implemented (feature/within-act-texture)**
 - ~~Crossroads after match 9 and 21 (slice 2) — Rest/Whetstone choice~~ **Implemented (feature/crossroads)**
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | feature/entity-types: reset_run() now also picks a random entity (EntityLibrary.get_random()) and writes entity_id to GameState. Added get_location_name(act) — returns entity's themed location name for the given act, falling back to "Location N" if entity_id is empty or EntityLibrary missing. |
 | 2026-05-07 | Created. Implements 27-match Case structure (9 easy / 12 medium / 6 hard). |
