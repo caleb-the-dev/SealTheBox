@@ -678,6 +678,27 @@ func _setup_ui() -> void:
 	dev_hp_btn.pressed.connect(_on_dev_give_hp_pressed)
 	dev_btns.add_child(dev_hp_btn)
 
+	var dev_storm_btn = Button.new()
+	dev_storm_btn.text = "Force Storm Box →"
+	dev_storm_btn.custom_minimum_size = Vector2(0, 56)
+	dev_storm_btn.add_theme_font_size_override("font_size", 17)
+	dev_storm_btn.pressed.connect(_on_dev_force_entry_box_pressed.bind("storm_box"))
+	dev_btns.add_child(dev_storm_btn)
+
+	var dev_cleanse_btn = Button.new()
+	dev_cleanse_btn.text = "Force Cleanse Box →"
+	dev_cleanse_btn.custom_minimum_size = Vector2(0, 56)
+	dev_cleanse_btn.add_theme_font_size_override("font_size", 17)
+	dev_cleanse_btn.pressed.connect(_on_dev_force_entry_box_pressed.bind("cleanse_box"))
+	dev_btns.add_child(dev_cleanse_btn)
+
+	var dev_borrowed_btn = Button.new()
+	dev_borrowed_btn.text = "Force Borrowed Time →"
+	dev_borrowed_btn.custom_minimum_size = Vector2(0, 56)
+	dev_borrowed_btn.add_theme_font_size_override("font_size", 17)
+	dev_borrowed_btn.pressed.connect(_on_dev_force_entry_box_pressed.bind("borrowed_time"))
+	dev_btns.add_child(dev_borrowed_btn)
+
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
 	dev_close_btn.custom_minimum_size = Vector2(0, 44)
@@ -1328,6 +1349,27 @@ func _on_dev_restart_pressed() -> void:
 func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
 	_refresh_ui()
+
+func _on_dev_force_entry_box_pressed(box_id: String) -> void:
+	# Force the next match to be the named entry-effects box.
+	_dev_overlay.visible = false
+	var box_lib = Engine.get_singleton("BoxLibrary") if Engine.has_singleton("BoxLibrary") else null
+	if box_lib == null:
+		push_warning("Dev: BoxLibrary not available")
+		return
+	var box = box_lib.get_box(box_id)
+	if box == null:
+		push_warning("Dev: '%s' not found in BoxLibrary" % box_id)
+		return
+	if not _match_ended:
+		_round_manager.dev_win_match()
+	_round_manager.start_match(box)
+	_rebuild_tab_buttons()
+	_update_tabs_header_widths()
+	for btn in _tab_buttons:
+		btn.disabled = false
+	_refresh_ui()
+	_refresh_powers_panel()
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false

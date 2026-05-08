@@ -1,6 +1,11 @@
 class_name RoundManager
 extends Node
 
+# Preload ENTRY-axis registry so it compiles in both full-project and
+# headless --script test modes (global class_name lookup isn't available
+# in --script mode without a project import).
+const _BoxEntryEffects = preload("res://scripts/match/box_entry_effects.gd")
+
 signal phase_changed(phase: String)
 signal round_ended(round_num: int)
 signal match_won(critical: bool)
@@ -37,8 +42,31 @@ func start_match(box: BoxDefinition) -> void:
 	_threshold_notified = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
-	_dice_pool.setup(GameState.dice_pool.duplicate())
+	# Fire entry effects before building the pool so storm_box can populate
+	# match_pool_delta before DicePool.setup() reads it.
+	if _BoxEntryEffects.has_entry_effect(box.id):
+		_BoxEntryEffects.on_box_entry(box.id, GameState)
+		status_updated.emit(_entry_effect_message(box.id))
+	# Build active pool = persistent pool + any transient delta (storm_box).
+	var active_pool: Array = GameState.dice_pool.duplicate()
+	active_pool.append_array(GameState.match_pool_delta)
+	_dice_pool.setup(active_pool)
 	start_round()
+
+# Returns a short status message describing the entry effect for box_id.
+func _entry_effect_message(box_id: String) -> String:
+	match box_id:
+		"storm_box":
+			var delta = GameState.match_pool_delta
+			if delta.is_empty():
+				return "Storm Box — entry effect fired."
+			var die = delta[-1]
+			return "Storm Box — bonus d%d added to your pool for this match!" % die.faces
+		"cleanse_box":
+			return "Cleanse Box — all ability charges refilled!"
+		"borrowed_time":
+			return "Borrowed Time — took 1 damage; round limit +1."
+	return ""
 
 func start_round() -> void:
 	GameState.round += 1
