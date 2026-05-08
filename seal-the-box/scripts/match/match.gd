@@ -54,7 +54,12 @@ var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
 var _crossroads_overlay: Control
 var _vignette_overlay: Control
+var _vignette_text_label: Label
 var _event_overlay: Control
+var _event_prompt_label: Label
+var _event_btn_a: Button
+var _event_btn_b: Button
+var _current_event = null
 var _die_swap_offered_buttons: Array[Button] = []
 var _die_swap_pool_row: HBoxContainer
 var _die_swap_pool_buttons: Array[Button] = []
@@ -931,16 +936,74 @@ func _setup_ui() -> void:
 	_crossroads_overlay = crossroads_overlay
 
 	# ── Vignette overlay ───────────────────────────────────────────────────────
-	var vignette_overlay_node = load("res://scripts/ui/vignette_overlay.gd").new()
-	vignette_overlay_node.visible = false
-	root.add_child(vignette_overlay_node)
-	_vignette_overlay = vignette_overlay_node
+	var vig_overlay = Control.new()
+	vig_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vig_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	vig_overlay.visible = false
+	var vig_bg = ColorRect.new()
+	vig_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vig_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	vig_overlay.add_child(vig_bg)
+	var vig_center = VBoxContainer.new()
+	vig_center.anchor_left = 0.2
+	vig_center.anchor_right = 0.8
+	vig_center.anchor_top = 0.4
+	vig_center.anchor_bottom = 0.7
+	vig_center.add_theme_constant_override("separation", 24)
+	vig_overlay.add_child(vig_center)
+	_vignette_text_label = Label.new()
+	_vignette_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_vignette_text_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_vignette_text_label.add_theme_font_size_override("font_size", 24)
+	_vignette_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vig_center.add_child(_vignette_text_label)
+	var vig_hint = Label.new()
+	vig_hint.text = "[ click anywhere to continue ]"
+	vig_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vig_hint.add_theme_font_size_override("font_size", 14)
+	vig_hint.modulate = Color(0.6, 0.6, 0.6)
+	vig_center.add_child(vig_hint)
+	vig_overlay.gui_input.connect(_on_vignette_gui_input)
+	root.add_child(vig_overlay)
+	_vignette_overlay = vig_overlay
 
 	# ── Event overlay ──────────────────────────────────────────────────────────
-	var event_overlay_node = load("res://scripts/ui/event_overlay.gd").new()
-	event_overlay_node.visible = false
-	root.add_child(event_overlay_node)
-	_event_overlay = event_overlay_node
+	var evt_overlay = Control.new()
+	evt_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	evt_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	evt_overlay.visible = false
+	var evt_bg = ColorRect.new()
+	evt_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	evt_bg.color = Color(0.0, 0.0, 0.0, 1.0)
+	evt_overlay.add_child(evt_bg)
+	var evt_center = VBoxContainer.new()
+	evt_center.anchor_left = 0.2
+	evt_center.anchor_right = 0.8
+	evt_center.anchor_top = 0.3
+	evt_center.anchor_bottom = 0.75
+	evt_center.add_theme_constant_override("separation", 32)
+	evt_overlay.add_child(evt_center)
+	_event_prompt_label = Label.new()
+	_event_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_event_prompt_label.add_theme_font_size_override("font_size", 22)
+	_event_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	evt_center.add_child(_event_prompt_label)
+	var evt_btn_row = HBoxContainer.new()
+	evt_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	evt_btn_row.add_theme_constant_override("separation", 32)
+	evt_center.add_child(evt_btn_row)
+	_event_btn_a = Button.new()
+	_event_btn_a.custom_minimum_size = Vector2(160, 64)
+	_event_btn_a.add_theme_font_size_override("font_size", 18)
+	_event_btn_a.pressed.connect(_on_event_option_a_pressed)
+	evt_btn_row.add_child(_event_btn_a)
+	_event_btn_b = Button.new()
+	_event_btn_b.custom_minimum_size = Vector2(160, 64)
+	_event_btn_b.add_theme_font_size_override("font_size", 18)
+	_event_btn_b.pressed.connect(_on_event_option_b_pressed)
+	evt_btn_row.add_child(_event_btn_b)
+	root.add_child(evt_overlay)
+	_event_overlay = evt_overlay
 
 	# ── Powers side panel (right side, always visible) ────────────────────────
 	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
@@ -1252,27 +1315,43 @@ func _on_show_texture_beat(beat: Dictionary) -> void:
 		if vignette_data == null:
 			_run_manager.handle_texture_done()
 			return
-		_vignette_overlay.call("setup", vignette_data)
+		_vignette_text_label.text = vignette_data.text
 		_vignette_overlay.visible = true
-		_vignette_overlay.dismissed.connect(_on_vignette_dismissed, CONNECT_ONE_SHOT)
 	elif beat_type == "event":
 		var event_data = beat.get("event", null)
 		if event_data == null:
 			_run_manager.handle_texture_done()
 			return
-		_event_overlay.call("setup", event_data)
+		_current_event = event_data
+		_event_prompt_label.text = event_data.prompt
+		_event_btn_a.text = event_data.option_a_label
+		_event_btn_b.text = event_data.option_b_label
 		_event_overlay.visible = true
-		_event_overlay.resolved.connect(_on_event_resolved, CONNECT_ONE_SHOT)
 	else:
 		# Should not happen (silent is handled in RunManager), but guard anyway
 		_run_manager.handle_texture_done()
+
+func _on_vignette_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_on_vignette_dismissed()
 
 func _on_vignette_dismissed() -> void:
 	_vignette_overlay.visible = false
 	_refresh_ui()
 	_run_manager.handle_texture_done()
 
+func _on_event_option_a_pressed() -> void:
+	if _current_event:
+		load("res://scripts/ui/event_overlay.gd").apply_effects(_current_event.option_a_effect)
+	_on_event_resolved("a")
+
+func _on_event_option_b_pressed() -> void:
+	if _current_event:
+		load("res://scripts/ui/event_overlay.gd").apply_effects(_current_event.option_b_effect)
+	_on_event_resolved("b")
+
 func _on_event_resolved(_option: String) -> void:
+	_current_event = null
 	_event_overlay.visible = false
 	_refresh_ui()
 	_refresh_powers_panel()
