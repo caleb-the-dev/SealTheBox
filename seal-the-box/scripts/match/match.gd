@@ -978,6 +978,7 @@ func _connect_signals() -> void:
 	_round_manager.tabs_sealed.connect(_on_tabs_sealed)
 	_round_manager.status_updated.connect(_on_status_updated)
 	_round_manager.threshold_reached.connect(_on_threshold_reached)
+	_round_manager.tab_behavior_changed.connect(_on_tab_behavior_changed)
 	_run_manager.next_match_ready.connect(_on_next_match_ready)
 	_run_manager.show_power_offer.connect(_on_show_power_offer)
 	_run_manager.run_over.connect(_on_run_over)
@@ -1353,10 +1354,22 @@ func _on_run_won_new_case_pressed() -> void:
 func _on_tabs_sealed(_tabs: Array) -> void:
 	_selected_tabs = []
 	_selected_dice = []
+	# Rebuild tab buttons in case mitosis added new tabs.
+	_rebuild_tab_buttons()
+	_update_tabs_header_widths()
 	_refresh_ui()
 
 func _on_status_updated(text: String) -> void:
 	_status_label.text = text
+
+# BHV tab mutation: rebuild the tab display and show message in status.
+func _on_tab_behavior_changed(message: String) -> void:
+	_selected_tabs = []
+	_rebuild_tab_buttons()
+	_update_tabs_header_widths()
+	_refresh_ui()
+	if not message.is_empty():
+		_status_label.text = message
 
 # ── input handlers ───────────────────────────────────────────────────────────
 func _on_die_pressed(index: int) -> void:
