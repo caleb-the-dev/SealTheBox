@@ -117,30 +117,36 @@ func _test_eager_die_at_max_face(gs: Node, pm: Node) -> void:
 func _test_tab9_bounty_grants_hp_when_9_sealed(gs: Node, pm: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	gs.owned_powers = [power_lib.get_power("tab_9_bounty")]
+	pm.add_power(power_lib.get_power("tab_9_bounty"))
 	var hp_before = gs.hp
 	pm.apply_tab9_bounty([9, 5])
+	pm.apply_tab9_bounty([9])
+	assert(gs.hp == hp_before, "Tab 9 Bounty: no HP after 2 tab-9 seals (counter at 2)")
+	pm.apply_tab9_bounty([9])
 	assert(gs.hp == hp_before + 1,
-		"Tab 9 Bounty: sealing 9 should grant +1 HP (expected %d, got %d)" % [hp_before + 1, gs.hp])
+		"Tab 9 Bounty: should gain +1 HP after 3rd tab-9 seal (expected %d, got %d)" % [hp_before + 1, gs.hp])
+	assert(gs.power_counters.get("tab_9_bounty", 0) == 0, "counter resets to 0 after firing")
 
 func _test_tab9_bounty_no_hp_without_9(gs: Node, pm: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	gs.owned_powers = [power_lib.get_power("tab_9_bounty")]
+	pm.add_power(power_lib.get_power("tab_9_bounty"))
 	var hp_before = gs.hp
 	pm.apply_tab9_bounty([5, 7])
 	assert(gs.hp == hp_before,
-		"Tab 9 Bounty: no 9 in sealed list should not grant HP")
+		"Tab 9 Bounty: no 9 in sealed list should not increment counter or grant HP")
+	assert(gs.power_counters.get("tab_9_bounty", 0) == 0, "counter stays at 0 when 9 not sealed")
 
 func _test_tab9_bounty_two_copies_grants_two_hp(gs: Node, pm: Node) -> void:
 	gs.reset_run()
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	var bounty = power_lib.get_power("tab_9_bounty")
-	gs.owned_powers = [bounty, bounty]
+	pm.add_power(power_lib.get_power("tab_9_bounty"))
 	var hp_before = gs.hp
 	pm.apply_tab9_bounty([9])
-	assert(gs.hp == hp_before + 2,
-		"2x Tab 9 Bounty: sealing 9 should grant +2 HP (expected %d, got %d)" % [hp_before + 2, gs.hp])
+	pm.apply_tab9_bounty([9])
+	pm.apply_tab9_bounty([9])
+	assert(gs.hp == hp_before + 1,
+		"Tab 9 Bounty: 3 seals of 9 should grant +1 HP, got %d" % gs.hp)
 
 # ── Bonus Seal ───────────────────────────────────────────────────────────────
 

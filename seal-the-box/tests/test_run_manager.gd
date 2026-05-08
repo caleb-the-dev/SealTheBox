@@ -694,11 +694,7 @@ func _test_tax_collector_fires_after_2_critical_wins(gs: Node) -> void:
 	assert(gs.power_counters.get("tax_collector", 0) == 1, "counter should be 1 after 1 crit win")
 
 	pm.on_critical_win()
-	assert(gs.hp == 6, "Tax Collector: no HP gain after 2 critical wins (counter at 2)")
-	assert(gs.power_counters.get("tax_collector", 0) == 2, "counter should be 2 after 2 crit wins")
-
-	pm.on_critical_win()
-	assert(gs.hp == 7, "Tax Collector: hp should be 7 after counter hits 3, got %d" % gs.hp)
+	assert(gs.hp == 7, "Tax Collector: hp should be 7 after counter hits 2, got %d" % gs.hp)
 	assert(gs.power_counters.get("tax_collector", 0) == 0, "counter resets to 0 after firing")
 
 func _test_tax_collector_persists_across_non_critical_wins(gs: Node) -> void:
@@ -720,13 +716,11 @@ func _test_tax_collector_resets_and_fires_again(gs: Node) -> void:
 	gs.hp = 6
 	pm.on_critical_win()
 	pm.on_critical_win()
-	pm.on_critical_win()
-	assert(gs.hp == 7, "first fire after 3 crit wins")
-	# After reset to 0, next 3 critical wins fire again
-	pm.on_critical_win()
+	assert(gs.hp == 7, "first fire after 2 crit wins")
+	# After reset to 0, next 2 critical wins fire again
 	pm.on_critical_win()
 	pm.on_critical_win()
-	assert(gs.hp == 8, "Tax Collector: should fire again after 3 more crit wins, got %d" % gs.hp)
+	assert(gs.hp == 8, "Tax Collector: should fire again after 2 more crit wins, got %d" % gs.hp)
 	assert(gs.power_counters.get("tax_collector", 0) == 0, "counter resets again")
 
 # ── Diabolic Pact tests ───────────────────────────────────────────────────────

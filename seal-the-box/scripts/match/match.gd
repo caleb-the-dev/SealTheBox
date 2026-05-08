@@ -11,6 +11,7 @@ var _match_ended: bool = false
 
 # ── ui references ───────────────────────────────────────────────────────────
 var _hp_label: Label
+var _hp_max_label: Label
 var _hp_tween: Tween = null
 var _status_label: Label
 var _tab_buttons: Array[Button] = []
@@ -39,6 +40,7 @@ var _power_offer_cards: Array[Button] = []
 var _power_offer_confirm_btn: Button
 var _power_offer_options: Array = []
 var _current_power_offer: PowerData = null
+var _heal_notice_label: Label
 var _run_over_overlay: Control
 var _run_over_detail_label: Label
 var _rotation_overlay: Control
@@ -144,9 +146,20 @@ func _setup_ui() -> void:
 	top_bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	root.add_child(top_bar)
 
+	var hp_container = HBoxContainer.new()
+	hp_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	hp_container.add_theme_constant_override("separation", 1)
+	top_bar.add_child(hp_container)
+
 	_hp_label = Label.new()
 	_hp_label.add_theme_font_size_override("font_size", 28)
-	top_bar.add_child(_hp_label)
+	hp_container.add_child(_hp_label)
+
+	_hp_max_label = Label.new()
+	_hp_max_label.add_theme_font_size_override("font_size", 16)
+	_hp_max_label.modulate = Color(0.6, 0.6, 0.6)
+	_hp_max_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	hp_container.add_child(_hp_max_label)
 
 	var top_left_vbox = VBoxContainer.new()
 	top_left_vbox.anchor_left = 0.0
@@ -450,6 +463,20 @@ func _setup_ui() -> void:
 	skip_btn.add_theme_font_size_override("font_size", 20)
 	skip_btn.pressed.connect(_on_power_offer_skipped)
 	power_btn_row.add_child(skip_btn)
+
+	_heal_notice_label = Label.new()
+	_heal_notice_label.text = "Healed 1 HP!"
+	_heal_notice_label.add_theme_font_size_override("font_size", 18)
+	_heal_notice_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4))
+	_heal_notice_label.anchor_left = 0.0
+	_heal_notice_label.anchor_right = 0.0
+	_heal_notice_label.anchor_top = 1.0
+	_heal_notice_label.anchor_bottom = 1.0
+	_heal_notice_label.offset_left = 24
+	_heal_notice_label.offset_right = 200
+	_heal_notice_label.offset_top = -52
+	_heal_notice_label.offset_bottom = -24
+	power_overlay.add_child(_heal_notice_label)
 
 	root.add_child(power_overlay)
 	_power_offer_overlay = power_overlay
@@ -1470,6 +1497,7 @@ func _stop_hp_pulse() -> void:
 
 func _refresh_ui() -> void:
 	_hp_label.text = "❤  %d" % GameState.hp
+	_hp_max_label.text = "/%d" % GameState.MAX_HP
 	match GameState.hp:
 		1:
 			_hp_label.add_theme_color_override("font_color", Color(1.0, 0.18, 0.18))
@@ -1589,6 +1617,8 @@ func _refresh_ability_display() -> void:
 		if a != null:
 			var name_text = a.flavor_name
 			var charges_text = "%d/%d" % [a.charges, a.max_charges]
+			if i == 0:
+				charges_text += " — lose after this round"
 			if btn is TooltipButton:
 				(btn as TooltipButton).update_info("%s  [%s]" % [name_text, charges_text], a.description)
 			if a.charges <= 0:

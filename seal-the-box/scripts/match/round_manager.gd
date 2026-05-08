@@ -218,6 +218,7 @@ func accept_threshold_win() -> void:
 func _check_win() -> void:
 	if _tab_board.check_critical_win():
 		_match_over = true
+		GameState.hp = min(GameState.hp + 1, GameState.MAX_HP)
 		var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 		if power_mgr:
 			power_mgr.on_match_end()
@@ -245,6 +246,7 @@ func dev_critical_win() -> void:
 	if _match_over:
 		return
 	_match_over = true
+	GameState.hp = min(GameState.hp + 1, GameState.MAX_HP)
 	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	if power_mgr:
 		power_mgr.on_match_end()

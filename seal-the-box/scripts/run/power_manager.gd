@@ -126,10 +126,17 @@ func _get_counter_target(power_id: String) -> int:
 	return 0
 
 func apply_tab9_bounty(all_sealed_tabs: Array) -> void:
-	var count = count_owned("tab_9_bounty")
-	if count == 0 or not (9 in all_sealed_tabs):
+	if count_owned("tab_9_bounty") == 0 or not (9 in all_sealed_tabs):
 		return
-	GameState.hp += count
+	var target = _get_counter_target("tab_9_bounty")
+	if target <= 0:
+		return
+	var current: int = GameState.power_counters.get("tab_9_bounty", 0)
+	current += 1
+	GameState.power_counters["tab_9_bounty"] = current
+	if current >= target:
+		GameState.power_counters["tab_9_bounty"] = 0
+		GameState.hp += 1
 
 func apply_box_shutter() -> void:
 	var count = count_owned("box_shutter")

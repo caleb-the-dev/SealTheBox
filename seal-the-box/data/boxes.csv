@@ -1,9 +1,9 @@
 id,name,tabs,win_threshold,tier,source_for
-classic,Classic,1;2;3;4;5;6;7;8;9,15,easy,
-low_evens,Low Evens,2;3;4;5;6;7;8,13,easy,
-high_odds,High Odds,3;5;7;9;11,13,medium,
-compressed,Compressed,2;4;5;6;8,10,hard,
-stairs,Stairs,1;3;5;6;7;9,12,medium,
-source_devil,the Pact,1;2;3;4;5;6;7;8;9,14,boss,diabolic
-source_cosmic,the Veil,2;3;4;5;6;7;8;9;10,15,boss,cosmic
-source_ghost,the Anchor,1;3;5;6;7;8;9;11;13,17,boss,ethereal
+classic,Classic,1;2;3;4;5;6;7;8;9,11,easy,
+low_evens,Low Evens,2;3;4;5;6;7;8,10,easy,
+high_odds,High Odds,3;5;7;9;11,10,medium,
+compressed,Compressed,2;4;5;6;8,8,hard,
+stairs,Stairs,1;3;5;6;7;9,9,medium,
+source_devil,the Pact,1;2;3;4;5;6;7;8;9,11,boss,diabolic
+source_cosmic,the Veil,2;3;4;5;6;7;8;9;10,11,boss,cosmic
+source_ghost,the Anchor,1;3;5;6;7;8;9;11;13,13,boss,ethereal

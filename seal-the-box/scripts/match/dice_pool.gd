@@ -11,14 +11,14 @@ func setup(pool_config: Array) -> void:
     _hand = []
 
 func draw_hand() -> Array:
-    if _pool.size() < 2:
+    if _pool.size() < 3:
         _reshuffle()
     if _pool.is_empty():
         push_warning("DicePool: draw_hand called on empty pool+discard — returning empty hand")
         _hand = []
         return _hand
     _hand = []
-    var draw_count = min(2, _pool.size())
+    var draw_count = min(3, _pool.size())
     for i in draw_count:
         var idx = randi() % _pool.size()
         _hand.append(_pool[idx])
