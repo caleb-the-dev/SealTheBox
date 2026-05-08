@@ -51,6 +51,8 @@ var _dev_ability_list: VBoxContainer
 var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
 var _crossroads_overlay: Control
+var _vignette_overlay: Control
+var _event_overlay: Control
 var _die_swap_offered_buttons: Array[Button] = []
 var _die_swap_pool_row: HBoxContainer
 var _die_swap_pool_buttons: Array[Button] = []
@@ -77,6 +79,10 @@ func _ready() -> void:
 		Engine.register_singleton("PowerManager", PowerManager)
 	if not Engine.has_singleton("CaseManager"):
 		Engine.register_singleton("CaseManager", CaseManager)
+	if not Engine.has_singleton("VignetteLibrary"):
+		Engine.register_singleton("VignetteLibrary", VignetteLibrary)
+	if not Engine.has_singleton("EventLibrary"):
+		Engine.register_singleton("EventLibrary", EventLibrary)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
@@ -907,6 +913,18 @@ func _setup_ui() -> void:
 	root.add_child(crossroads_overlay)
 	_crossroads_overlay = crossroads_overlay
 
+	# ── Vignette overlay ───────────────────────────────────────────────────────
+	var vignette_overlay_node = load("res://scripts/ui/vignette_overlay.gd").new()
+	vignette_overlay_node.visible = false
+	root.add_child(vignette_overlay_node)
+	_vignette_overlay = vignette_overlay_node
+
+	# ── Event overlay ──────────────────────────────────────────────────────────
+	var event_overlay_node = load("res://scripts/ui/event_overlay.gd").new()
+	event_overlay_node.visible = false
+	root.add_child(event_overlay_node)
+	_event_overlay = event_overlay_node
+
 	# ── Powers side panel (right side, always visible) ────────────────────────
 	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
 	powers_panel.anchor_left = 1.0
@@ -948,6 +966,7 @@ func _connect_signals() -> void:
 	_run_manager.show_rotation_offer.connect(_on_show_rotation_offer)
 	_run_manager.show_die_swap.connect(_on_show_die_swap)
 	_run_manager.show_crossroads.connect(_on_show_crossroads)
+	_run_manager.show_texture_beat.connect(_on_show_texture_beat)
 	if Engine.has_singleton("CaseManager"):
 		Engine.get_singleton("CaseManager").run_won.connect(_on_run_won)
 
@@ -1031,6 +1050,10 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_run_won_overlay.visible = false
 	if _crossroads_overlay:
 		_crossroads_overlay.visible = false
+	if _vignette_overlay:
+		_vignette_overlay.visible = false
+	if _event_overlay:
+		_event_overlay.visible = false
 	_action_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
@@ -1205,6 +1228,39 @@ func _on_crossroads_whetstone_pressed() -> void:
 	_crossroads_overlay.visible = false
 	_run_manager.handle_crossroads_whetstone()
 
+func _on_show_texture_beat(beat: Dictionary) -> void:
+	var beat_type: String = beat.get("type", "silent")
+	if beat_type == "vignette":
+		var vignette_data = beat.get("vignette", null)
+		if vignette_data == null:
+			_run_manager.handle_texture_done()
+			return
+		_vignette_overlay.call("setup", vignette_data)
+		_vignette_overlay.visible = true
+		_vignette_overlay.dismissed.connect(_on_vignette_dismissed, CONNECT_ONE_SHOT)
+	elif beat_type == "event":
+		var event_data = beat.get("event", null)
+		if event_data == null:
+			_run_manager.handle_texture_done()
+			return
+		_event_overlay.call("setup", event_data)
+		_event_overlay.visible = true
+		_event_overlay.resolved.connect(_on_event_resolved, CONNECT_ONE_SHOT)
+	else:
+		# Should not happen (silent is handled in RunManager), but guard anyway
+		_run_manager.handle_texture_done()
+
+func _on_vignette_dismissed() -> void:
+	_vignette_overlay.visible = false
+	_refresh_ui()
+	_run_manager.handle_texture_done()
+
+func _on_event_resolved(_option: String) -> void:
+	_event_overlay.visible = false
+	_refresh_ui()
+	_refresh_powers_panel()
+	_run_manager.handle_texture_done()
+
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
 
@@ -1296,6 +1352,7 @@ func _on_dev_win_series_pressed() -> void:
 		safety += 1
 		_round_manager.dev_win_match()
 		_run_manager.dev_skip_rotation()
+		_run_manager.dev_skip_texture()
 		_run_manager.dev_skip_crossroads()
 
 func _on_play_again_pressed() -> void:
