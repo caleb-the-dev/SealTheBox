@@ -34,7 +34,7 @@ var location_index: int:
 	get: return act
 
 func reset_run() -> void:
-	hp = 6
+	hp = MAX_HP
 	owned_powers = []
 	pending_threshold_bonus = 0
 	power_counters = {}
