@@ -24,8 +24,7 @@ var _discard_label: Label
 var _current_phase: String = ""
 var _match_label: Label
 var _act_label: Label
-var _location_label: Label
-var _case_label: Label
+var _tier_label: Label
 var _run_won_overlay: Control
 var _run_won_title_label: Label
 var _dev_box_label: Label
@@ -53,13 +52,6 @@ var _dev_ability_list: VBoxContainer
 var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
 var _crossroads_overlay: Control
-var _vignette_overlay: Control
-var _vignette_text_label: Label
-var _event_overlay: Control
-var _event_prompt_label: Label
-var _event_btn_a: Button
-var _event_btn_b: Button
-var _current_event = null
 var _die_swap_offered_buttons: Array[Button] = []
 var _die_swap_pool_row: HBoxContainer
 var _die_swap_pool_buttons: Array[Button] = []
@@ -86,12 +78,6 @@ func _ready() -> void:
 		Engine.register_singleton("PowerManager", PowerManager)
 	if not Engine.has_singleton("CaseManager"):
 		Engine.register_singleton("CaseManager", CaseManager)
-	if not Engine.has_singleton("VignetteLibrary"):
-		Engine.register_singleton("VignetteLibrary", VignetteLibrary)
-	if not Engine.has_singleton("EventLibrary"):
-		Engine.register_singleton("EventLibrary", EventLibrary)
-	if not Engine.has_singleton("EntityLibrary"):
-		Engine.register_singleton("EntityLibrary", EntityLibrary)
 	_round_manager = RoundManager.new()
 	add_child(_round_manager)
 	_run_manager = RunManager.new()
@@ -183,15 +169,10 @@ func _setup_ui() -> void:
 	_act_label.modulate = Color(0.75, 0.75, 0.75)
 	top_left_vbox.add_child(_act_label)
 
-	_location_label = Label.new()
-	_location_label.add_theme_font_size_override("font_size", 13)
-	_location_label.modulate = Color(0.75, 0.75, 0.75)
-	top_left_vbox.add_child(_location_label)
-
-	_case_label = Label.new()
-	_case_label.add_theme_font_size_override("font_size", 11)
-	_case_label.modulate = Color(0.55, 0.55, 0.55)
-	top_left_vbox.add_child(_case_label)
+	_tier_label = Label.new()
+	_tier_label.add_theme_font_size_override("font_size", 13)
+	_tier_label.modulate = Color(0.75, 0.75, 0.75)
+	top_left_vbox.add_child(_tier_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -935,76 +916,6 @@ func _setup_ui() -> void:
 	root.add_child(crossroads_overlay)
 	_crossroads_overlay = crossroads_overlay
 
-	# ── Vignette overlay ───────────────────────────────────────────────────────
-	var vig_overlay = Control.new()
-	vig_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vig_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	vig_overlay.visible = false
-	var vig_bg = ColorRect.new()
-	vig_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vig_bg.color = Color(0.0, 0.0, 0.0, 1.0)
-	vig_overlay.add_child(vig_bg)
-	var vig_center = VBoxContainer.new()
-	vig_center.anchor_left = 0.2
-	vig_center.anchor_right = 0.8
-	vig_center.anchor_top = 0.4
-	vig_center.anchor_bottom = 0.7
-	vig_center.add_theme_constant_override("separation", 24)
-	vig_overlay.add_child(vig_center)
-	_vignette_text_label = Label.new()
-	_vignette_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_vignette_text_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_vignette_text_label.add_theme_font_size_override("font_size", 24)
-	_vignette_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vig_center.add_child(_vignette_text_label)
-	var vig_hint = Label.new()
-	vig_hint.text = "[ click anywhere to continue ]"
-	vig_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vig_hint.add_theme_font_size_override("font_size", 14)
-	vig_hint.modulate = Color(0.6, 0.6, 0.6)
-	vig_center.add_child(vig_hint)
-	vig_overlay.gui_input.connect(_on_vignette_gui_input)
-	root.add_child(vig_overlay)
-	_vignette_overlay = vig_overlay
-
-	# ── Event overlay ──────────────────────────────────────────────────────────
-	var evt_overlay = Control.new()
-	evt_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	evt_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	evt_overlay.visible = false
-	var evt_bg = ColorRect.new()
-	evt_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	evt_bg.color = Color(0.0, 0.0, 0.0, 1.0)
-	evt_overlay.add_child(evt_bg)
-	var evt_center = VBoxContainer.new()
-	evt_center.anchor_left = 0.2
-	evt_center.anchor_right = 0.8
-	evt_center.anchor_top = 0.3
-	evt_center.anchor_bottom = 0.75
-	evt_center.add_theme_constant_override("separation", 32)
-	evt_overlay.add_child(evt_center)
-	_event_prompt_label = Label.new()
-	_event_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_event_prompt_label.add_theme_font_size_override("font_size", 22)
-	_event_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	evt_center.add_child(_event_prompt_label)
-	var evt_btn_row = HBoxContainer.new()
-	evt_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	evt_btn_row.add_theme_constant_override("separation", 32)
-	evt_center.add_child(evt_btn_row)
-	_event_btn_a = Button.new()
-	_event_btn_a.custom_minimum_size = Vector2(160, 64)
-	_event_btn_a.add_theme_font_size_override("font_size", 18)
-	_event_btn_a.pressed.connect(_on_event_option_a_pressed)
-	evt_btn_row.add_child(_event_btn_a)
-	_event_btn_b = Button.new()
-	_event_btn_b.custom_minimum_size = Vector2(160, 64)
-	_event_btn_b.add_theme_font_size_override("font_size", 18)
-	_event_btn_b.pressed.connect(_on_event_option_b_pressed)
-	evt_btn_row.add_child(_event_btn_b)
-	root.add_child(evt_overlay)
-	_event_overlay = evt_overlay
-
 	# ── Powers side panel (right side, always visible) ────────────────────────
 	var powers_panel = _make_rounded_panel(12, Color(0.18, 0.18, 0.18, 0.92), 10, 8)
 	powers_panel.anchor_left = 1.0
@@ -1046,7 +957,6 @@ func _connect_signals() -> void:
 	_run_manager.show_rotation_offer.connect(_on_show_rotation_offer)
 	_run_manager.show_die_swap.connect(_on_show_die_swap)
 	_run_manager.show_crossroads.connect(_on_show_crossroads)
-	_run_manager.show_texture_beat.connect(_on_show_texture_beat)
 	if Engine.has_singleton("CaseManager"):
 		Engine.get_singleton("CaseManager").run_won.connect(_on_run_won)
 
@@ -1130,10 +1040,6 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_run_won_overlay.visible = false
 	if _crossroads_overlay:
 		_crossroads_overlay.visible = false
-	if _vignette_overlay:
-		_vignette_overlay.visible = false
-	if _event_overlay:
-		_event_overlay.visible = false
 	_action_button.disabled = false
 	for btn in _dice_buttons + _ability_buttons:
 		btn.disabled = false
@@ -1308,55 +1214,6 @@ func _on_crossroads_whetstone_pressed() -> void:
 	_crossroads_overlay.visible = false
 	_run_manager.handle_crossroads_whetstone()
 
-func _on_show_texture_beat(beat: Dictionary) -> void:
-	var beat_type: String = beat.get("type", "silent")
-	if beat_type == "vignette":
-		var vignette_data = beat.get("vignette", null)
-		if vignette_data == null:
-			_run_manager.handle_texture_done()
-			return
-		_vignette_text_label.text = vignette_data.text
-		_vignette_overlay.visible = true
-	elif beat_type == "event":
-		var event_data = beat.get("event", null)
-		if event_data == null:
-			_run_manager.handle_texture_done()
-			return
-		_current_event = event_data
-		_event_prompt_label.text = event_data.prompt
-		_event_btn_a.text = event_data.option_a_label
-		_event_btn_b.text = event_data.option_b_label
-		_event_overlay.visible = true
-	else:
-		# Should not happen (silent is handled in RunManager), but guard anyway
-		_run_manager.handle_texture_done()
-
-func _on_vignette_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_on_vignette_dismissed()
-
-func _on_vignette_dismissed() -> void:
-	_vignette_overlay.visible = false
-	_refresh_ui()
-	_run_manager.handle_texture_done()
-
-func _on_event_option_a_pressed() -> void:
-	if _current_event:
-		load("res://scripts/ui/event_overlay.gd").apply_effects(_current_event.option_a_effect)
-	_on_event_resolved("a")
-
-func _on_event_option_b_pressed() -> void:
-	if _current_event:
-		load("res://scripts/ui/event_overlay.gd").apply_effects(_current_event.option_b_effect)
-	_on_event_resolved("b")
-
-func _on_event_resolved(_option: String) -> void:
-	_current_event = null
-	_event_overlay.visible = false
-	_refresh_ui()
-	_refresh_powers_panel()
-	_run_manager.handle_texture_done()
-
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
 
@@ -1452,7 +1309,6 @@ func _on_dev_win_series_pressed() -> void:
 		safety += 1
 		_round_manager.dev_win_match()
 		_run_manager.dev_skip_rotation()
-		_run_manager.dev_skip_texture()
 		_run_manager.dev_skip_crossroads()
 
 func _on_play_again_pressed() -> void:
@@ -1460,20 +1316,7 @@ func _on_play_again_pressed() -> void:
 
 func _on_run_won() -> void:
 	if _run_won_title_label:
-		var entity_name := "the entity"
-		var source_name := ""
-		if Engine.has_singleton("EntityLibrary") and not GameState.entity_id.is_empty():
-			var entity = Engine.get_singleton("EntityLibrary").get_entity(GameState.entity_id)
-			if entity:
-				entity_name = entity.display_name
-		if Engine.has_singleton("BoxLibrary") and not GameState.entity_id.is_empty():
-			var source_box = Engine.get_singleton("BoxLibrary").get_source(GameState.entity_id)
-			if source_box:
-				source_name = source_box.name
-		if source_name.is_empty():
-			_run_won_title_label.text = "%s is sealed" % entity_name
-		else:
-			_run_won_title_label.text = "%s is sealed at %s" % [entity_name, source_name]
+		_run_won_title_label.text = "sealed"
 	_run_won_overlay.visible = true
 
 func _on_run_won_new_case_pressed() -> void:
@@ -1646,15 +1489,11 @@ func _refresh_ui() -> void:
 			_stop_hp_pulse()
 	_match_label.text = "Match %d / 27" % _run_manager.match_number
 	_act_label.text = "Act %d" % GameState.act
-	if Engine.has_singleton("CaseManager"):
-		_location_label.text = Engine.get_singleton("CaseManager").get_location_name(GameState.act)
+	if GameState.current_box:
+		var tier := GameState.current_box.tier
+		_tier_label.text = "BOSS" if tier == "boss" else tier
 	else:
-		_location_label.text = "Location %d" % GameState.location_index
-	if Engine.has_singleton("EntityLibrary") and not GameState.entity_id.is_empty():
-		var entity = Engine.get_singleton("EntityLibrary").get_entity(GameState.entity_id)
-		_case_label.text = "Case: %s" % entity.display_name if entity else ""
-	else:
-		_case_label.text = ""
+		_tier_label.text = ""
 	if GameState.current_box:
 		var remaining_sum := 0
 		for t in GameState.tabs:

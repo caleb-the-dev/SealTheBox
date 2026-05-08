@@ -6,7 +6,6 @@ signal show_power_offer(powers: Array)
 signal show_rotation_offer(options: Array)
 signal show_die_swap(offered_dice: Array)
 signal show_crossroads(after_match: int)
-signal show_texture_beat(beat: Dictionary)
 signal run_over(match_number: int)
 
 const DIE_SWAP_FACES: Array[int] = [2, 4, 8, 10, 12]
@@ -70,23 +69,11 @@ func handle_rotation_pick(chosen: AbilityData) -> void:
 	_pending_rotation_options = []
 	gs.reset_run_end()
 	var completed := match_number - 1   # match_number was already incremented
-	# Crossroads takes priority over texture — skip texture on crossroads matches.
 	# Crossroads fires after match 9 (next match is 10) and match 21 (next is 22).
 	if completed == 9 or completed == 21:
 		show_crossroads.emit(completed)
 	else:
-		_do_texture_beat()
-
-func _do_texture_beat() -> void:
-	var beat := TextureRoller.roll("default")
-	if beat["type"] == "silent":
 		_start_next_match()
-	else:
-		show_texture_beat.emit(beat)
-		# match.gd will call handle_texture_done() after the overlay is dismissed
-
-func handle_texture_done() -> void:
-	_start_next_match()
 
 func handle_die_swap_confirm(offered_die: Die, pool_die: Die) -> void:
 	var gs = Engine.get_singleton("GameState")
@@ -118,9 +105,6 @@ func dev_skip_crossroads() -> void:
 func dev_skip_rotation() -> void:
 	if _pending_rotation_options.size() > 0:
 		handle_rotation_pick(_pending_rotation_options[0])
-
-func dev_skip_texture() -> void:
-	handle_texture_done()
 
 func _start_next_match() -> void:
 	var gs = Engine.get_singleton("GameState")

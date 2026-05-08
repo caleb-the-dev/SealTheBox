@@ -41,7 +41,14 @@ func get_ordered() -> Array:
     return _order.map(func(id): return _boxes[id])
 
 func get_by_tier(tier: String) -> Array:
-    return _boxes.values().filter(func(b): return b.tier == tier and b.source_for.is_empty())
+    return _boxes.values().filter(func(b): return b.tier == tier)
+
+func get_random_source() -> BoxDefinition:
+    var boss_boxes := get_by_tier("boss")
+    if boss_boxes.is_empty():
+        push_error("BoxLibrary: no boss-tier boxes found")
+        return null
+    return boss_boxes[randi() % boss_boxes.size()]
 
 func get_source(entity_id: String) -> BoxDefinition:
     if entity_id.is_empty():

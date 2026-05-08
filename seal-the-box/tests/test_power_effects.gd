@@ -227,7 +227,7 @@ func _test_box_shutter_no_power_no_change(gs: Node, pm: Node) -> void:
 
 func _test_get_random_unowned_excludes_owned(gs: Node, _pm: Node) -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	# Own all 8 powers except box_shutter
+	# Own all 11 powers except box_shutter
 	gs.owned_powers = [
 		power_lib.get_power("lighter_box"),
 		power_lib.get_power("eager"),
@@ -236,6 +236,9 @@ func _test_get_random_unowned_excludes_owned(gs: Node, _pm: Node) -> void:
 		power_lib.get_power("phoenix_down"),
 		power_lib.get_power("coffee_break"),
 		power_lib.get_power("survivor"),
+		power_lib.get_power("tax_collector"),
+		power_lib.get_power("diabolic_pact"),
+		power_lib.get_power("tab_counter"),
 	]
 	for _i in 10:
 		var result = power_lib.get_random_unowned(gs.owned_powers)
@@ -258,7 +261,7 @@ func _test_get_random_unowned_multiple_returns_up_to_3(gs: Node, _pm: Node) -> v
 	var result = power_lib.get_random_unowned_multiple(gs.owned_powers, 3)
 	assert(result is Array, "get_random_unowned_multiple: should return an Array")
 	assert(result.size() == 3,
-		"with 8 powers and 0 owned, should return 3, got %d" % result.size())
+		"with 11 powers and 0 owned, should return 3, got %d" % result.size())
 
 func _test_get_random_unowned_multiple_respects_count(gs: Node, _pm: Node) -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
@@ -269,7 +272,7 @@ func _test_get_random_unowned_multiple_respects_count(gs: Node, _pm: Node) -> vo
 
 func _test_get_random_unowned_multiple_returns_fewer_when_only_1_unowned(gs: Node, _pm: Node) -> void:
 	var power_lib = Engine.get_singleton("PowerLibrary")
-	# Own 7 of 8, leaving only box_shutter unowned
+	# Own 10 of 11, leaving only box_shutter unowned
 	gs.owned_powers = [
 		power_lib.get_power("lighter_box"),
 		power_lib.get_power("eager"),
@@ -278,6 +281,9 @@ func _test_get_random_unowned_multiple_returns_fewer_when_only_1_unowned(gs: Nod
 		power_lib.get_power("phoenix_down"),
 		power_lib.get_power("coffee_break"),
 		power_lib.get_power("survivor"),
+		power_lib.get_power("tax_collector"),
+		power_lib.get_power("diabolic_pact"),
+		power_lib.get_power("tab_counter"),
 	]
 	var result = power_lib.get_random_unowned_multiple(gs.owned_powers, 3)
 	assert(result.size() == 1,

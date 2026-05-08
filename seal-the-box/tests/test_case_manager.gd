@@ -13,12 +13,6 @@ func _init() -> void:
 	box_lib._ready()
 	Engine.register_singleton("BoxLibrary", box_lib)
 
-	var entity_lib = load("res://scripts/globals/entity_library.gd").new()
-	entity_lib.name = "EntityLibrary"
-	get_root().add_child(entity_lib)
-	entity_lib._ready()
-	Engine.register_singleton("EntityLibrary", entity_lib)
-
 	var gs = load("res://scripts/globals/game_state.gd").new()
 	gs.name = "GameState"
 	get_root().add_child(gs)
@@ -31,18 +25,18 @@ func _init() -> void:
 
 	_test_reset_run_builds_27_boxes(cm)
 	_test_act_boundaries_correct(cm)
-	_test_all_act1_boxes_are_easy(cm)
-	_test_all_act2_boxes_are_medium(cm)
-	_test_all_act3_boxes_are_hard(cm)
+	_test_matches_1_to_8_are_easy(cm)
+	_test_match_9_is_boss(cm)
+	_test_matches_10_to_20_are_medium(cm)
+	_test_match_21_is_boss(cm)
+	_test_matches_22_to_26_are_hard(cm)
+	_test_match_27_is_boss(cm)
+	_test_boss_matches_are_all_different(cm)
 	_test_get_act_for_match(cm)
 	_test_case_match_index_increments(gs)
 	_test_run_won_fires_on_match_27(cm, gs)
 	_test_run_won_does_not_fire_before_match_27(cm)
 	_test_reset_run_clears_run_won_and_rerolls(cm, gs)
-	_test_match_27_is_source_box_for_entity(cm, gs, box_lib)
-	_test_matches_22_to_26_are_never_source_boxes(cm)
-	_test_each_entity_has_exactly_one_source(box_lib, entity_lib)
-	_test_run_won_overlay_text_includes_source_box_name(gs, box_lib, entity_lib)
 	print("All CaseManager tests passed!")
 	quit()
 
@@ -63,23 +57,61 @@ func _test_act_boundaries_correct(cm: Node) -> void:
 	assert(cm.get_act_for_match(22) == 3, "match 22 should be act 3")
 	assert(cm.get_act_for_match(27) == 3, "match 27 should be act 3")
 
-func _test_all_act1_boxes_are_easy(cm: Node) -> void:
+func _test_matches_1_to_8_are_easy(cm: Node) -> void:
 	cm.reset_run()
-	for i in range(1, 10):
+	for i in range(1, 9):
 		var box = cm.get_box_for_match(i)
-		assert(box.tier == "easy", "match %d (act 1) should be easy tier, got '%s'" % [i, box.tier])
+		assert(box.tier == "easy", "match %d should be easy tier, got '%s'" % [i, box.tier])
 
-func _test_all_act2_boxes_are_medium(cm: Node) -> void:
-	cm.reset_run()
-	for i in range(10, 22):
-		var box = cm.get_box_for_match(i)
-		assert(box.tier == "medium", "match %d (act 2) should be medium tier, got '%s'" % [i, box.tier])
+func _test_match_9_is_boss(cm: Node) -> void:
+	# Run several resets to confirm match 9 is always boss tier
+	for _i in 5:
+		cm.reset_run()
+		var box = cm.get_box_for_match(9)
+		assert(box != null, "match 9 should return a box")
+		assert(box.tier == "boss", "match 9 should be boss tier, got '%s'" % box.tier)
 
-func _test_all_act3_boxes_are_hard(cm: Node) -> void:
+func _test_matches_10_to_20_are_medium(cm: Node) -> void:
 	cm.reset_run()
-	for i in range(22, 28):
+	for i in range(10, 21):
 		var box = cm.get_box_for_match(i)
-		assert(box.tier == "hard", "match %d (act 3) should be hard tier, got '%s'" % [i, box.tier])
+		assert(box.tier == "medium", "match %d should be medium tier, got '%s'" % [i, box.tier])
+
+func _test_match_21_is_boss(cm: Node) -> void:
+	for _i in 5:
+		cm.reset_run()
+		var box = cm.get_box_for_match(21)
+		assert(box != null, "match 21 should return a box")
+		assert(box.tier == "boss", "match 21 should be boss tier, got '%s'" % box.tier)
+
+func _test_matches_22_to_26_are_hard(cm: Node) -> void:
+	cm.reset_run()
+	for i in range(22, 27):
+		var box = cm.get_box_for_match(i)
+		assert(box.tier == "hard", "match %d should be hard tier, got '%s'" % [i, box.tier])
+
+func _test_match_27_is_boss(cm: Node) -> void:
+	for _i in 5:
+		cm.reset_run()
+		var box = cm.get_box_for_match(27)
+		assert(box != null, "match 27 should return a box")
+		assert(box.tier == "boss", "match 27 should be boss tier, got '%s'" % box.tier)
+
+func _test_boss_matches_are_all_different(cm: Node) -> void:
+	# Run several resets and confirm the 3 boss matches (9, 21, 27) are always different boxes
+	for _i in 5:
+		cm.reset_run()
+		var b9  = cm.get_box_for_match(9)
+		var b21 = cm.get_box_for_match(21)
+		var b27 = cm.get_box_for_match(27)
+		assert(b9 != null and b21 != null and b27 != null,
+			"all three boss matches should return valid boxes")
+		assert(b9.id != b21.id,
+			"boss match 9 (%s) and 21 (%s) should be different boxes" % [b9.id, b21.id])
+		assert(b9.id != b27.id,
+			"boss match 9 (%s) and 27 (%s) should be different boxes" % [b9.id, b27.id])
+		assert(b21.id != b27.id,
+			"boss match 21 (%s) and 27 (%s) should be different boxes" % [b21.id, b27.id])
 
 func _test_get_act_for_match(cm: Node) -> void:
 	for i in range(1, 10):
@@ -127,60 +159,3 @@ func _test_reset_run_clears_run_won_and_rerolls(cm: Node, gs: Node) -> void:
 	var box1 = cm.get_box_for_match(1)
 	assert(box1 != null, "after reset_run, CaseManager should have a valid box for match 1")
 	assert(box1.tier == "easy", "first box after reset should be easy tier")
-
-func _test_match_27_is_source_box_for_entity(cm: Node, gs: Node, box_lib: Node) -> void:
-	# Run several resets and confirm match 27 always matches the entity's Source box
-	for _i in 5:
-		gs.reset_run()
-		cm.reset_run()
-		var entity_id: String = gs.entity_id
-		assert(not entity_id.is_empty(), "entity_id should be set after reset_run")
-		var expected_source: BoxDefinition = box_lib.get_source(entity_id)
-		assert(expected_source != null, "BoxLibrary.get_source('%s') should return a box" % entity_id)
-		var match27: BoxDefinition = cm.get_box_for_match(27)
-		assert(match27 != null, "match 27 should return a valid box")
-		assert(match27.id == expected_source.id,
-			"match 27 id '%s' should equal Source box id '%s' for entity '%s'" \
-			% [match27.id, expected_source.id, entity_id])
-
-func _test_matches_22_to_26_are_never_source_boxes(cm: Node) -> void:
-	# Run several resets and verify matches 22–26 never have a Source box
-	for _i in 5:
-		cm.reset_run()
-		for match_idx in range(22, 27):
-			var box: BoxDefinition = cm.get_box_for_match(match_idx)
-			assert(box != null, "match %d should return a valid box" % match_idx)
-			assert(box.source_for.is_empty(),
-				"match %d should not be a Source box, got '%s' (source_for='%s')" \
-				% [match_idx, box.id, box.source_for])
-
-func _test_each_entity_has_exactly_one_source(box_lib: Node, entity_lib: Node) -> void:
-	var entities = entity_lib.get_all()
-	assert(entities.size() > 0, "EntityLibrary should have at least one entity")
-	for entity in entities:
-		var source = box_lib.get_source(entity.id)
-		assert(source != null,
-			"Entity '%s' should have exactly one Source box in BoxLibrary" % entity.id)
-		assert(source.source_for == entity.id,
-			"Source box source_for '%s' should match entity id '%s'" % [source.source_for, entity.id])
-	# Also confirm non-entity source_for values don't exist
-	var all_sources = box_lib.get_all().filter(func(b): return not b.source_for.is_empty())
-	assert(all_sources.size() == entities.size(),
-		"Number of Source boxes (%d) should equal number of entities (%d)" \
-		% [all_sources.size(), entities.size()])
-
-func _test_run_won_overlay_text_includes_source_box_name(gs: Node, box_lib: Node, entity_lib: Node) -> void:
-	# Simulate the logic used in _on_run_won() and verify the composed text
-	var entities = entity_lib.get_all()
-	assert(entities.size() > 0, "EntityLibrary should have entities for overlay text test")
-	for entity in entities:
-		gs.entity_id = entity.id
-		var entity_name: String = entity.display_name
-		var source_box: BoxDefinition = box_lib.get_source(entity.id)
-		assert(source_box != null, "Source box should exist for entity '%s'" % entity.id)
-		var expected_text: String = "%s is sealed at %s" % [entity_name, source_box.name]
-		# Verify the text format is correct (non-empty and contains the source name)
-		assert(expected_text.contains(source_box.name),
-			"Overlay text should include Source box name '%s'" % source_box.name)
-		assert(expected_text.contains(entity_name),
-			"Overlay text should include entity display_name '%s'" % entity_name)

@@ -62,10 +62,10 @@ seal-the-box/
 **Globals / Autoloads:**
 - `GameState` — current run state (HP, round, tabs, dice pool, ability hand, current box, case_match_index, run_won, act)
 - `AbilityLibrary` — all ability definitions indexed by id
-- `BoxLibrary` — all box definitions indexed by id; get_ordered() returns CSV row order; get_by_tier(tier) filters by "easy"/"medium"/"hard"
+- `BoxLibrary` — all box definitions indexed by id; get_ordered() returns CSV row order; get_by_tier(tier) filters by tier string (easy/medium/hard/boss); get_random_source() returns a random boss-tier box
 - `CaseManager` — owns the 27-match run sequence; reset_run() builds the list; get_box_for_match(idx) and get_act_for_match(idx) expose it; emits run_won signal
 
-**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player uses free one-time abilities → player assigns dice to seal tabs → check win/lose. A **run** is a 27-match Case (9 easy / 12 medium / 6 hard) orchestrated by `CaseManager`; boxes are drawn randomly by tier each match. Win by sealing match 27; lose by reaching HP = 0.
+**Match loop:** `RoundManager` orchestrates each round: roll dice pool → player uses free one-time abilities → player assigns dice to seal tabs → check win/lose. A **run** is a 27-match Case orchestrated by `CaseManager`; structure: matches 1–8 easy, match 9 boss, matches 10–20 medium, match 21 boss, matches 22–26 hard, match 27 boss. Win by sealing match 27; lose by reaching HP = 0.
 
 **Win condition:** `TabBoard.check_win(threshold)` — remaining tab sum ≤ threshold (not sealed sum ≥ threshold).
 
@@ -95,12 +95,10 @@ seal-the-box/
 
 - **A run is a Case.** The player tracks a single dark entity across three locations and seals 27 of its manifestations on the way to the Source.
 - **Length:** 27 matches per run, fixed. Acts of 9 / 12 / 6 (poetics nod — short setup, long middle, short climax). Total play time ~25–35 minutes for a winning run.
-- **Win condition:** seal match 27 (the Source). Lose condition: HP = 0 at any point.
+- **Win condition:** seal match 27 (the Source boss). Lose condition: HP = 0 at any point.
 - **No branching paths.** Sequence is linear; variety comes from cadence and content, not navigation.
-- **Within-act cadence:** between matches, draw 50% silent / 30% vignette / 20% small event. Math game first; texture appears, doesn't dominate.
 - **Between-act crossroads:** after match 9 and match 21, player picks Rest (+2 HP) or Whetstone (swap one die). The only mid-run die-swap path.
-- **Box tiers:** each act draws from a difficulty tier — Act 1 easy, Act 2 medium, Act 3 hard. Match 27 is always a Source box themed to the run's entity.
-- **Entity:** at run start, randomly pick Diabolic / Cosmic / Ethereal. The entity controls flavor only — vignette/event deck, location names, Source skin. No mechanical asymmetry yet (reserved for future dice-vs-entity work).
+- **Box tiers:** 1–8 easy, match 9 boss, 10–20 medium, match 21 boss, 22–26 hard, match 27 boss. Boss pool = 3 source boxes shuffled per run.
 - **Theme:** dark, otherworldly, sparse. The unseen player-character is an exorcist-like figure traveling to seal what shouldn't be.
 - **No meta-progression yet.** Both wins and losses fully reset.
 
@@ -124,11 +122,11 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 
 **Working (committed to master):**
 - Full single-match loop playable end-to-end
-- **27-match Case structure** (feature/case-shape): infinite loop replaced with 3-act run (Act 1: 9 easy-tier matches, Act 2: 12 medium-tier, Act 3: 6 hard-tier); win on match 27; run-won overlay ("the entity is sealed" + "Begin a new case" button); Crossroads fires after match 9 and match 21: Rest (+2 HP, capped at MAX_HP=6) or Whetstone (one die swap). Periodic die swap removed.
-- BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv (columns: id, name, tabs, win_threshold, tier); BoxLibrary.get_by_tier(tier) added; boxes assigned tiers: Classic/Low Evens=easy, Stairs/High Odds=medium, Compressed=hard
+- **27-match Case structure** with boss tier: matches 1–8 easy, match 9 boss, matches 10–20 medium, match 21 boss, matches 22–26 hard, match 27 boss. Boss pool = 3 source boxes (the Pact / the Veil / the Anchor) shuffled per run so each boss match gets a unique box. Win on match 27; run-won overlay ("sealed" + "Begin a new case" button). Crossroads fires after match 9 and match 21: Rest (+2 HP, capped at MAX_HP=6) or Whetstone (one die swap). Periodic die swap removed.
+- BoxDefinition Resource + BoxLibrary autoload parse data/boxes.csv (columns: id, name, tabs, win_threshold, tier, source_for); BoxLibrary.get_by_tier(tier) returns all boxes of that tier; boxes assigned tiers: Classic/Low Evens=easy, Stairs/High Odds=medium, Compressed=hard, source_devil/source_cosmic/source_ghost=boss; get_random_source() returns a random boss-tier box
 - CaseManager autoload (scripts/run/case_manager.gd): builds 27-match list on reset_run(); exposes get_box_for_match(idx) and get_act_for_match(idx); emits run_won signal via notify_run_won()
-- GameState: case_match_index (1..27, synced by RunManager), run_won (bool), act (derived property: 1/2/3), location_index (same as act for now), entity_id (String set by CaseManager.reset_run()); all reset by reset_run()
-- Top bar: "Match N / 27", "Act N", entity-themed location name (e.g. "sulfur manor"), small "Case: [entity display_name]" label
+- GameState: case_match_index (1..27, synced by RunManager), run_won (bool), act (derived property: 1/2/3), location_index (same as act for now); all reset by reset_run()
+- Top bar: "Match N / 27", "Act N", tier label ("easy"/"medium"/"hard"/"BOSS" based on current box tier)
 - win_threshold is explicit per-box in CSV (Classic 20, Low Evens 17, High Odds 17); round_limit = ceili(tab_sum/15)+1 (all boxes: 4 rounds before overtime)
 - Abilities have charges; 3 fixed slots rotate after every match — slot 1 discarded, slots shift, player picks 1 of 3 new abilities into slot 3; run starts with 1 random ability in slot 3; rolling dice is free (no AP)
 - 14 wired abilities in rotation pool: Reroll (2), Empower (3), Weaken (3), Empower II (2), Weaken II (2), Reroll All (1), Auto-Seal Highest (1), Auto-Seal Lowest (2), Multiply x2 (1, no ceiling), Set to Max (2), Set to Min (3), Reroll Lucky (2), Reroll Unlucky (2), Drop Die (2)
@@ -142,14 +140,8 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - GameState: hp=6, MAX_HP=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], power_counters={}, pending_threshold_bonus=0
 - Dev menu (T key or DEV button): scrollable panels; "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu (all 11 powers), "Give Ability →" submenu (all 14 pool abilities, fills first empty slot or overwrites slot 3), "Switch Dice →" (mid-match die swap, no match transition), "Win Entire Series", "Restart Run" shortcuts for playtesting
 - UI: top bar (HP/Match N of 27/Act N/Location N); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates, counter display "Name X/Y" for counter powers); power offer overlay (3-card pick) + rotation overlay + run-over overlay + run-won overlay — all built in code in match.gd
-- Within-act texture system (feature/within-act-texture): between matches (excluding crossroads points), TextureRoller draws a beat — 50% silent (nothing shown), 30% vignette (one-line flavor text, click to dismiss), 20% event (prompt + two choices, mechanical effect). Beat fires AFTER rotation/power-offer beats, BEFORE crossroads check. Crossroads points (after match 9 and 21) skip texture.
-- VignetteData + EventData resources; VignetteLibrary + EventLibrary autoloads parse data/vignettes.csv and data/events.csv; get_pool(pool_id) returns all entries with that pool_id. 3 vignettes (v_fog, v_bell, v_cold) + 1 event (e_coin) in pool_id="default"; 2 vignettes + 1 event per entity (vig_diabolic/vig_cosmic/vig_ethereal and evt_diabolic/evt_cosmic/evt_ethereal).
-- Entity type system (feature/entity-types): three entity types (Diabolic / Cosmic / Ethereal) randomized per run. EntityData resource + EntityLibrary autoload parse data/entities.csv; each entity has display_name, 3 semicolon-separated location_names, vignette_pool_id, event_pool_id. CaseManager.reset_run() picks a random entity (EntityLibrary.get_random()) and stores id on GameState.entity_id. CaseManager.get_location_name(act) returns the entity's themed location name. TextureRoller reads entity's pool ids from GameState instead of hardcoded "default"; falls back to "default" if entity_id is empty. Run-won overlay shows "[display_name] is sealed" (e.g. "the devil is sealed").
-- Effect-string DSL parser (EventOverlay.apply_effects): parses semicolons; supports none, hp+N, hp-N (capped at MAX_HP / floored at 0; 0 does NOT immediately fire run-loss — detected on next match-end), charge_random+1 (+1 to random non-null below-max ability). Unknown effects push_error and skip.
-- VignetteOverlay + EventOverlay UI (built in code, MOUSE_FILTER_STOP, opaque black bg, instant show/hide). Signal chain: vignette → dismissed → RunManager.handle_texture_done(); event → resolved(option) → RunManager.handle_texture_done().
-- TextureRoller is a static-method class (no autoload needed). PROB_SILENT=0.50, PROB_VIGNETTE=0.30 constants for one-line tuning.
-- Source box system (feature/source-boxes): three themed Source boxes in data/boxes.csv — source_devil ("the Pact", tabs 1–9, threshold 18, diabolic), source_cosmic ("the Veil", tabs 2–10, threshold 20, cosmic), source_ghost ("the Anchor", tabs 1;3;5;6;7;8;9;11;13, threshold 22, ethereal). BoxDefinition.source_for field added; BoxLibrary.get_source(entity_id) returns the matching Source box; get_by_tier() now excludes Source boxes so they never appear in the regular tier draw. CaseManager.reset_run() forces match 27 = BoxLibrary.get_source(GameState.entity_id); matches 22–26 draw from regular hard-tier boxes only. Run-won overlay text updated to "[display_name] is sealed at [source_box_name]" (e.g. "the devil is sealed at the Pact").
-- Tests: test_run_manager.gd (46 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd (22 abilities) + test_case_manager.gd (14 tests) + test_crossroads.gd (8 tests) + test_texture_roller.gd (9 tests) + test_entity.gd (9 tests) pass headless
+- Source boxes in data/boxes.csv (tier=boss): source_devil ("the Pact", tabs 1–9, threshold 14), source_cosmic ("the Veil", tabs 2–10, threshold 15), source_ghost ("the Anchor", tabs 1;3;5;6;7;8;9;11;13, threshold 17). BoxDefinition.source_for field retained for reference; get_by_tier("boss") returns all three. Boss pool is shuffled each reset_run() so match 9 / 21 / 27 each receive a unique boss box.
+- Tests: test_run_manager.gd (46 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd (22 abilities) + test_case_manager.gd (15 tests) + test_crossroads.gd (8 tests) pass headless. test_entity.gd and test_texture_roller.gd replaced with stubs (systems removed).
 
 ## Git & GitHub
 
