@@ -14,6 +14,7 @@ signal show_power_offer(powers: Array)          # emitted only on critical wins;
 signal show_rotation_offer(options: Array)      # emitted after every match win (3 AbilityData options)
 signal show_die_swap(offered_dice: Array)       # emitted by handle_crossroads_whetstone() or dev Switch Dice; Array of Die options
 signal show_crossroads(after_match: int)        # emitted after matches 9 and 21; after_match is the just-completed match number
+signal show_texture_beat(beat: Dictionary)      # emitted when a non-silent texture beat is drawn; beat has "type"+"vignette" or "type"+"event"
 signal run_over(match_number: int)              # emitted when player loses (HP = 0) and no Phoenix Down
 ```
 
@@ -51,8 +52,12 @@ func handle_rotation_pick(chosen: AbilityData) -> void
     # Old slot 0 is discarded regardless of remaining charges.
     # Clears _pending_rotation_options, calls gs.reset_run_end().
     # var completed = match_number - 1 (match_number already post-incremented).
-    # If completed == 9 or 21: emits show_crossroads(completed) — crossroads must be resolved before next match.
-    # Otherwise: calls _start_next_match() directly.
+    # If completed == 9 or 21: emits show_crossroads(completed) — crossroads preempts texture.
+    # Otherwise: calls _do_texture_beat() — rolls the texture beat then either starts next match (silent) or emits show_texture_beat.
+
+func handle_texture_done() -> void
+    # Called by match.gd after the vignette or event overlay is dismissed/resolved.
+    # Calls _start_next_match() to begin the next match.
 
 func handle_die_swap_confirm(offered_die: Die, pool_die: Die) -> void
     # Replaces pool_die in GameState.dice_pool with offered_die. Then starts next match.
@@ -74,18 +79,43 @@ func dev_skip_rotation() -> void
 func dev_skip_crossroads() -> void
     # Dev tool: unconditionally calls handle_crossroads_rest() (auto-picks Rest).
     # Used by match.gd "Win Entire Series" loop to skip the crossroads overlay at act boundaries.
+
+func dev_skip_texture() -> void
+    # Dev tool: calls handle_texture_done() directly, skipping whatever overlay would show.
+    # Used by match.gd "Win Entire Series" loop — fires after dev_skip_rotation() in the fast-forward path.
 ```
 
 ## Box Selection
 Box selection is delegated to CaseManager. `_start_next_match()` calls `CaseManager.get_box_for_match(match_number)`. If `gs.run_won == true` (match 27 just won), `_start_next_match()` calls `CaseManager.notify_run_won()` instead of starting another match. `_boxes` is kept as a fallback Array but is always empty in normal play (CaseManager path covers all cases).
 
 ## Crossroads Timing
-After completing match 9 (end of Act 1) or match 21 (end of Act 2), `handle_rotation_pick()` emits `show_crossroads(completed)` instead of calling `_start_next_match()`. The player must pick Rest or Whetstone before the next match starts.
+After completing match 9 (end of Act 1) or match 21 (end of Act 2), `handle_rotation_pick()` emits `show_crossroads(completed)` instead of rolling a texture beat. The player must pick Rest or Whetstone before the next match starts. **Crossroads preempts texture** — these two matches never show a vignette or event.
 
 - **Rest** → `handle_crossroads_rest()` → HP +2 (capped at MAX_HP=6) → `_start_next_match()`
 - **Whetstone** → `handle_crossroads_whetstone()` → emits `show_die_swap` → player confirms/skips → `_start_next_match()` from die-swap handlers
 
 The periodic "die swap every 5 matches" was removed. `DIE_SWAP_FACES`, `show_die_swap`, `handle_die_swap_confirm()`, and `handle_die_swap_skip()` are kept because Whetstone reuses them.
+
+## Texture Beat Timing
+For all matches EXCEPT crossroads points (9 and 21), `handle_rotation_pick()` calls `_do_texture_beat()` instead of `_start_next_match()` directly.
+
+`_do_texture_beat()`:
+1. Calls `TextureRoller.roll("default")` → gets `{type: "silent"}`, `{type: "vignette", ...}`, or `{type: "event", ...}`
+2. Silent → calls `_start_next_match()` immediately
+3. Vignette or event → emits `show_texture_beat(beat)` → match.gd shows the overlay → player dismisses → match.gd calls `handle_texture_done()` → `_start_next_match()`
+
+Full beat flow (non-crossroads, non-silent):
+```
+handle_rotation_pick()
+  → _do_texture_beat()
+       → TextureRoller.roll("default") returns vignette or event
+       → show_texture_beat.emit(beat)
+            → match.gd shows VignetteOverlay or EventOverlay
+            → player clicks / chooses
+            → _on_vignette_dismissed() or _on_event_resolved()
+                 → _run_manager.handle_texture_done()
+                      → _start_next_match()
+```
 
 ## Match Win / Loss Flow
 ```
@@ -134,6 +164,8 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 - `AbilityLibrary` — used by _do_rotation_offer() to duplicate ability options
 - `PowerLibrary` — used by _do_power_offer() to get random unowned power
 - `PowerManager` — called in handle_match_won(true) for Box Shutter; in handle_power_offer_accepted() via add_power(); in handle_match_won() for apply_survivor(); in handle_match_lost() for try_phoenix_down()
+- `TextureRoller` — called in _do_texture_beat(); static class, no singleton needed
+- `VignetteLibrary` / `EventLibrary` — consulted indirectly via TextureRoller; must be registered singletons
 
 ## Gotchas
 - **`match_number` is incremented inside `handle_match_won()` BEFORE any signal fires.** By the time any listener sees match_number, it already reflects the upcoming match number.
@@ -144,6 +176,8 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 - **Signals emit synchronously in Godot 4.** By the time `handle_match_won()` returns for a threshold win with auto-rotation connected, the next match may already be mid-start.
 - **`dev_skip_rotation()` only works for threshold wins** via the dev loop — it auto-picks immediately after `dev_win_match()` fires. Critical wins (dev_critical_win) require manual interaction with the power offer and rotation overlays.
 - **`dev_skip_crossroads()` is unconditional** — it always calls `handle_crossroads_rest()`, which calls `_start_next_match()`. In the "Win Entire Series" loop this fires every iteration, but `_start_next_match()` is safe to call when no crossroads is pending (it just emits `next_match_ready` again, which the `_match_ended` guard in the loop catches).
+- **`dev_skip_texture()` must fire after `dev_skip_rotation()`** in the dev fast-forward loop. Order: `dev_win_match()` → `dev_skip_rotation()` → `dev_skip_texture()` → `dev_skip_crossroads()`. Omitting `dev_skip_texture()` stalls the run at a vignette/event that never resolves.
+- **Texture beat is silently skipped on crossroads matches** — `handle_rotation_pick()` checks `completed == 9 or 21` before calling `_do_texture_beat()`. No texture fires on those two transitions.
 - **PowerManager and PowerLibrary calls are guarded** with `Engine.has_singleton()` so tests that don't register these singletons still pass.
 - **Phoenix Down is consumed on use.** `try_phoenix_down()` removes one copy from `owned_powers`. The powers panel will reflect this immediately after the next `_refresh_powers_panel()` call.
 - **apply_survivor() fires on every win** — before the power offer branch. A player at HP=1 who wins a critical match gets the survivor heal AND then gets to pick a power.
@@ -151,6 +185,7 @@ var _pending_rotation_options: Array   # the 3 AbilityData duplicates offered to
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | feature/within-act-texture: added show_texture_beat signal; handle_rotation_pick() now calls _do_texture_beat() instead of _start_next_match() for non-crossroads matches. Added _do_texture_beat() (calls TextureRoller.roll; either starts next match silently or emits show_texture_beat), handle_texture_done() (called by match.gd after overlay dismissal → _start_next_match), dev_skip_texture() (dev loop fast-forward). Updated Crossroads Timing: crossroads preempts texture. Updated dependencies: TextureRoller, VignetteLibrary, EventLibrary. |
 | 2026-05-07 | feature/crossroads: added show_crossroads signal; handle_rotation_pick() now emits show_crossroads at completed==9 or 21 instead of the old periodic % 5 die swap. Added handle_crossroads_rest() (+2 HP capped at MAX_HP, then next match), handle_crossroads_whetstone() (emits show_die_swap, delegates _start_next_match to die-swap handlers), dev_skip_crossroads() (auto-Rest for dev loop). Periodic die swap removed. |
 | 2026-05-07 | feature/case-shape: start_run() now calls CaseManager.reset_run() and uses _start_next_match() (no more _boxes[0]). handle_match_won() now records completed_match, syncs gs.case_match_index, sets gs.run_won=true when completed_match==27. _start_next_match() checks gs.run_won — if true, calls CaseManager.notify_run_won() and returns instead of starting match 28; otherwise calls CaseManager.get_box_for_match(match_number). |
 | 2026-05-06 | handle_match_won(true) now calls PowerManager.on_critical_win() after apply_box_shutter() — Tax Collector hook. |

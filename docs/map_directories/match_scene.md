@@ -38,6 +38,8 @@ match.tscn  (Node3D, script: match.gd)
       _run_over_overlay          — hidden until run over (HP = 0); "Play Again" button → start_run()
       _run_won_overlay           — hidden until match 27 won; "the entity is sealed" + "Begin a new case" → start_run()
       _crossroads_overlay        — hidden until act boundary (after match 9 or 21); "Crossroads" + "Choose your path" + Rest/Whetstone buttons
+      _vignette_overlay          — hidden until a vignette beat fires; opaque black; one-line text; click anywhere to dismiss
+      _event_overlay             — hidden until an event beat fires; opaque black; prompt + two choice buttons; applies effects on pick
       dev_toggle (Button)        — "DEV" button, top-right corner
       _dev_overlay               — dev menu (see Dev Menu section)
       _dev_power_overlay         — Give Power submenu; populated dynamically on open
@@ -47,7 +49,7 @@ match.tscn  (Node3D, script: match.gd)
 
 ## Responsibilities
 - Instantiates and owns RoundManager and RunManager
-- Registers all 6 singletons (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager)
+- Registers all 8 singletons (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary)
 - Builds all UI in code (_setup_ui()) — no UI child nodes in the .tscn
 - Wires signals from both managers in _connect_signals()
 - Rebuilds tab buttons dynamically per match (_rebuild_tab_buttons()) since tab values vary by box
@@ -67,9 +69,26 @@ RunManager.show_power_offer     → _on_show_power_offer       (shows power offe
 RunManager.show_rotation_offer  → _on_show_rotation_offer    (shows rotation overlay with 3 picks)
 RunManager.show_die_swap        → _on_show_die_swap          (shows die swap overlay; also called directly in dev path)
 RunManager.show_crossroads      → _on_show_crossroads        (shows crossroads overlay; _after_match param intentionally unused for now)
+RunManager.show_texture_beat    → _on_show_texture_beat      (shows vignette or event overlay based on beat["type"])
 RunManager.run_over             → _on_run_over               (shows over overlay)
 CaseManager.run_won             → _on_run_won                (shows run_won_overlay — wired only if CaseManager singleton is registered)
 ```
+
+## Texture Beat Overlay Flow
+After every non-crossroads match win, following the rotation pick, RunManager rolls the texture beat:
+- **Silent** (50%): RunManager calls `_start_next_match()` directly — no overlay appears.
+- **Vignette** (30%): `_on_show_texture_beat(beat)` fires.
+  1. `_vignette_overlay.setup(vignette_data)` sets text
+  2. `_vignette_overlay.visible = true`
+  3. `dismissed` signal connected with `CONNECT_ONE_SHOT`
+  4. Player clicks anywhere → `_on_vignette_dismissed()` → hides overlay, `_refresh_ui()`, `_run_manager.handle_texture_done()` → next match starts
+- **Event** (20%): `_on_show_texture_beat(beat)` fires.
+  1. `_event_overlay.setup(event_data)` sets prompt and button labels
+  2. `_event_overlay.visible = true`
+  3. `resolved` signal connected with `CONNECT_ONE_SHOT`
+  4. Player clicks Option A or B → effects applied → `resolved("a"/"b")` emitted → `_on_event_resolved()` → hides overlay, `_refresh_ui()`, `_refresh_powers_panel()`, `_run_manager.handle_texture_done()` → next match starts
+
+Texture overlays are also force-hidden in `_on_next_match_ready()` as a safeguard.
 
 ## Power Offer Overlay Flow
 After every **critical win** (shut the box):
@@ -120,7 +139,7 @@ Open with T key or the "DEV" button (top-right corner). Full-screen opaque overl
 | Give Power → | Opens `_dev_power_overlay` with all 11 power buttons |
 | Give Ability → | Opens `_dev_ability_overlay` listing all 14 pool abilities; tapping one fills the first empty slot, or overwrites slot 3 if all are full |
 | Switch Dice → | Opens the die swap overlay mid-match in dev mode (see below) |
-| Win Entire Series | Loops threshold wins + auto-rotation + auto-crossroads (Rest); terminates at match 27 win (shows run_won_overlay); no power offers |
+| Win Entire Series | Loops threshold wins + auto-rotation + auto-texture-skip + auto-crossroads (Rest); terminates at match 27 win (shows run_won_overlay); no power offers |
 | Restart Run | `start_run()` — resets everything including owned powers |
 | Close [T] | Hides overlay |
 
@@ -135,10 +154,10 @@ Tab buttons are dynamic. `_rebuild_tab_buttons()` clears `_tab_row` children and
 
 ## Singleton Registration Pattern
 ```gdscript
-if not Engine.has_singleton("PowerLibrary"):
-    Engine.register_singleton("PowerLibrary", PowerLibrary)
+if not Engine.has_singleton("VignetteLibrary"):
+    Engine.register_singleton("VignetteLibrary", VignetteLibrary)
 ```
-Done in `_ready()` for all 6 autoloads (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager). Necessary because autoload scripts without `class_name` are not auto-registered as engine singletons — only those with `class_name` get that treatment. `Engine.get_singleton()` requires explicit registration in `_ready()` as a fallback.
+Done in `_ready()` for all 8 autoloads (AbilityLibrary, GameState, BoxLibrary, PowerLibrary, PowerManager, CaseManager, VignetteLibrary, EventLibrary). Necessary because autoload scripts without `class_name` are not auto-registered as engine singletons — only those with `class_name` get that treatment. `Engine.get_singleton()` requires explicit registration in `_ready()` as a fallback.
 
 ## Continue Button Flow
 `_continue_button` is hidden at match start. When `threshold_reached` fires:
@@ -185,7 +204,16 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 - **Tab display uses button.text.to_int()** to get tab values. Don't change button text formatting without updating `_refresh_tab_display()`.
 - **Run-won overlay exists.** `_run_won_overlay` shows after match 27 is won. CaseManager.run_won signal fires AFTER the rotation pick (not immediately on match win) — the normal rotation/power-offer flow completes first, then `_start_next_match()` detects `gs.run_won==true` and calls `notify_run_won()`. The overlay is hidden in `_on_next_match_ready()` (for "Begin a new case" flow).
 - **Dev "Win Entire Series"** calls `dev_win_match()`, `dev_skip_rotation()`, and `dev_skip_crossroads()` in a loop. Always produces threshold wins (not critical), so the power offer overlay never appears. `dev_skip_crossroads()` auto-picks Rest unconditionally — it fires on every iteration (not only at boundaries), but this is safe since `handle_crossroads_rest()` calling `_start_next_match()` when no crossroads is pending is harmless.
-- **CaseManager must be registered before start_run().** It has no `class_name`, so it's not auto-registered. `_ready()` now explicitly registers it alongside the other 5 autoloads. Omitting this causes a modulo-by-zero error in `_start_next_match()` when the `_boxes` fallback array is empty.
+- **CaseManager must be registered before start_run().** It has no `class_name`, so it's not auto-registered. `_ready()` now explicitly registers it alongside the other autoloads. Omitting this causes a modulo-by-zero error in `_start_next_match()` when the `_boxes` fallback array is empty.
+- **VignetteLibrary and EventLibrary must also be registered** in `_ready()`. Without them, TextureRoller falls back to "silent" for all rolls (pools are considered empty). The game will still run, but no vignettes or events will appear.
+- **Texture overlays are instantiated by loading the script directly** (`load("res://scripts/ui/vignette_overlay.gd").new()`) rather than instancing the .tscn. The .tscn files exist for future scene-tree usage but aren't currently loaded. All UI is built in the script's `_ready()`.
+- **`_on_show_texture_beat()` uses untyped locals** for vignette_data and event_data. GDScript type hints on VignetteData / EventData cause parse-time errors in headless mode before import. Access only the fields you need (`.text`, `.prompt`, etc.).
 
 ## Recent Changes
-Last significant updates: feature/crossroads (2026-05-07) added crossroads overlay + Rest/Whetstone handlers; feature/case-shape (2026-05-07) added 27-match top-bar labels and run_won_overlay; ability/power slices (2026-05-04 through 2026-05-06) added rotation overlay, power offer overlay, powers panel, dropped-die UI, auto-seal abilities, dev menu expansions, and counter display. Initial build 2026-05-01.
+| Date | Change |
+|------|--------|
+| 2026-05-07 | feature/within-act-texture: Added _vignette_overlay and _event_overlay (both instantiated via `load(...).new()` in _setup_ui()). Connected show_texture_beat signal → _on_show_texture_beat(). Added _on_show_texture_beat(), _on_vignette_dismissed(), _on_event_resolved() handlers. Both overlays force-hidden in _on_next_match_ready(). Registered VignetteLibrary and EventLibrary in _ready() (now 8 total singleton registrations). Dev "Win Entire Series" loop now calls dev_skip_texture() between dev_skip_rotation() and dev_skip_crossroads(). |
+| 2026-05-07 | feature/crossroads: added crossroads overlay + Rest/Whetstone handlers; registered CaseManager singleton in _ready() (fixes launch crash). |
+| 2026-05-07 | feature/case-shape: added 27-match top-bar labels (_match_label, _act_label, _location_label) and run_won_overlay. |
+| 2026-05-04–06 | Rotation overlay, power offer overlay, powers panel, dropped-die UI, auto-seal abilities, dev menu expansions, counter display. |
+| 2026-05-01 | Initial build. |
