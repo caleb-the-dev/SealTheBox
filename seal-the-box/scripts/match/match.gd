@@ -658,6 +658,13 @@ func _setup_ui() -> void:
 	dev_restart_btn.pressed.connect(_on_dev_restart_pressed)
 	dev_btns.add_child(dev_restart_btn)
 
+	var dev_hp_btn = Button.new()
+	dev_hp_btn.text = "+10 HP (Dev)"
+	dev_hp_btn.custom_minimum_size = Vector2(0, 56)
+	dev_hp_btn.add_theme_font_size_override("font_size", 17)
+	dev_hp_btn.pressed.connect(_on_dev_give_hp_pressed)
+	dev_btns.add_child(dev_hp_btn)
+
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
 	dev_close_btn.custom_minimum_size = Vector2(0, 44)
@@ -1354,6 +1361,10 @@ func _on_dev_ability_back_pressed() -> void:
 func _on_dev_restart_pressed() -> void:
 	_dev_overlay.visible = false
 	_run_manager.start_run()
+
+func _on_dev_give_hp_pressed() -> void:
+	GameState.hp += 10
+	_refresh_ui()
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false
