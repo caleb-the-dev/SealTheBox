@@ -40,9 +40,9 @@ func start_match(box: BoxDefinition) -> void:
 	_threshold_notified = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
-	# Use get_active_pool() so DICE-axis boxes (single_die, locked_d8, locked_d4)
-	# can override the pool for this match without touching the persistent pool.
-	_dice_pool.setup(GameState.get_active_pool())
+	# Use BoxDiceAccess to get the active pool so DICE-axis boxes (single_die,
+	# locked_d8, locked_d4) can override the pool without touching the persistent pool.
+	_dice_pool.setup(BoxDiceAccess.get_active_pool(box.id, GameState.dice_pool))
 	# Apply bounty_box entry effect: grant phoenix_down once per run.
 	if BoxDiceAccess.has_entry_power(box.id) and not GameState.marquee_seen.has(box.id):
 		GameState.marquee_seen[box.id] = true

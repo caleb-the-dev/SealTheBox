@@ -4,6 +4,11 @@ extends SceneTree
 # Checks structural invariants for all boxes and presence of the 6 DICE boxes.
 # Run headless: godot --headless --path seal-the-box --script tests/test_box_definitions.gd
 
+# Preload so BDA is available in headless --script mode.
+# In headless mode class_name types in subdirectories may not be registered at parse time;
+# preload forces the script to be loaded and available as a constant.
+const BDA = preload("res://scripts/match/box_dice_access.gd")
+
 func _init() -> void:
 	var box_lib = load("res://scripts/globals/box_library.gd").new()
 	box_lib.name = "BoxLibrary"
@@ -86,15 +91,15 @@ func _test_dice_access_registry_coverage() -> void:
 	# Pool-override boxes have a registered override.
 	var pool_override_ids := ["single_die", "locked_d8", "locked_d4"]
 	for id in pool_override_ids:
-		assert(BoxDiceAccess.has_override(id),
-			"BoxDiceAccess should have a pool override for DICE box '%s'" % id)
+		assert(BDA.has_override(id),
+			"BDA should have a pool override for DICE box '%s'" % id)
 	# Non-override DICE boxes (round-end hooks, entry power) should NOT have pool override.
 	var no_pool_override_ids := ["bounty_box", "tax_per_roll", "forced_full_commit"]
 	for id in no_pool_override_ids:
-		assert(not BoxDiceAccess.has_override(id),
+		assert(not BDA.has_override(id),
 			"DICE box '%s' should not have a pool override (uses other hooks)" % id)
 	# Non-DICE boxes should not have pool overrides.
 	var non_dice_ids := ["classic", "low_evens", "high_odds", "compressed", "stairs"]
 	for id in non_dice_ids:
-		assert(not BoxDiceAccess.has_override(id),
+		assert(not BDA.has_override(id),
 			"non-DICE box '%s' should not have a pool override" % id)
