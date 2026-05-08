@@ -1,5 +1,7 @@
 extends Node
 
+const MAX_HP := 6
+
 const ABILITY_POOL_IDS: Array[String] = [
 	"reroll_die", "greater_1", "lesser_1", "greater_2", "lesser_2", "reroll_all",
 	"put_down_highest", "auto_seal_lowest",
