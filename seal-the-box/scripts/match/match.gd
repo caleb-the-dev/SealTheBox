@@ -1371,11 +1371,19 @@ func _on_play_again_pressed() -> void:
 func _on_run_won() -> void:
 	if _run_won_title_label:
 		var entity_name := "the entity"
+		var source_name := ""
 		if Engine.has_singleton("EntityLibrary") and not GameState.entity_id.is_empty():
 			var entity = Engine.get_singleton("EntityLibrary").get_entity(GameState.entity_id)
 			if entity:
 				entity_name = entity.display_name
-		_run_won_title_label.text = "%s is sealed" % entity_name
+		if Engine.has_singleton("BoxLibrary") and not GameState.entity_id.is_empty():
+			var source_box = Engine.get_singleton("BoxLibrary").get_source(GameState.entity_id)
+			if source_box:
+				source_name = source_box.name
+		if source_name.is_empty():
+			_run_won_title_label.text = "%s is sealed" % entity_name
+		else:
+			_run_won_title_label.text = "%s is sealed at %s" % [entity_name, source_name]
 	_run_won_overlay.visible = true
 
 func _on_run_won_new_case_pressed() -> void:

@@ -25,6 +25,8 @@ func _load_csv() -> void:
         data.win_threshold = row[3].strip_edges().to_int()
         if row.size() >= 5:
             data.tier = row[4].strip_edges()
+        if row.size() >= 6:
+            data.source_for = row[5].strip_edges()
         _boxes[data.id] = data
         _order.append(data.id)
     file.close()
@@ -39,4 +41,13 @@ func get_ordered() -> Array:
     return _order.map(func(id): return _boxes[id])
 
 func get_by_tier(tier: String) -> Array:
-    return _boxes.values().filter(func(b): return b.tier == tier)
+    return _boxes.values().filter(func(b): return b.tier == tier and b.source_for.is_empty())
+
+func get_source(entity_id: String) -> BoxDefinition:
+    if entity_id.is_empty():
+        return null
+    for box in _boxes.values():
+        if box.source_for == entity_id:
+            return box
+    push_error("BoxLibrary: no Source box found for entity_id '%s'" % entity_id)
+    return null

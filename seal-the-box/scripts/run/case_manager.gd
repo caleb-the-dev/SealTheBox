@@ -23,8 +23,18 @@ func reset_run() -> void:
 		_case_list.append(easy[randi() % easy.size()])
 	for i in ACT2_SIZE:
 		_case_list.append(medium[randi() % medium.size()])
-	for i in ACT3_SIZE:
+	# Act 3: matches 22–26 draw from regular hard-tier boxes (Source boxes excluded
+	# by get_by_tier); match 27 is forced to the entity's Source box.
+	for i in ACT3_SIZE - 1:
 		_case_list.append(hard[randi() % hard.size()])
+	var source_box: BoxDefinition = null
+	if Engine.has_singleton("BoxLibrary") and Engine.has_singleton("GameState"):
+		var entity_id: String = Engine.get_singleton("GameState").entity_id
+		source_box = Engine.get_singleton("BoxLibrary").get_source(entity_id)
+	if source_box == null and hard.size() > 0:
+		push_error("CaseManager: Source box not found — falling back to random hard-tier box")
+		source_box = hard[randi() % hard.size()]
+	_case_list.append(source_box)
 
 func get_box_for_match(idx: int) -> BoxDefinition:
 	if idx < 1 or idx > _case_list.size():

@@ -20,9 +20,12 @@ func reset_run() -> void
     # Builds (or rebuilds) the 27-match list from BoxLibrary tier pools:
     #   Matches  1–9  → 9 random draws (with replacement) from easy-tier boxes
     #   Matches 10–21 → 12 random draws from medium-tier boxes
-    #   Matches 22–27 → 6 random draws from hard-tier boxes
+    #   Matches 22–26 → 5 random draws from hard-tier boxes (Source boxes excluded by get_by_tier)
+    #   Match   27    → forced to BoxLibrary.get_source(GameState.entity_id) — the entity's Source box
     # Also picks a random entity via EntityLibrary.get_random() and writes its id to
     # GameState.entity_id. If EntityLibrary singleton is missing, entity_id is left unchanged.
+    # If the Source box is not found (entity_id empty or missing row), falls back to random hard-tier
+    # box with push_error — match 27 will have a hard-tier box but won't be the themed Source.
     # Called by RunManager.start_run() after GameState.reset_run().
 
 func get_box_for_match(idx: int) -> BoxDefinition
@@ -54,9 +57,9 @@ var _case_list: Array   # Array of BoxDefinition, length 27; built by reset_run(
 ```
 
 ## Dependencies
-- `BoxLibrary` — calls `get_by_tier("easy"/"medium"/"hard")` in reset_run()
+- `BoxLibrary` — calls `get_by_tier("easy"/"medium"/"hard")` and `get_source(entity_id)` in reset_run()
 - `EntityLibrary` — calls `get_random()` in reset_run(); calls `get_entity(entity_id)` in get_location_name()
-- `GameState` — writes `entity_id` in reset_run(); reads `entity_id` in get_location_name()
+- `GameState` — reads and writes `entity_id` in reset_run(); reads `entity_id` in get_location_name()
 
 ## How RunManager Uses CaseManager
 ```
@@ -79,16 +82,18 @@ RunManager._start_next_match()
 
 ## Gotchas
 - **`reset_run()` must be called before `get_box_for_match()`.** Calling `get_box_for_match()` before `reset_run()` returns null/errors for all indices because `_case_list` is empty.
-- **Box draws are with replacement.** The same box can appear multiple times within an act. With only 2 easy-tier boxes, each of the 9 act-1 slots is 50/50 between them. High repetition is acknowledged as acceptable for slice 1 — adding more boxes per tier is deferred.
+- **Box draws are with replacement.** The same box can appear multiple times within an act. With only 1 regular hard-tier box (Compressed), matches 22–26 all use Compressed. High repetition is acknowledged — adding more boxes is deferred.
+- **Match 27 is always the entity's Source box.** This is forced in `reset_run()` by calling `BoxLibrary.get_source(GameState.entity_id)` and appending it as the 27th entry. Matches 22–26 draw from `get_by_tier("hard")` which excludes Source boxes.
+- **Source box fallback on missing entity.** If `entity_id` is empty (e.g. tests that skip EntityLibrary setup), `get_source()` returns null and `reset_run()` falls back to a random hard-tier box with push_error. Tests registering EntityLibrary will not see this error.
 - **`run_won` fires AFTER the rotation pick, not immediately on match win.** RunManager completes the full power-offer → rotation flow before calling `notify_run_won()`. This is intentional: the player gets their end-of-match rewards even on the winning match.
 - **`get_act_for_match()` is stateless** — it derives purely from the index, no _case_list needed. Safe to call any time.
 - **`get_location_name()` depends on EntityLibrary and GameState singletons.** If EntityLibrary is not registered, it returns the plain "Location N" fallback. Safe to call any time but returns placeholder text if entity_id is "".
-- **Entity is picked during `reset_run()`.** GameState.entity_id is set to "" by GameState.reset_run() first, then CaseManager.reset_run() writes the chosen entity id. The order of calls in RunManager.start_run() is GameState.reset_run() then CaseManager.reset_run() — if this order is ever swapped, entity_id will be "" for the entire run.
-- **Headless test setup requires CaseManager registration.** Tests calling RunManager.start_run() must register CaseManager (see test_run_manager.gd _init() pattern). Tests using CaseManager directly must also register EntityLibrary (see test_entity.gd).
+- **Entity is picked during `reset_run()`.** GameState.entity_id is set to "" by GameState.reset_run() first, then CaseManager.reset_run() writes the chosen entity id. The order of calls in RunManager.start_run() is GameState.reset_run() then CaseManager.reset_run() — if this order is ever swapped, entity_id will be "" for the entire run and match 27 will fall back to a random hard-tier box.
+- **Headless test setup requires CaseManager registration.** Tests calling RunManager.start_run() must register CaseManager. Tests using CaseManager.reset_run() directly should also register EntityLibrary; without it, match 27 falls back with a push_error but all tests still pass.
 - **No class_name declaration.** Adding class_name CaseManager would cause "hides an autoload singleton" parse error. Access via `Engine.get_singleton("CaseManager")`.
 
 ## Out of Scope (deferred to future slices)
-- Forced Source box at match 27 (slice 5) — currently match 27 is just a random hard-tier box
+- ~~Forced Source box at match 27 (slice 5)~~ **Implemented (feature/source-boxes)**
 - ~~Entity selection (slice 4) — picking Diabolic/Cosmic/Ethereal at run start~~ **Implemented (feature/entity-types)**
 - ~~Within-act texture (slice 3) — silent/vignette/event rolls between matches~~ **Implemented (feature/within-act-texture)**
 - ~~Crossroads after match 9 and 21 (slice 2) — Rest/Whetstone choice~~ **Implemented (feature/crossroads)**
@@ -96,5 +101,6 @@ RunManager._start_next_match()
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-07 | feature/source-boxes: reset_run() now forces match 27 = BoxLibrary.get_source(GameState.entity_id). The ACT3_SIZE loop changed from 6 iterations to 5 (matches 22–26) + 1 forced Source box (match 27). Added fallback push_error if Source box not found. BoxLibrary dependency expanded to include get_source(). |
 | 2026-05-07 | feature/entity-types: reset_run() now also picks a random entity (EntityLibrary.get_random()) and writes entity_id to GameState. Added get_location_name(act) — returns entity's themed location name for the given act, falling back to "Location N" if entity_id is empty or EntityLibrary missing. |
 | 2026-05-07 | Created. Implements 27-match Case structure (9 easy / 12 medium / 6 hard). |

@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 12 |
+| Sessions since groom | 13 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -52,7 +52,7 @@ seal-the-box/
   project.godot
   data/
     abilities.csv          # ability definitions (22 abilities; 14 in rotation pool with charges 1–3)
-    boxes.csv              # box definitions (5 boxes: classic, low_evens, high_odds, compressed, stairs)
+    boxes.csv              # box definitions (8 boxes: 5 regular + 3 Source boxes — source_devil/source_cosmic/source_ghost)
     powers.csv             # power definitions (11 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor, tax_collector, diabolic_pact, tab_counter)
     entities.csv           # entity definitions (3 rows: diabolic, cosmic, ethereal; location_names semicolon-separated)
     vignettes.csv          # vignette definitions (3 default + 2 per entity = 9 total; pools: default, vig_diabolic, vig_cosmic, vig_ethereal)
@@ -98,7 +98,7 @@ seal-the-box/
     test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 46 tests
     test_power_effects.gd  # Tests for all 8 power effects via PowerManager (headless) — 30 tests
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
-    test_case_manager.gd   # Tests for CaseManager (headless) — 10 tests
+    test_case_manager.gd   # Tests for CaseManager (headless) — 14 tests (4 new: Source box assignment)
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap, periodic swap removal (headless) — 8 tests
     test_entity.gd         # Tests for EntityLibrary, EntityData, entity variety in reset_run(), get_location_name(), TextureRoller entity-pool integration (headless) — 9 tests
     test_texture_roller.gd # Tests for TextureRoller distribution + empty-pool fallback + effect-string DSL parser (headless) — 9 tests
@@ -126,6 +126,7 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-07 | feature/source-boxes (slice 5 — capstone of the Case meta-flow). Three themed Source boxes added to boxes.csv (source_devil/"the Pact"/diabolic, source_cosmic/"the Veil"/cosmic, source_ghost/"the Anchor"/ethereal). BoxDefinition: `source_for: String` field added. BoxLibrary: `get_source(entity_id)` added; `get_by_tier()` now excludes Source boxes. CaseManager.reset_run() forces match 27 = BoxLibrary.get_source(entity_id); matches 22–26 draw 5 regular hard-tier boxes only. match.gd _on_run_won(): overlay text updated to "[display_name] is sealed at [source_name]" (e.g. "the devil is sealed at the Pact"). 4 new tests in test_case_manager.gd (14 total); EntityLibrary added to test setup. All 5 Case meta-flow slices now shipped. |
 | 2026-05-07 | feature/entity-types (slice 4 of the Case meta-flow). Three entity types (Diabolic, Cosmic, Ethereal) randomized per run. New: EntityData resource (id, display_name, location_names[3], vignette_pool_id, event_pool_id); EntityLibrary autoload (parses entities.csv, get_entity/get_all/get_random); data/entities.csv (3 rows, location_names semicolon-separated). Content: 2 vignettes per entity (6 new entries: v_sulfur_1/2, v_deep_1/2, v_echo_1/2) + 1 event per entity (e_brand, e_whisper, e_cold_room) in per-entity pool_ids. CaseManager.reset_run() now picks a random entity and writes GameState.entity_id; get_location_name(act) added. TextureRoller._get_pool_ids() added — reads entity from GameState instead of using caller-supplied pool_id param. match.gd: registered EntityLibrary (now 9 singletons); _location_label now shows entity-themed name via CaseManager.get_location_name(); _case_label added ("Case: [display_name]"); _run_won_title_label field added, _on_run_won() sets "[display_name] is sealed". GameState: entity_id field added, reset_run() clears it. New bucket files: entity_library.md, entity_data.md. test_entity.gd: 9 tests. test_texture_roller.gd: updated empty-pool-fallback test for entity-based pool resolution. |
 | 2026-05-07 | feature/within-act-texture (slice 3 of the Case meta-flow). Between-match texture beat system: TextureRoller (static class) rolls 50% silent / 30% vignette / 20% event using VignetteLibrary and EventLibrary (both new autoloads). New resources: VignetteData (id, pool_id, text), EventData (id, pool_id, prompt, option_a/b_label/effect). New CSVs: vignettes.csv (3 entries: v_fog, v_bell, v_cold), events.csv (1 entry: e_coin — hp-1;charge_random+1 / none). New overlays: VignetteOverlay (click-to-dismiss), EventOverlay (two-button choice, applies effect DSL). Effect DSL: none, hp±N, charge_random+1; unknowns push_error and skip. Texture fires AFTER rotation/power-offer, BEFORE crossroads (crossroads matches 9 and 21 skip texture entirely). RunManager: added show_texture_beat signal, _do_texture_beat(), handle_texture_done(), dev_skip_texture(). match.gd: registered 2 new singletons (now 8 total), wired show_texture_beat, added overlay instances and handlers, dev "Win Entire Series" skips texture. test_texture_roller.gd: 9 headless tests (distribution, empty-pool fallback, effect DSL). New bucket files: vignette_library.md, event_library.md, texture_roller.md, vignette_overlay.md, event_overlay.md. |
 | 2026-05-07 | feature/crossroads (slice 2 of the Case meta-flow). Replaced periodic die swap (every 5 matches) with Crossroads decision at act boundaries: after match 9 and 21 the player picks Rest (+2 HP, capped at MAX_HP=6) or Whetstone (die swap). RunManager: added show_crossroads signal, handle_crossroads_rest(), handle_crossroads_whetstone(), dev_skip_crossroads(). GameState: added MAX_HP=6 const; hp field and reset_run() use MAX_HP. match.gd: added _crossroads_overlay, wired show_crossroads signal, added crossroads button handlers, registered CaseManager singleton in _ready() (fixes launch crash). test_crossroads.gd: 8 new headless tests. 2 stale periodic-swap tests removed from test_run_manager.gd (now 46 tests). Also caught and fixed: CaseManager was never registered as engine singleton in match.gd, causing modulo-by-zero on launch. |
