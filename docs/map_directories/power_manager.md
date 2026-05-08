@@ -41,7 +41,7 @@ func on_match_end() -> void
     #   dev_win_match, dev_critical_win).
 
 func on_critical_win() -> void
-    # Increments the tax_collector counter by 1. Fires (+1 HP, counter resets to 0) when counter >= target (3).
+    # Increments the tax_collector counter by 1. Fires (+1 HP, counter resets to 0) when counter >= target (2).
     # Counter persists across matches — NOT reset in on_match_end(). Resets only via reset_run().
     # Called by RunManager.handle_match_won(true) after apply_box_shutter().
 
@@ -68,7 +68,9 @@ func get_bonus_seals_if_ready(tab_board: TabBoard, primary_seals: Array) -> Arra
     # Does NOT cascade — caller must not feed results back into this method.
 
 func apply_tab9_bounty(all_sealed_tabs: Array) -> void
-    # If tab_9_bounty owned AND 9 is in all_sealed_tabs: GameState.hp += count_owned("tab_9_bounty").
+    # If tab_9_bounty owned AND 9 is in all_sealed_tabs: increments the tab_9_bounty counter by 1.
+    # Fires (+1 HP, counter resets to 0) when counter >= target (3).
+    # Counter persists across matches — NOT reset in on_match_end(). Resets only via reset_run().
 
 func apply_box_shutter() -> void
     # GameState.pending_threshold_bonus += count_owned("box_shutter") * 2.
@@ -135,6 +137,7 @@ func try_phoenix_down() -> bool
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | tax_collector counter_target changed 3→2 (fires every other crit win). apply_tab9_bounty() converted from instant On-Seal (+1 HP per copy) to Counter logic (increments counter, fires +1 HP at target=3, persists across matches). |
 | 2026-05-06 | Added on_critical_win() (Tax Collector: fires at 3 critical wins, +1 HP, persists across matches). Added on_die_rolled(die) (Diabolic Pact: fires at 7 d12 rolls, +1 HP, persists; d12 check is first guard so non-d12 calls return immediately). Added on_tabs_sealed(count) + _apply_tab_counter_charge() (Tab Counter: fires at 5 total tab seals including bonus seals; +1 charge to highest-charge ability, tiebreaker lowest slot; null hand is no-op). apply_eager() now calls on_die_rolled(die) for Diabolic Pact coverage of Eager pre-rolls. on_critical_win() called from RunManager.handle_match_won(true) after apply_box_shutter(). on_tabs_sealed() called from RoundManager.attempt_seal() after all seals resolved. Changed counter init from 1 → 0 (all counters now fire after exactly N events with no acquisition bonus). |
 | 2026-05-05 | Added counter infrastructure: add_power() (initializes counter to 1 on first acquisition), on_round_end() (increments bonus_seal counter each round, capped at target), on_match_end() (resets bonus_seal counter to 0), get_bonus_seals_if_ready() (replaces get_bonus_seals — only fires when counter == target, then resets). Counter starts at 1 so Bonus Seal fires on round 3. Fixed post-fire reset: resets to 0, end_round bumps to 1 → display stays at 1/N. |
 | 2026-05-05 | Tuned Lighter Box: get_threshold_bonus() now returns count (was count×3). Tuned Box Shutter: apply_box_shutter() now adds count×2 (was count×5). Added apply_coffee_break() — round-1 hook, charges a random below-max ability, capped at max_charges. Added apply_survivor() — match-win hook, heals at exactly 1 HP. Added try_phoenix_down() — match-loss intercept, consumes itself, sets HP=1. |

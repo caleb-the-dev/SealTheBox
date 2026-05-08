@@ -28,7 +28,7 @@ Roll your dice, play your cards, and seal the box — round by round, match by m
 
 Each **match** is one game of advanced Shut the Box:
 - Tabs (numbered tiles) sit in the box. The goal is to reduce the sum of remaining tabs below the win threshold.
-- Each round the player draws a hand of 2 dice from their pool, rolls them, then assigns dice combinations to seal matching tabs.
+- Each round the player draws a hand of 3 dice from their pool, rolls them, then assigns dice combinations to seal matching tabs.
 - Ability cards modify dice values, add rerolls, or grant special effects.
 - When remaining sum ≤ win threshold, a "Continue →" button appears. The player chooses when to advance (threshold win — rotation only) or keeps pushing to seal all tabs (critical win — power offer then rotation).
 - The run ends only when HP reaches 0.
@@ -41,17 +41,17 @@ Each **run** is a **27-match Case** divided into three acts (9 easy / 12 medium 
 
 - A **tab range** is the set of numbers present in the box. Default: [1–9].
 - Tab ranges are flexible and can be non-flush (e.g., [1,2,4,7,9]).
-- **Win threshold**: explicit per-box value in boxes.csv (tuned for playtesting). Current values: Classic 15, Low Evens 13, High Odds 13, Stairs 12, Compressed 10, boss boxes 14/15/17. Target feel: must seal most tabs to reach threshold; shut the box requires skill or luck.
+- **Win threshold**: explicit per-box value in boxes.csv (tuned for playtesting). Current values: Classic 11, Low Evens 10, High Odds 10, Stairs 9, Compressed 8, boss boxes 11/11/13. Target feel: must seal most tabs to reach threshold; shut the box requires skill or luck.
 - **Round limit**: `ceili(tab_sum / 15) + 1`. Current values: all boxes 4 rounds (unchanged from original formula).
 - Exceeding the round limit costs 1 HP per extra round until the match ends.
-- **Shut the box** = all tabs sealed (sum = 0) → critical win, offers a power (Accept or Skip) + mandatory ability rotation pick.
+- **Shut the box** = all tabs sealed (sum = 0) → critical win: heals +1 HP (capped at MAX_HP), offers a power (Accept or Skip) + mandatory ability rotation pick.
 
 ---
 
 ## Match Structure
 
 Each round has three phases:
-1. **Roll phase:** Draw 2 dice from your pool. Select which to roll. All drawn dice are discarded at end of round.
+1. **Roll phase:** Draw 3 dice from your pool. Select which to roll. All drawn dice are discarded at end of round.
 2. **Ability phase:** Play ability cards — modify dice values, reroll, etc.
 3. **Seal phase:** Assign rolled dice whose sum equals an unsealed tab to seal it. Runs concurrently with the ability phase.
 
@@ -103,9 +103,9 @@ Powers are persistent run modifiers acquired between matches. They modify core g
 |------|---------|
 | Passive | Always-on effect (e.g. Lighter Box, Phoenix Down, Survivor) |
 | Match-Start | Fires at the start of round 1 each match (e.g. Eager, Coffee Break) |
-| On-Seal | Fires when specific tabs are sealed (e.g. Tab 9 Bounty) |
+| On-Seal | Fires when specific tabs are sealed (no current powers use this type) |
 | Critical-Win | Fires on critical wins only (e.g. Box Shutter) |
-| Counter | Tracks a specific trigger event; fires when counter reaches its target, then resets to 0. Trigger varies by power: Bonus Seal counts rounds, Tax Collector counts critical wins, Diabolic Pact counts d12 rolls, Tab Counter counts tab seals. Counter initializes to 0 at acquisition and fires after exactly N events. Bonus Seal resets at match end; all other counters persist across matches and reset only on run reset. |
+| Counter | Tracks a specific trigger event; fires when counter reaches its target, then resets to 0. Trigger varies by power: Bonus Seal counts rounds, Tax Collector counts critical wins (target=2), Tab 9 Bounty counts tab-9 seals (target=3), Diabolic Pact counts d12 rolls (target=7), Tab Counter counts tab seals (target=5). Counter initializes to 0 at acquisition and fires after exactly N events. Bonus Seal resets at match end; all other counters persist across matches and reset only on run reset. |
 
 **Power traits (design intent, not all implemented):**
 | Trait | Meaning |

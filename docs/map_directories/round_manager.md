@@ -80,15 +80,15 @@ func dev_win_match() -> void
     # Dev shortcut: calls PowerManager.on_match_end(), emits match_won(false). Threshold (not critical).
 
 func dev_critical_win() -> void
-    # Dev shortcut: calls PowerManager.on_match_end(), emits match_won(true) (power offer + rotation).
+    # Dev shortcut: heals +1 HP (capped at MAX_HP), calls PowerManager.on_match_end(), emits match_won(true) (power offer + rotation).
 
 func get_draw_count() -> int
 func get_discard_count() -> int
 ```
 
 ## Win Conditions
-- **Critical win** (`match_won(true)`): all tabs sealed — fires automatically via `TabBoard.check_critical_win()`
-- **Threshold win** (`match_won(false)`): player manually clicks Continue after `threshold_reached` fires. Does NOT auto-end the match — emits `threshold_reached()` once and waits.
+- **Critical win** (`match_won(true)`): all tabs sealed — fires automatically via `TabBoard.check_critical_win()`. Heals player +1 HP (capped at MAX_HP) before emitting `match_won`.
+- **Threshold win** (`match_won(false)`): player manually clicks Continue after `threshold_reached` fires. Does NOT auto-end the match — emits `threshold_reached()` once and waits. No HP heal.
 
 ## Power Hooks Summary
 | Power | Hook location | When |
@@ -142,6 +142,7 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | Critical win path (_check_win + dev_critical_win) now heals +1 HP (capped at MAX_HP) before emitting match_won(true). |
 | 2026-05-06 | use_ability() wired for 8 new ability IDs: put_down_highest, auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die. Auto-seal abilities fire power hooks (apply_tab9_bounty + on_tabs_sealed). Empower/Empower II guard added: return false if die.value >= die.faces (prevents multiply-then-empower shrink). Total calculations in commit_roll() and use_ability() now exclude dropped dice (die.rolled and not die.dropped). |
 | 2026-05-06 | commit_roll() now calls PowerManager.on_die_rolled(die) per die after rolling (Diabolic Pact hook). use_ability() now calls on_die_rolled(die) for reroll_die and reroll_all (same hook). attempt_seal() now calls PowerManager.on_tabs_sealed(all_sealed.size()) after Tab 9 Bounty (Tab Counter hook). |
 | 2026-05-05 | Counter hooks added: end_round() now calls PowerManager.on_round_end() before round_ended; all 5 match-end paths (accept_threshold_win, _check_win critical, end_round loss, dev_win_match, dev_critical_win) now call PowerManager.on_match_end() before emitting. attempt_seal() now calls get_bonus_seals_if_ready() (was get_bonus_seals) — only fires when counter==target. |

@@ -15,7 +15,7 @@ match.tscn  (Node3D, script: match.gd)
   MeshInstance3D               # flat table plane — placeholder for 3D environment
   CanvasLayer
     Control (root UI)
-      top_bar (HBoxContainer)    — HP label (centered)
+      top_bar (HBoxContainer)    — HP display (centered): _hp_label (font 28) + _hp_max_label (font 16, grey) inside an HBoxContainer showing "❤ N /MAX"
       top_left_vbox (VBoxContainer) — anchored top-left
         _match_label             — "Match N / 27"
         _act_label               — "Act N" (grey, smaller)
@@ -75,7 +75,7 @@ CaseManager.run_won             → _on_run_won                (shows run_won_ov
 After every **critical win** (shut the box):
 1. `_on_show_power_offer(powers: Array)` fires — receives up to 3 PowerData candidates
 2. Power offer overlay appears (opaque black `Color(0,0,0,1.0)`)
-3. Shows: header "Shut the Box! — Choose a Power", three card buttons (200×140), disabled Confirm button, Skip button
+3. Shows: header "Shut the Box! — Choose a Power", three card buttons (200×140), disabled Confirm button, Skip button, and a green "Healed 1 HP!" label anchored to the bottom-left corner
 4. Player **clicks a card** → it highlights (yellow tint), Confirm button enables; `_current_power_offer` is set
 5. **Confirm** → `_run_manager.handle_power_offer_accepted(_current_power_offer)` → power added → `_refresh_powers_panel()` → rotation follows
 6. **Skip** → `_run_manager.handle_power_offer_skipped()` → rotation overlay follows
@@ -170,7 +170,7 @@ When a die has `die.dropped == true` (from the Drop Die ability):
 
 ## Ability Slot Display
 See `ability_hand.md` for full detail. Summary:
-- Slot 0: orange tint (oldest, discarded next rotation)
+- Slot 0: orange tint (oldest, discarded next rotation). Tooltip charges text reads `"N/M — lose after this round"` to remind the player this slot is discarded at rotation.
 - Any slot at 0 charges: grey, disabled
 - Null slot: darker grey, disabled
 
@@ -192,6 +192,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | UI polish: HP display now shows "❤ N /MAX" — _hp_label (font 28) + _hp_max_label (font 16, grey) in an HBoxContainer. Power offer overlay gains green "Healed 1 HP!" label in bottom-left (_heal_notice_label). Slot-0 ability tooltip charges text appends "— lose after this round". |
 | 2026-05-08 | Playtest refactor: removed _vignette_overlay, _event_overlay, _case_label, and all associated vars/handlers. Replaced _location_label with _tier_label (shows "easy"/"medium"/"hard"/"BOSS"). Removed show_texture_beat signal wiring. Removed EntityLibrary, VignetteLibrary, EventLibrary from singleton registrations (now 6 total). Run-won overlay text simplified to "sealed". Added "+10 HP (Dev)" button to dev menu. Fixed overlay layout bug: vignette and event overlays were previously loaded from external scripts (zero-size layout); rebuilt inline (this became moot when both were removed). |
 | 2026-05-07 | feature/crossroads: added crossroads overlay + Rest/Whetstone handlers; registered CaseManager singleton in _ready() (fixes launch crash). |
 | 2026-05-07 | feature/case-shape: added 27-match top-bar labels (_match_label, _act_label, _location_label) and run_won_overlay. |

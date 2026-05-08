@@ -21,13 +21,13 @@ Typed container for one power's static data: id, display name, type tag, descrip
 |----|------|------|----------------|--------|
 | lighter_box | Lighter Box | Passive | 0 | +1 to win_threshold per copy each match |
 | eager | Eager | Match-Start | 0 | Pre-rolls one random hand die at max face, round 1 only |
-| tab_9_bounty | Tab 9 Bounty | On-Seal | 0 | +1 HP per copy when tab 9 is sealed |
+| tab_9_bounty | Tab 9 Bounty | Counter | 3 | Every 3 times tab 9 is sealed: +1 HP; counter persists across matches |
 | bonus_seal | Bonus Seal | Counter | 3 | Every 3 rounds, next seal also seals floor(N/2); no cascade; resets at match end |
 | box_shutter | Box Shutter | Critical-Win | 0 | Adds +2 per copy to next match's win_threshold |
 | phoenix_down | Phoenix Down | Passive | 0 | Intercepts run-over once; sets HP=1, self-consumes |
 | coffee_break | Coffee Break | Match-Start | 0 | Round 1: charges one random below-max ability by +1/copy, capped at max |
 | survivor | Survivor | Passive | 0 | After any win at exactly HP=1: heal +1 per copy |
-| tax_collector | Tax Collector | Counter | 3 | Every 3 critical wins: +1 HP; counter persists across matches |
+| tax_collector | Tax Collector | Counter | 2 | Every 2 critical wins: +1 HP; counter persists across matches |
 | diabolic_pact | Diabolic Pact | Counter | 7 | Every 7 d12 rolls (any source): +1 HP; counter persists across matches |
 | tab_counter | Tab Counter | Counter | 5 | Every 5 tabs sealed (primary + bonus): +1 charge to highest-charge ability; counter persists |
 
@@ -45,6 +45,7 @@ Typed container for one power's static data: id, display name, type tag, descrip
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | tax_collector counter_target 3→2 (fires every other crit win). tab_9_bounty converted from On-Seal (instant, per-copy) to Counter type with target=3 (every 3rd tab-9 seal → +1 HP, persists across matches). |
 | 2026-05-06 | Added 3 new Counter powers: tax_collector (3 critical wins → +1 HP), diabolic_pact (7 d12 rolls → +1 HP), tab_counter (5 tab seals → +1 charge to highest-charge ability). All persist across matches (not reset in on_match_end()). Total: 11 powers. |
 | 2026-05-05 | Added counter_target field. bonus_seal converted to Counter type with counter_target=3. All other powers get counter_target=0. Powers table expanded to all 8 powers with correct types and effects. |
 | 2026-05-04 | Created. |
