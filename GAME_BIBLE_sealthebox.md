@@ -126,7 +126,9 @@ A run is a **Case** — 27 matches across three acts:
 
 **Between-act crossroads:** after match 9 (Act 1 end) and match 21 (Act 2 end), player chooses Rest (+2 HP, capped at MAX_HP=6) or Whetstone (one die swap). Periodic die swap removed. Implemented in feature/crossroads (slice 2).
 
-**Entity (implemented in feature/entity-types):** at run start, one of Diabolic / Cosmic / Ethereal is selected at random. Drives content flavor (vignette/event pools, location names, run-won overlay copy) but no mechanical asymmetry. Entity id stored on GameState.entity_id. Each entity has 2 vignettes and 1 event in its pool; location names shown in top bar. Source box per entity is deferred to slice 5.
+**Entity (implemented in feature/entity-types):** at run start, one of Diabolic / Cosmic / Ethereal is selected at random. Drives content flavor (vignette/event pools, location names, run-won overlay copy) but no mechanical asymmetry. Entity id stored on GameState.entity_id. Each entity has 2 vignettes and 1 event in its pool; location names shown in top bar.
+
+**Source boxes (implemented in feature/source-boxes):** each entity has one themed Source box used exclusively at match 27. source_devil = "the Pact" (tabs 1–9, threshold 18); source_cosmic = "the Veil" (tabs 2–10, threshold 20); source_ghost = "the Anchor" (tabs 1,3,5,6,7,8,9,11,13, threshold 22). Source boxes are excluded from regular tier draws. Match 27 is forced to the entity's Source; matches 22–26 draw from regular hard-tier boxes only. Run-won overlay reads "[display_name] is sealed at [source_name]".
 
 **Starting setup:** pool = 1d4 + 4d6 + 2d8 (7 dice fixed). Run starts with 1 random ability in slot 3; no starting powers.
 
@@ -163,4 +165,4 @@ See `docs/superpowers/specs/2026-05-06-game-flow-design.md` for the Case meta-fl
 | 2 — Crossroads (Rest/Whetstone after acts 1 and 2; remove periodic die swap) | feature/crossroads | ✅ Merged |
 | 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | ✅ Merged |
 | 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | ✅ Merged |
-| 5 — Source boxes (themed match-27 box per entity) | feature/source-boxes | Planned |
+| 5 — Source boxes (themed match-27 box per entity) | feature/source-boxes | ✅ Merged |
