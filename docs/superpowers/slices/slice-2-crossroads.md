@@ -16,6 +16,20 @@ This slice adds the meaningful between-act decision point and removes the old
 periodic die swap. No texture (vignettes / events) yet — that's slice 3. No
 entity types yet — that's slice 4. No themed Source — that's slice 5.
 
+ARCHITECTURE NOTE — READ BEFORE TOUCHING CODE
+
+All overlays in this project are built entirely in code in match.gd's _setup_ui().
+There are NO .tscn files for UI overlays. Do NOT create a crossroads_overlay.tscn.
+Do NOT create a CrossroadsController class.
+
+The correct pattern (consistent with run_won_overlay, rotation_overlay, etc.):
+  1. RunManager gains a new signal and 2 new public methods (crossroads logic lives here).
+  2. match.gd builds the crossroads overlay in _setup_ui(), wires RunManager's new
+     signal in _connect_signals(), and calls RunManager's methods on button press.
+
+The existing die-swap overlay + flow is KEPT and reused by Whetstone — only the
+periodic trigger is removed. See Change 4 for the exact scope.
+
 DESIGN RATIONALE
 
   - Act boundaries currently feel invisible (slice 1's open question). The
@@ -30,61 +44,147 @@ DESIGN RATIONALE
 
 CHANGES (in order)
 
-1. Create scripts/run/crossroads_controller.gd:
-     - Public method: show_crossroads(after_match: int) — opens overlay.
-     - Emits crossroads_resolved signal when player picks an option.
-     - Resolves choice:
-         * Rest      → GameState.hp = min(hp + 2, max_hp). Close overlay.
-         * Whetstone → trigger the existing die-swap-offer flow once.
-                        After swap completes (or skip), close overlay.
+1. Add crossroads logic to RunManager (scripts/run/run_manager.gd):
 
-2. Create scripts/ui/crossroads_overlay.gd + scenes/ui/crossroads_overlay.tscn:
-     - Opaque black background (per Prototyping UI Rule).
-     - Header text: "Crossroads" (placeholder copy is fine).
-     - Two big buttons:
-         * Rest        — subtitle: "+2 HP"
-         * Whetstone   — subtitle: "swap one die"
-     - Reuse the visual pattern from the existing power-offer overlay or
-       run-won overlay — copy and modify, don't design fresh.
+   a. Add a new signal:
+        signal show_crossroads(after_match: int)
 
-3. Wire CaseManager (or RunManager — whichever drives between-match flow):
-     - After match 9 ends and existing reward beats (rotation pick, power offer
-       if critical) resolve, fire CrossroadsController.show_crossroads(9)
-       BEFORE proceeding to match 10.
-     - Same after match 21, before proceeding to match 22.
-     - Wait for crossroads_resolved before advancing.
+   b. In handle_rotation_pick(), REPLACE the existing periodic die-swap block:
+        # match_number is already post-incremented here; condition fires after matches 5, 10, 15, ...
+        if (match_number - 1) % 5 == 0:
+            var offered: Array = []
+            for f in DIE_SWAP_FACES:
+                offered.append(Die.new(f))
+            show_die_swap.emit(offered)
+        else:
+            _start_next_match()
 
-4. Remove the periodic every-5-matches die swap entirely:
-     - Delete the trigger logic.
-     - Remove any related state (counter, flags) from GameState if no longer
-       used.
-     - Remove its UI overlay/trigger if it had one separate from the generic
-       die-swap-offer flow. The die-swap-offer flow itself stays — Whetstone
-       reuses it.
+      WITH the crossroads trigger:
+        var completed := match_number - 1   # match_number was already incremented
+        if completed == 9 or completed == 21:
+            show_crossroads.emit(completed)
+        else:
+            _start_next_match()
 
-5. Tests — extend tests/test_case_manager.gd or create tests/test_crossroads.gd:
-     - Crossroads fires after match 9 and after match 21, NOT at any other
-       boundary.
-     - Rest applies +2 HP, capped at max_hp.
-     - Whetstone triggers exactly one die-swap-offer flow.
-     - crossroads_resolved fires exactly once per shown crossroads.
-     - Periodic die swap (every 5 matches) no longer fires anywhere in a run.
+   c. Add two new public methods:
+        func handle_crossroads_rest() -> void:
+            var gs = Engine.get_singleton("GameState")
+            gs.hp = min(gs.hp + 2, GameState.MAX_HP)  # see GameState change below
+            _start_next_match()
+
+        func handle_crossroads_whetstone() -> void:
+            var offered: Array = []
+            for f in DIE_SWAP_FACES:
+                offered.append(Die.new(f))
+            show_die_swap.emit(offered)
+            # _start_next_match() is called by handle_die_swap_confirm or handle_die_swap_skip
+
+   d. Add dev helper for "Win Entire Series":
+        func dev_skip_crossroads() -> void:
+            handle_crossroads_rest()   # auto-pick Rest in the dev fast-forward path
+
+2. Add MAX_HP to GameState (scripts/globals/game_state.gd):
+
+   Add one line near the top of the file, alongside the ABILITY_POOL_IDS const:
+        const MAX_HP := 6
+
+   This is the cap for Rest. It also establishes the field so future powers that
+   raise max HP have a clear place to change. Do NOT add max_hp as a var yet — a
+   const is sufficient for this slice.
+
+3. Build crossroads overlay in match.gd (scripts/match/match.gd):
+
+   a. Add field to the state block at the top:
+        var _crossroads_overlay: Control
+
+   b. In _setup_ui(), build the overlay following the same pattern as
+      _run_won_overlay (opaque black, centered VBoxContainer, buttons):
+        - Opaque black background (Color(0, 0, 0, 1.0))
+        - Header label: "Crossroads" (font_size 30, centered)
+        - Subheader label: "Choose your path" (font_size 16, grey, centered — placeholder copy)
+        - HBoxContainer with two big buttons (min size 200×100, font_size 20):
+            * "Rest"      — subtitle label below: "+2 HP"
+            * "Whetstone" — subtitle label below: "swap one die"
+          (Use a VBoxContainer per button: label on top, subtitle below, or
+           just put both lines in the button text with \n)
+        - No skip / cancel button — player must choose one.
+
+   c. In _connect_signals():
+        _run_manager.show_crossroads.connect(_on_show_crossroads)
+
+   d. Add handler:
+        func _on_show_crossroads(_after_match: int) -> void:
+            _crossroads_overlay.visible = true
+
+   e. Add button handlers:
+        func _on_crossroads_rest_pressed() -> void:
+            _crossroads_overlay.visible = false
+            _run_manager.handle_crossroads_rest()
+
+        func _on_crossroads_whetstone_pressed() -> void:
+            _crossroads_overlay.visible = false
+            _run_manager.handle_crossroads_whetstone()
+
+   f. In _on_next_match_ready(), add to the existing overlay-hide block:
+        if _crossroads_overlay:
+            _crossroads_overlay.visible = false
+
+   g. Update the dev "Win Entire Series" button handler (_on_dev_win_series_pressed):
+      Add a call to dev_skip_crossroads() in the loop alongside dev_skip_rotation(),
+      so the fast-forward path doesn't stall at act boundaries:
+        _run_manager.dev_skip_rotation()
+        _run_manager.dev_skip_crossroads()   # no-ops unless crossroads is pending
+
+      NOTE: dev_skip_crossroads() calls handle_crossroads_rest() which calls
+      _start_next_match() directly — make sure the loop guard (_match_ended check)
+      still works correctly after this change.
+
+4. Remove ONLY the periodic die-swap trigger — keep everything else:
+
+   REMOVE from RunManager.handle_rotation_pick():
+     - The `if (match_number - 1) % 5 == 0` block and its `else: _start_next_match()`
+       (this is fully replaced by change 1b above)
+
+   KEEP (Whetstone reuses all of these):
+     - `const DIE_SWAP_FACES`
+     - `signal show_die_swap`
+     - `handle_die_swap_confirm()`
+     - `handle_die_swap_skip()`
+     - The die swap overlay in match.gd (_die_swap_overlay, _on_show_die_swap, etc.)
+     - The "Switch Dice →" dev menu button (still useful for testing mid-match)
+
+   Nothing in GameState needs removal — there is no die-swap counter or flag there.
+
+5. Tests — create tests/test_crossroads.gd (new file, headless pattern):
+
+   Follow the pattern from tests/test_run_manager.gd. Register: AbilityLibrary,
+   BoxLibrary, PowerLibrary, GameState, PowerManager, CaseManager.
+
+   Cover:
+     - show_crossroads fires after match 9 (not at match 5, not at match 10).
+     - show_crossroads fires after match 21 (not at match 20, not at match 22).
+     - show_crossroads does NOT fire after matches 1–8, 10–20, 22–26.
+     - handle_crossroads_rest() adds +2 HP, capped at MAX_HP (6).
+     - handle_crossroads_rest() at HP == MAX_HP: no change.
+     - handle_crossroads_whetstone() emits show_die_swap exactly once.
+     - After handle_die_swap_skip(), _start_next_match() fires (next_match_ready emitted).
+     - Periodic die swap (every 5 matches) no longer fires anywhere in a run —
+       advance 10 matches and confirm show_die_swap was never emitted except via
+       Whetstone.
 
 6. Update CLAUDE.md "Current Build State":
-     - Add: crossroads system (Rest / Whetstone) replaces periodic die swap;
-       fires after match 9 and match 21.
-     - Remove the bullet about "die swap offered every 5 matches" if present.
+     - Replace "die swap offered every 5 matches" bullet with:
+       "Crossroads fires after match 9 and match 21: Rest (+2 HP, capped at
+       MAX_HP=6) or Whetstone (one die swap). Periodic die swap removed."
+     - Add GameState.MAX_HP = 6 to the GameState bullet.
 
 PROTOTYPING DISCIPLINE (re-emphasized — see spec section)
 
   - "Crossroads" as a header is fine — no per-act themed copy yet.
   - Plain button labels with one-line subtitles.
   - No animations, no transitions, instant overlay show/hide.
-  - Reuse the existing power-offer or run-won overlay structure as a starting
+  - Reuse the existing run-won / power-offer overlay structure as a starting
     point — same opaque background, same button style.
-  - If the die-swap-offer flow is awkward to call as a sub-flow from Whetstone
-    (e.g., it expects to be the top-level overlay), flag it instead of
-    refactoring deeply. A quick wrapper is fine.
 
 OUT OF SCOPE (explicitly — slices 3–5 and beyond)
 
@@ -95,6 +195,7 @@ OUT OF SCOPE (explicitly — slices 3–5 and beyond)
   - Vignettes / events / texture roller (slice 3)
   - Entity types and entity-themed crossroads copy (slice 4)
   - Source boxes (slice 5)
+  - Dynamic max_hp (any power that increases max HP — deferred; const is fine for now)
 
 WORKFLOW
 
