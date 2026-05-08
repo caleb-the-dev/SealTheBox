@@ -1,0 +1,2 @@
+id,pool_id,prompt,option_a_label,option_a_effect,option_b_label,option_b_effect
+e_coin,default,a stranger offers a cursed coin,Accept,hp-1;charge_random+1,Refuse,none
