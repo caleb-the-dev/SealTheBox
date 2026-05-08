@@ -14,6 +14,9 @@ var _dice_pool: DicePool
 var _current_phase: String = ""
 var _match_over: bool = false
 var _threshold_notified: bool = false
+# Sum of tab values sealed this round. Used by forced_full_commit to compute
+# leftover pips at round end.
+var _tabs_sum_sealed_this_round: int = 0
 
 # Shadow the autoload name so --script headless tests (which register the
 # singleton manually) can compile this file without autoloads running.
@@ -37,11 +40,18 @@ func start_match(box: BoxDefinition) -> void:
 	_threshold_notified = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
-	_dice_pool.setup(GameState.dice_pool.duplicate())
+	# Use get_active_pool() so DICE-axis boxes (single_die, locked_d8, locked_d4)
+	# can override the pool for this match without touching the persistent pool.
+	_dice_pool.setup(GameState.get_active_pool())
+	# Apply bounty_box entry effect: grant phoenix_down once per run.
+	if BoxDiceAccess.has_entry_power(box.id) and not GameState.marquee_seen.has(box.id):
+		GameState.marquee_seen[box.id] = true
+		_grant_bounty_box_power()
 	start_round()
 
 func start_round() -> void:
 	GameState.round += 1
+	_tabs_sum_sealed_this_round = 0
 	var hand = _dice_pool.draw_hand()
 	GameState.dice_hand = hand
 	if GameState.round == 1:
@@ -83,6 +93,10 @@ func attempt_seal(dice: Array, tabs: Array) -> bool:
 			all_sealed.append_array(bonus)
 		power_mgr.apply_tab9_bounty(all_sealed)
 		power_mgr.on_tabs_sealed(all_sealed.size())
+	# Track primary seals (not bonus seals) for forced_full_commit accounting.
+	# Bonus seals are "free" — they don't consume rolled pips.
+	for t in tabs:
+		_tabs_sum_sealed_this_round += t
 	GameState.tabs = _tab_board.get_remaining()
 	tabs_sealed.emit(all_sealed)
 	_check_win()
@@ -189,16 +203,30 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 func end_round() -> void:
 	if _match_over:
 		return
+	# forced_full_commit: check for leftover rolled pips before discarding the hand.
+	# Compute rolled total; if the player didn't seal all pips, deal damage = leftover.
+	if GameState.current_box != null and BoxDiceAccess.has_forced_commit(GameState.current_box.id):
+		var rolled_total := 0
+		for die in GameState.dice_hand:
+			if die.rolled and not die.dropped:
+				rolled_total += die.value
+		var leftover := rolled_total - _tabs_sum_sealed_this_round
+		if leftover > 0:
+			GameState.hp -= leftover
 	_dice_pool.discard_hand()
 	GameState.dice_hand = []
 	var in_overtime: bool = GameState.round > GameState.round_limit
 	if in_overtime:
 		GameState.hp -= 1
+	# tax_per_roll: deal 1 HP damage after round 1.
+	if GameState.current_box != null and BoxDiceAccess.has_tax(GameState.current_box.id):
+		if GameState.round > 1:
+			GameState.hp -= 1
 	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	if power_mgr:
 		power_mgr.on_round_end()
 	round_ended.emit(GameState.round)
-	if in_overtime and GameState.hp <= 0:
+	if GameState.hp <= 0:
 		_match_over = true
 		if power_mgr:
 			power_mgr.on_match_end()
@@ -255,3 +283,21 @@ func dev_critical_win() -> void:
 func _set_phase(phase: String) -> void:
 	_current_phase = phase
 	phase_changed.emit(phase)
+
+# Grant the bounty_box fixed power (phoenix_down) to the player.
+# Uses PowerManager.add_power if available; falls back to direct GameState append.
+func _grant_bounty_box_power() -> void:
+	var power_id := BoxDiceAccess.BOUNTY_BOX_POWER_ID
+	if not Engine.has_singleton("PowerLibrary"):
+		push_warning("RoundManager: PowerLibrary not available — cannot grant bounty_box power '%s'" % power_id)
+		return
+	var power_lib = Engine.get_singleton("PowerLibrary")
+	var power = power_lib.get_power(power_id)
+	if power == null:
+		push_warning("RoundManager: bounty_box power '%s' not found in PowerLibrary" % power_id)
+		return
+	if Engine.has_singleton("PowerManager"):
+		Engine.get_singleton("PowerManager").add_power(power.duplicate())
+	else:
+		GameState.owned_powers.append(power.duplicate())
+	status_updated.emit("Bounty Box — Gained: %s" % power.name)

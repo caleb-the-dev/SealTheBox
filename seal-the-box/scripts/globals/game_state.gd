@@ -23,6 +23,10 @@ var pending_threshold_bonus: int = 0
 var power_counters: Dictionary = {}
 var case_match_index: int = 1
 var run_won: bool = false
+# Tracks which marquee box ids have already been seen this run (used by CaseManager
+# to ensure once-per-run boxes like bounty_box appear at most once).
+# Dictionary used as a set: key = box_id, value = true.
+var marquee_seen: Dictionary = {}
 
 var act: int:
 	get:
@@ -40,6 +44,7 @@ func reset_run() -> void:
 	power_counters = {}
 	case_match_index = 1
 	run_won = false
+	marquee_seen = {}
 	_setup_dice_pool()
 	reset_match()
 	_setup_ability_hand()
@@ -61,6 +66,14 @@ func _setup_dice_pool() -> void:
 		dice_pool.append(Die.new(6))
 	dice_pool.append(Die.new(8))
 	dice_pool.append(Die.new(8))
+
+# Returns the effective dice pool for the current match.
+# If the current box has a pool override (DICE-axis boxes), returns the overridden pool.
+# The persistent dice_pool is never modified — this is read-only for the match.
+func get_active_pool() -> Array:
+	if current_box == null:
+		return dice_pool.duplicate()
+	return BoxDiceAccess.get_active_pool(current_box.id, dice_pool)
 
 func _setup_ability_hand() -> void:
 	var lib = Engine.get_singleton("AbilityLibrary")
