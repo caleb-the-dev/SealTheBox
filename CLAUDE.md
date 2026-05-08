@@ -142,7 +142,7 @@ Before suggesting or implementing anything new, ask: *"Is this needed for the cu
 - GameState: hp=6, MAX_HP=6, starting pool=1d4+4d6+2d8 (7 dice), ability_hand=[null, null, random_ability], owned_powers=[], power_counters={}, pending_threshold_bonus=0
 - Dev menu (T key or DEV button): scrollable panels; "Win Current Match" (threshold), "Shut the Box (Critical Win)", "Give Power →" submenu (all 11 powers), "Give Ability →" submenu (all 14 pool abilities, fills first empty slot or overwrites slot 3), "Switch Dice →" (mid-match die swap, no match transition), "Win Entire Series", "Restart Run" shortcuts for playtesting
 - UI: top bar (HP/Match N of 27/Act N/Location N); tab area with remaining-sum counter + threshold label + Continue button (disabled mid-round); bottom panel split into dice area (2/3) and abilities area (1/3); right-side powers panel (always visible, hover tooltips, stack count badge for duplicates, counter display "Name X/Y" for counter powers); power offer overlay (3-card pick) + rotation overlay + run-over overlay + run-won overlay — all built in code in match.gd
-- Tests: test_run_manager.gd (48 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd (22 abilities) + test_case_manager.gd (10 tests) + test_crossroads.gd (8 tests) pass headless
+- Tests: test_run_manager.gd (46 tests) + test_power_effects.gd (30 tests) + test_ability_library.gd (22 abilities) + test_case_manager.gd (10 tests) + test_crossroads.gd (8 tests) pass headless
 
 ## Git & GitHub
 
