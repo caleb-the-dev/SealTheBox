@@ -33,12 +33,15 @@ func _init() -> void:
 	_test_crit_only_returns_false_when_tabs_remain()
 
 	# escalating_threshold tests
-	_test_escalating_threshold_round_1_is_30()
-	_test_escalating_threshold_round_2_is_25()
-	_test_escalating_threshold_round_3_is_20()
-	_test_escalating_threshold_round_4_is_15()
-	_test_escalating_threshold_round_99_is_15()
+	_test_escalating_threshold_round_1_is_25()
+	_test_escalating_threshold_round_2_is_20()
+	_test_escalating_threshold_round_3_is_15()
+	_test_escalating_threshold_round_4_is_5()
+	_test_escalating_threshold_round_99_is_5()
 	_test_get_escalating_threshold_helper()
+
+	# crit_only round_limit override
+	_test_crit_only_round_limit_is_5()
 
 	# RoundManager integration tests
 	_test_round_manager_crit_only_suppresses_threshold_reached(gs)
@@ -119,43 +122,49 @@ func _test_crit_only_returns_false_when_tabs_remain() -> void:
 # escalating_threshold tests
 # ---------------------------------------------------------------------------
 
-func _test_escalating_threshold_round_1_is_30() -> void:
+func _test_escalating_threshold_round_1_is_25() -> void:
 	var tb := _make_tab_board([1, 2, 3, 4, 5, 6, 7, 8, 9])
-	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 1, 30)
-	assert(result == 30,
-		"escalating_threshold R1: expected 30, got %s" % str(result))
-
-func _test_escalating_threshold_round_2_is_25() -> void:
-	var tb := _make_tab_board([1, 2, 3, 4, 5, 6, 7, 8, 9])
-	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 2, 30)
+	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 1, 25)
 	assert(result == 25,
-		"escalating_threshold R2: expected 25, got %s" % str(result))
+		"escalating_threshold R1: expected 25, got %s" % str(result))
 
-func _test_escalating_threshold_round_3_is_20() -> void:
+func _test_escalating_threshold_round_2_is_20() -> void:
 	var tb := _make_tab_board([1, 2, 3, 4, 5, 6, 7, 8, 9])
-	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 3, 30)
+	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 2, 25)
 	assert(result == 20,
-		"escalating_threshold R3: expected 20, got %s" % str(result))
+		"escalating_threshold R2: expected 20, got %s" % str(result))
 
-func _test_escalating_threshold_round_4_is_15() -> void:
+func _test_escalating_threshold_round_3_is_15() -> void:
 	var tb := _make_tab_board([1, 2, 3, 4, 5, 6, 7, 8, 9])
-	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 4, 30)
+	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 3, 25)
 	assert(result == 15,
-		"escalating_threshold R4: expected 15, got %s" % str(result))
+		"escalating_threshold R3: expected 15, got %s" % str(result))
 
-func _test_escalating_threshold_round_99_is_15() -> void:
-	# Floor at R4+ = 15.
+func _test_escalating_threshold_round_4_is_5() -> void:
 	var tb := _make_tab_board([1, 2, 3, 4, 5, 6, 7, 8, 9])
-	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 99, 30)
-	assert(result == 15,
-		"escalating_threshold R99: expected floor of 15, got %s" % str(result))
+	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 4, 25)
+	assert(result == 5,
+		"escalating_threshold R4: expected 5, got %s" % str(result))
+
+func _test_escalating_threshold_round_99_is_5() -> void:
+	# Floor at R4+ = 5.
+	var tb := _make_tab_board([1, 2, 3, 4, 5, 6, 7, 8, 9])
+	var result = BoxWinConditions.evaluate("escalating_threshold", tb, 99, 25)
+	assert(result == 5,
+		"escalating_threshold R99: expected floor of 5, got %s" % str(result))
 
 func _test_get_escalating_threshold_helper() -> void:
-	assert(BoxWinConditions.get_escalating_threshold(1) == 30, "helper R1 should be 30")
-	assert(BoxWinConditions.get_escalating_threshold(2) == 25, "helper R2 should be 25")
-	assert(BoxWinConditions.get_escalating_threshold(3) == 20, "helper R3 should be 20")
-	assert(BoxWinConditions.get_escalating_threshold(4) == 15, "helper R4 should be 15")
-	assert(BoxWinConditions.get_escalating_threshold(5) == 15, "helper R5+ should be 15")
+	assert(BoxWinConditions.get_escalating_threshold(1) == 25, "helper R1 should be 25")
+	assert(BoxWinConditions.get_escalating_threshold(2) == 20, "helper R2 should be 20")
+	assert(BoxWinConditions.get_escalating_threshold(3) == 15, "helper R3 should be 15")
+	assert(BoxWinConditions.get_escalating_threshold(4) == 5,  "helper R4 should be 5")
+	assert(BoxWinConditions.get_escalating_threshold(5) == 5,  "helper R5+ should be 5")
+
+func _test_crit_only_round_limit_is_5() -> void:
+	assert(BoxWinConditions.get_round_limit("crit_only", 4) == 5,
+		"crit_only: round_limit override should be 5, base was 4")
+	assert(BoxWinConditions.get_round_limit("classic", 4) == 4,
+		"classic: no override, should return base_limit 4")
 
 # ---------------------------------------------------------------------------
 # RoundManager integration tests
@@ -209,57 +218,52 @@ func _test_round_manager_crit_only_allows_critical_win(gs: Node) -> void:
 
 func _test_round_manager_escalating_threshold_updates_each_round(gs: Node) -> void:
 	gs.reset_run()
-	var box := _make_box("escalating_threshold", [1, 2, 3, 4, 5, 6, 7, 8, 9], 30)
+	var box := _make_box("escalating_threshold", [1, 2, 3, 4, 5, 6, 7, 8, 9], 25)
 	var rm := RoundManager.new()
 	rm.start_match(box)
-	# After R1 start, threshold should be 30.
-	assert(gs.win_threshold == 30,
-		"escalating_threshold R1: win_threshold should be 30, got %d" % gs.win_threshold)
+	# After R1 start, threshold should be 25.
+	assert(gs.win_threshold == 25,
+		"escalating_threshold R1: win_threshold should be 25, got %d" % gs.win_threshold)
 	# Advance to R2.
 	rm.commit_roll([])
 	rm.end_round()
-	# After R2 start, threshold should be 25.
-	assert(gs.win_threshold == 25,
-		"escalating_threshold R2: win_threshold should be 25, got %d" % gs.win_threshold)
+	# After R2 start, threshold should be 20.
+	assert(gs.win_threshold == 20,
+		"escalating_threshold R2: win_threshold should be 20, got %d" % gs.win_threshold)
 	# Advance to R3.
 	rm.commit_roll([])
 	rm.end_round()
-	assert(gs.win_threshold == 20,
-		"escalating_threshold R3: win_threshold should be 20, got %d" % gs.win_threshold)
+	assert(gs.win_threshold == 15,
+		"escalating_threshold R3: win_threshold should be 15, got %d" % gs.win_threshold)
 	# Advance to R4.
 	rm.commit_roll([])
 	rm.end_round()
-	assert(gs.win_threshold == 15,
-		"escalating_threshold R4: win_threshold should be 15, got %d" % gs.win_threshold)
+	assert(gs.win_threshold == 5,
+		"escalating_threshold R4: win_threshold should be 5, got %d" % gs.win_threshold)
 
 func _test_round_manager_escalating_threshold_threshold_reached_at_correct_value(gs: Node) -> void:
 	gs.reset_run()
-	# tabs [1..9] sum=45. In R1, threshold=30. Remaining=45 > 30, no fire in R1.
-	# In R2, threshold=25. Seal [8,7,6] sum=21 → remaining=24 ≤ 25 → threshold_reached fires.
-	var box := _make_box("escalating_threshold", [1, 2, 3, 4, 5, 6, 7, 8, 9], 30)
+	# tabs [6,7,8,9] sum=30. In R1, threshold=25. Remaining=30 > 25, no fire in R1.
+	# In R2, threshold=20. Seal [7,8] sum=15 → remaining=15 ≤ 20 → threshold_reached fires.
+	var box := _make_box("escalating_threshold", [6, 7, 8, 9], 25)
 	var rm := RoundManager.new()
-	# Use array capture pattern.
 	var threshold_reached_round := [-1]
 	rm.threshold_reached.connect(func(): threshold_reached_round[0] = gs.round)
 	rm.start_match(box)
-	# R1: remaining sum=45 > threshold=30. Do not attempt any seal; just advance round.
+	# R1: remaining sum=30 > threshold=25. Do not seal; just advance round.
 	rm.commit_roll([])
-	# Verify no threshold fire in R1.
 	assert(threshold_reached_round[0] == -1,
-		"escalating_threshold: threshold_reached should not fire in R1 with remaining=45 > threshold=30")
+		"escalating_threshold: threshold_reached should not fire in R1 with remaining=30 > threshold=25")
 	rm.end_round()
-	# Now in R2: threshold=25 (updated by start_round).
-	assert(gs.win_threshold == 25,
-		"escalating_threshold: after end_round, R2 threshold should be 25, got %d" % gs.win_threshold)
-	# Commit R2 dice, seal [8, 7, 6] sum=21 → remaining=24 ≤ 25 → fires.
+	# Now in R2: threshold=20.
+	assert(gs.win_threshold == 20,
+		"escalating_threshold: after end_round, R2 threshold should be 20, got %d" % gs.win_threshold)
+	# Commit R2 dice, seal [7,8] sum=15 → remaining=15 ≤ 20 → fires.
 	rm.commit_roll([])
-	gs.dice_hand[0].value = 8
+	gs.dice_hand[0].value = 7
 	gs.dice_hand[0].rolled = true
-	gs.dice_hand[1].value = 7
+	gs.dice_hand[1].value = 8
 	gs.dice_hand[1].rolled = true
-	gs.dice_hand[2].value = 6
-	gs.dice_hand[2].rolled = true
-	rm.attempt_seal(gs.dice_hand, [8, 7, 6])
-	# Remaining = 45 - 21 = 24 ≤ 25 (R2 threshold) → should fire.
+	rm.attempt_seal(gs.dice_hand, [7, 8])
 	assert(threshold_reached_round[0] == 2,
 		"escalating_threshold: threshold_reached should fire in R2 (round=2), got round=%d" % threshold_reached_round[0])

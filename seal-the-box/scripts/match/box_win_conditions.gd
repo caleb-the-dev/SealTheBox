@@ -24,8 +24,15 @@ static var _initialized: bool = false
 
 static var _descriptions: Dictionary = {
 	"crit_only":            "Must seal every tab. The Continue button is disabled — only a full shutdown wins.",
-	"escalating_threshold": "Win threshold drops each round: ≤30 → ≤25 → ≤20 → ≤15. Seal fast or the window closes.",
+	"escalating_threshold": "Win threshold drops each round: ≤25 → ≤20 → ≤15 → ≤5. Seal fast or the window closes.",
 }
+
+static var _round_limit_overrides: Dictionary = {
+	"crit_only": 5,
+}
+
+static func get_round_limit(box_id: String, base_limit: int) -> int:
+	return _round_limit_overrides.get(box_id, base_limit)
 
 static func get_description(box_id: String) -> String:
 	return _descriptions.get(box_id, "")
@@ -79,16 +86,16 @@ static func _cond_crit_only(tab_board: TabBoard, _round: int, _threshold: int) -
 #   If the remaining sum is already ≤15, later rounds keep the floor.
 static func _cond_escalating_threshold(_tab_board: TabBoard, current_round: int, _threshold: int) -> Variant:
 	match current_round:
-		1: return 30
-		2: return 25
-		3: return 20
-		_: return 15  # R4 and beyond
+		1: return 25
+		2: return 20
+		3: return 15
+		_: return 5   # R4 and beyond
 
 # Helper: return the escalating threshold for a given round (used by RoundManager
 # to display the correct threshold label each round start).
 static func get_escalating_threshold(current_round: int) -> int:
 	match current_round:
-		1: return 30
-		2: return 25
-		3: return 20
-		_: return 15
+		1: return 25
+		2: return 20
+		3: return 15
+		_: return 5

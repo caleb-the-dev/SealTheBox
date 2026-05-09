@@ -29,7 +29,7 @@ func start_match(box: BoxDefinition) -> void:
 		threshold += GameState.pending_threshold_bonus
 		GameState.pending_threshold_bonus = 0
 	GameState.win_threshold = threshold
-	GameState.round_limit = box.round_limit
+	GameState.round_limit = BoxWinConditions.get_round_limit(box.id, box.round_limit)
 	GameState.tabs = box.tabs.duplicate()
 	_tab_board = TabBoard.new()
 	_dice_pool = DicePool.new()
