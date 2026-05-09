@@ -15,8 +15,10 @@ Does NOT own runtime state — tab sealing happens in TabBoard / GameState.
 @export var tabs: Array[int] # tab values (e.g. [1,2,3,4,5,6,7,8,9])
 var win_threshold: int       # loaded from CSV column 4 — remaining sum must be ≤ this to win
 var tier: String             # loaded from CSV column 5 — "easy", "medium", or "hard"; used by CaseManager to assign boxes to acts
-var source_for: String       # loaded from CSV column 6 — one of "diabolic", "cosmic", "ethereal", or "" for normal boxes
-                             # Source boxes are exclusively assigned to match 27 and excluded from tier draws
+var source_for: String       # loaded from CSV column 6. Known values:
+                             #   ""          — regular box; no special routing
+                             #   "diabolic" / "cosmic" / "ethereal" — legacy entity-type markers; no active use
+                             #   "final"     — fixed to match 27 (final boss slot); CaseManager routes this box there always
 ```
 
 ## Computed Getter
@@ -54,10 +56,12 @@ None — pure data object.
 - Assigning a plain `Array` literal to `tabs: Array[int]` raises a SCRIPT ERROR in headless tests. Use `box.tabs.assign([...])` instead.
 - Source boxes (`source_for != ""`) must not appear in regular tier draws. `BoxLibrary.get_by_tier()` automatically filters them out. Do not call `get_all()` and filter by tier manually — you'll include Source boxes.
 - `source_for` defaults to `""` (empty string) for all regular boxes. Check with `box.source_for.is_empty()`, not `box.source_for == null`.
+- `source_for == "final"` means this box is always assigned to match 27 by CaseManager. Currently only Den of Sevens carries this value. Don't add a second "final" box without updating CaseManager (it expects exactly one).
 
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | Slice 1 playtest: source_for gains "final" value (Den of Sevens, fixed match-27 boss). Box pool expanded to 20; thresholds retuned multiple times. The Pact threshold lowered to 7, the Anchor to 10, boss boxes tightened for difficulty. |
 | 2026-05-08 | All win_thresholds cut 25% (classic 15→11, low_evens 13→10, high_odds 13→10, compressed 10→8, stairs 12→9, source_devil 14→11, source_cosmic 15→11, source_ghost 17→13). Source box tiers corrected to "boss" in docs (was "hard" — docs were stale). |
 | 2026-05-08 | Source box tiers set to "boss" (refactored from "hard") so BoxLibrary.get_by_tier("boss") returns them exclusively. |
 | 2026-05-07 | feature/source-boxes: Added `source_for: String` field (CSV column 6). Three Source boxes added: source_devil ("the Pact", diabolic), source_cosmic ("the Veil", cosmic), source_ghost ("the Anchor", ethereal). |

@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 15 |
+| Sessions since groom | 16 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -52,7 +52,7 @@ seal-the-box/
   project.godot
   data/
     abilities.csv          # ability definitions (22 abilities; 14 in rotation pool with charges 1–3)
-    boxes.csv              # box definitions (8 boxes: 5 regular tiers + 3 boss-tier Source boxes — source_devil/source_cosmic/source_ghost)
+    boxes.csv              # box definitions (20 boxes: 7 easy / 5 medium / 5 hard / 3 boss; boss = the Pact / the Anchor / Den of Sevens)
     powers.csv             # power definitions (11 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor, tax_collector, diabolic_pact, tab_counter)
   resources/
     ability_data.gd        # AbilityData Resource subclass
@@ -83,6 +83,7 @@ seal-the-box/
     test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 46 tests
     test_power_effects.gd  # Tests for all 8 power effects via PowerManager (headless) — 30 tests
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
+    test_box_definitions.gd # Validates full 20-box pool: counts, tab sums, thresholds, tier validity, no duplicate ids (headless)
     test_case_manager.gd   # Tests for CaseManager (headless) — 15 tests (new difficulty structure: boss@9/21/27, no repeats)
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap (headless) — 8 tests
     test_entity.gd         # Stub — entity system removed 2026-05-08
@@ -111,6 +112,7 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-08 | Slice 1 (feature/boxes-composition) merged to master. 14 new COMP-axis boxes added, pool expanded to 20 (7 easy / 5 medium / 5 hard / 3 boss). Two boxes dropped after playtest (Five Nines, Ten Pillars). Major tuning: tier rebalancing (stairs→easy, lopsided_giant→medium, high_odds→hard, source_cosmic→easy, avalanche→medium, den_of_sevens→boss). cluster_of_fours renamed cluster_of_twos. mirror_ladder gained center-6 tab. Boss box thresholds tightened (the Pact 11→7, the Anchor 13→10). Den of Sevens (7×7 tabs, threshold 12) locked to match 27 as fixed final boss via source_for="final". Tab selection bug fixed (index-based, not value-based). Dynamic tab button sizing added for 10+ tab boxes. Dev menu: "Go to Match →" and "Go to Box →" submenus added. test_box_definitions.gd added (validates full pool). |
 | 2026-05-08 | Playtest tuning (session 2). Draw count restored to 3 (was 2 — Weaken abilities were too powerful with guaranteed low rolls). All box win_thresholds cut 25% (classic 15→11, low_evens 13→10, high_odds 13→10, stairs 12→9, compressed 10→8, boss boxes 14/15/17→11/11/13). Critical win now heals +1 HP before power offer; "Healed 1 HP!" notice shown on power offer overlay. HP display updated to show N/MAX with smaller grey max. Slot-1 ability tooltip appends "— lose after this round". Tax Collector counter_target 3→2. Tab 9 Bounty converted from On-Seal to Counter (target=3, persists across matches). |
 | 2026-05-08 | Playtest session. Four changes committed directly to master: (1) draw-2 dice per turn (was 3) — game was too easy; (2) 1.5× win thresholds then immediately cut 50% — net current values: Classic 15, Low Evens 13, High Odds 13, Stairs 12, Compressed 10, boss boxes 14/15/17; (3) fixed vignette/event overlays not filling screen (layout bug — moot since both were then removed); (4) major refactor — dropped vignette/event texture system (slice 3), entity types (slice 4), entity-flavored source box assignment; new difficulty structure: 8 easy → boss@9 → 11 medium → boss@21 → 5 hard → boss@27; boss pool (3 Source boxes) shuffled per run, no repeats across the 3 boss matches; tier label ("easy"/"medium"/"hard"/"BOSS") added to top-left; +10 HP dev button added; singleton count reduced from 9 to 6. |
 | 2026-05-07 | feature/source-boxes (slice 5 — capstone of the Case meta-flow). Three themed Source boxes added to boxes.csv (source_devil/"the Pact"/diabolic, source_cosmic/"the Veil"/cosmic, source_ghost/"the Anchor"/ethereal). BoxDefinition: `source_for: String` field added. BoxLibrary: `get_source(entity_id)` added; `get_by_tier()` now excludes Source boxes. CaseManager.reset_run() forces match 27 = BoxLibrary.get_source(entity_id); matches 22–26 draw 5 regular hard-tier boxes only. match.gd _on_run_won(): overlay text updated to "[display_name] is sealed at [source_name]" (e.g. "the devil is sealed at the Pact"). 4 new tests in test_case_manager.gd (14 total); EntityLibrary added to test setup. All 5 Case meta-flow slices now shipped. |
