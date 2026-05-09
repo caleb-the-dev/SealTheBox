@@ -21,6 +21,12 @@ extends RefCounted
 static var _registry: Dictionary = {}
 static var _initialized: bool = false
 
+static var _descriptions: Dictionary = {
+	"single_die": "Only 1 randomly-chosen die per round. Tabs are tuned for low rolls.",
+	"locked_d8":  "d8s are locked out for this match — roll without your biggest dice.",
+	"locked_d4":  "d4 is locked out for this match. A lighter restriction.",
+}
+
 static func _ensure_init() -> void:
 	if _initialized:
 		return
@@ -35,6 +41,14 @@ static func _ensure_init() -> void:
 static func has_override(box_id: String) -> bool:
 	_ensure_init()
 	return _registry.has(box_id)
+
+# Returns whether a box has a DICE-axis description (for the [!] badge).
+static func has_description(box_id: String) -> bool:
+	return _descriptions.has(box_id)
+
+# Returns the one-line description for the [!] tooltip, or "" if none.
+static func get_description(box_id: String) -> String:
+	return _descriptions.get(box_id, "")
 
 # Compute the active pool for box_id given the persistent pool.
 # Returns a new array of Die objects (persistent pool is untouched).

@@ -43,6 +43,9 @@ func _init() -> void:
 	_test_has_forced_commit_single()
 	_test_has_entry_power_bounty_box()
 	_test_bounty_box_power_id_is_phoenix_down()
+	# Note: bounty_box and forced_full_commit were dropped from boxes.csv (playtest 2026-05-09).
+	# The has_entry_power / has_forced_commit infra is tested above; BoxLibrary-dependent
+	# bounty_box tests are removed because bounty_box no longer exists in the library.
 
 	# single_die override.
 	_test_single_die_returns_one_die(gs)
@@ -67,11 +70,7 @@ func _init() -> void:
 	_test_forced_full_commit_no_damage_when_all_pips_used(gs)
 	_test_forced_full_commit_damage_for_leftover_pips(gs)
 
-	# bounty_box entry power grant (once per run).
-	_test_bounty_box_grants_power_on_first_entry(gs)
-	_test_bounty_box_does_not_grant_power_again(gs)
-
-	# CaseManager marquee deduplication.
+	# CaseManager marquee deduplication (bounty_box not in pool, expect count=0 ≤ 1).
 	_test_bounty_box_at_most_once_in_run()
 
 	print("All test_dice_access tests passed!")
@@ -106,7 +105,7 @@ func _test_registry_has_three_pool_overrides() -> void:
 			"BDA should have pool override for '%s'" % id)
 
 func _test_no_pool_override_for_non_dice_boxes() -> void:
-	var ids := ["classic", "low_evens", "bounty_box", "tax_per_roll", "forced_full_commit", ""]
+	var ids := ["classic", "low_evens", "quick_seal", ""]
 	for id in ids:
 		assert(not BDA.has_override(id),
 			"'%s' should NOT have a pool override" % id)
@@ -287,38 +286,6 @@ func _test_forced_full_commit_damage_for_leftover_pips(gs: Node) -> void:
 	rm.end_round()
 	assert(gs.hp == hp_before - 6,
 		"forced_full_commit: -6 HP for 6 leftover pips, expected %d got %d" % [hp_before - 6, gs.hp])
-
-# ---------------------------------------------------------------------------
-# bounty_box entry power grant
-# ---------------------------------------------------------------------------
-
-func _test_bounty_box_grants_power_on_first_entry(gs: Node) -> void:
-	gs.reset_run()
-	var initial_powers: int = gs.owned_powers.size()
-	var box = Engine.get_singleton("BoxLibrary").get_box("bounty_box")
-	assert(box != null, "bounty_box should exist in BoxLibrary")
-	var rm := RoundManager.new()
-	rm.start_match(box)
-	assert(gs.owned_powers.size() == initial_powers + 1,
-		"bounty_box: should grant 1 power on first entry, owned=%d" % gs.owned_powers.size())
-	var found := false
-	for p in gs.owned_powers:
-		if p.id == BDA.BOUNTY_BOX_POWER_ID:
-			found = true
-			break
-	assert(found, "bounty_box: granted power should be '%s'" % BDA.BOUNTY_BOX_POWER_ID)
-
-func _test_bounty_box_does_not_grant_power_again(gs: Node) -> void:
-	gs.reset_run()
-	var box = Engine.get_singleton("BoxLibrary").get_box("bounty_box")
-	assert(box != null, "bounty_box should exist in BoxLibrary")
-	var rm := RoundManager.new()
-	rm.start_match(box)
-	var powers_after_first: int = gs.owned_powers.size()
-	var rm2 := RoundManager.new()
-	rm2.start_match(box)
-	assert(gs.owned_powers.size() == powers_after_first,
-		"bounty_box: should NOT grant another power on second entry in same run, owned=%d" % gs.owned_powers.size())
 
 # ---------------------------------------------------------------------------
 # CaseManager marquee deduplication

@@ -264,7 +264,7 @@ func _setup_ui() -> void:
 
 	_sealed_total_label = Label.new()
 	_sealed_total_label.add_theme_font_size_override("font_size", 20)
-	_sealed_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_sealed_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	tabs_header.add_child(_sealed_total_label)
 
 	var tabs_lbl = Label.new()
@@ -283,7 +283,7 @@ func _setup_ui() -> void:
 
 	_threshold_label = Label.new()
 	_threshold_label.add_theme_font_size_override("font_size", 20)
-	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	thresh_col.add_child(_threshold_label)
 
 
@@ -765,20 +765,6 @@ func _setup_ui() -> void:
 	dev_hp_btn.add_theme_font_size_override("font_size", 17)
 	dev_hp_btn.pressed.connect(_on_dev_give_hp_pressed)
 	dev_btns.add_child(dev_hp_btn)
-
-	var dev_force_bounty_btn = Button.new()
-	dev_force_bounty_btn.text = "Force Bounty Box →"
-	dev_force_bounty_btn.custom_minimum_size = Vector2(0, 56)
-	dev_force_bounty_btn.add_theme_font_size_override("font_size", 17)
-	dev_force_bounty_btn.pressed.connect(_on_dev_force_bounty_box_pressed)
-	dev_btns.add_child(dev_force_bounty_btn)
-
-	var dev_reset_marquee_btn = Button.new()
-	dev_reset_marquee_btn.text = "Reset Marquee Set"
-	dev_reset_marquee_btn.custom_minimum_size = Vector2(0, 56)
-	dev_reset_marquee_btn.add_theme_font_size_override("font_size", 17)
-	dev_reset_marquee_btn.pressed.connect(_on_dev_reset_marquee_pressed)
-	dev_btns.add_child(dev_reset_marquee_btn)
 
 	var dev_force_round_btn = Button.new()
 	dev_force_round_btn.text = "Force Round → (escalating)"
@@ -1699,21 +1685,7 @@ func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
 	_refresh_ui()
 
-func _on_dev_force_bounty_box_pressed() -> void:
-	_dev_overlay.visible = false
-	var bounty = Engine.get_singleton("BoxLibrary").get_box("bounty_box") if Engine.has_singleton("BoxLibrary") else null
-	if bounty == null:
-		push_warning("Dev: bounty_box not found in BoxLibrary")
-		return
-	if not _match_ended:
-		_round_manager.dev_win_match()
-	_round_manager.start_match(bounty)
-	_rebuild_tab_buttons()
-	_refresh_ui()
 
-func _on_dev_reset_marquee_pressed() -> void:
-	GameState.marquee_seen.clear()
-	_dev_overlay.visible = false
 
 func _on_dev_force_round_menu_pressed() -> void:
 	_dev_overlay.visible = false
@@ -1898,7 +1870,15 @@ func _on_end_round_pressed() -> void:
 # ── ui refresh ───────────────────────────────────────────────────────────────
 func _update_tabs_header_widths() -> void:
 	var tab_count = GameState.tabs.size()
-	var row_width = tab_count * 62.0 + max(0, tab_count - 1) * 8.0
+	var btn_w: float
+	var sep: float
+	if tab_count >= 13:
+		btn_w = 36.0; sep = 4.0
+	elif tab_count >= 10:
+		btn_w = 52.0; sep = 6.0
+	else:
+		btn_w = 62.0; sep = 8.0
+	var row_width = tab_count * btn_w + max(0, tab_count - 1) * sep
 	var side_width = max(60.0, (row_width - 110.0) / 2.0)
 	_sealed_total_label.custom_minimum_size.x = side_width
 	_thresh_col.custom_minimum_size.x = side_width
@@ -1938,12 +1918,15 @@ func _refresh_ui() -> void:
 		var box_id := GameState.current_box.id
 		var has_roll_mod := BoxRollModifiers.has_modifier(box_id)
 		var has_win_mod := BoxWinConditions.has_override(box_id)
-		if has_roll_mod or has_win_mod:
+		var has_dice_mod := BoxDiceAccess.has_description(box_id)
+		if has_roll_mod or has_win_mod or has_dice_mod:
 			_box_mod_hint.visible = true
 			if has_roll_mod:
 				_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
-			else:
+			elif has_win_mod:
 				_mod_tooltip_label.text = BoxWinConditions.get_description(box_id)
+			else:
+				_mod_tooltip_label.text = BoxDiceAccess.get_description(box_id)
 		else:
 			_box_mod_hint.visible = false
 			_mod_tooltip.visible = false

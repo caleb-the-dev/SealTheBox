@@ -27,8 +27,8 @@ func _init() -> void:
 
 func _test_box_count() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
-	# 5 original + 3 boss + 13 comp + 6 ROLL + 2 WIN + 6 DICE = 34 boxes.
-	assert(all.size() == 34, "BoxLibrary should have 34 boxes, got %d" % all.size())
+	# 5 original + 3 boss + 13 comp + 6 ROLL + 2 WIN + 3 DICE = 32 boxes.
+	assert(all.size() == 32, "BoxLibrary should have 32 boxes, got %d" % all.size())
 
 func _test_all_tab_sums_positive() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
@@ -74,9 +74,7 @@ func _test_all_boxes_have_valid_tier() -> void:
 			"box '%s' should have a non-empty tier" % box.id)
 
 func _test_dice_access_boxes_present() -> void:
-	var dice_ids := [
-		"single_die", "locked_d8", "locked_d4", "bounty_box", "tax_per_roll", "forced_full_commit"
-	]
+	var dice_ids := ["single_die", "locked_d8", "locked_d4"]
 	var lib := Engine.get_singleton("BoxLibrary")
 	for id in dice_ids:
 		var box = lib.get_box(id)
@@ -90,13 +88,8 @@ func _test_dice_access_registry_coverage() -> void:
 	for id in pool_override_ids:
 		assert(BDA.has_override(id),
 			"BDA should have a pool override for DICE box '%s'" % id)
-	# Non-override DICE boxes (round-end hooks, entry power) should NOT have pool override.
-	var no_pool_override_ids := ["bounty_box", "tax_per_roll", "forced_full_commit"]
-	for id in no_pool_override_ids:
-		assert(not BDA.has_override(id),
-			"DICE box '%s' should not have a pool override (uses other hooks)" % id)
 	# Non-DICE boxes should not have pool overrides.
-	var non_dice_ids := ["classic", "low_evens", "high_odds", "compressed", "stairs"]
+	var non_dice_ids := ["classic", "low_evens", "high_odds", "compressed", "stairs", "quick_seal"]
 	for id in non_dice_ids:
 		assert(not BDA.has_override(id),
 			"non-DICE box '%s' should not have a pool override" % id)
