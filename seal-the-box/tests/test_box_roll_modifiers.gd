@@ -141,12 +141,12 @@ func _test_weak_dice_ignores_dropped() -> void:
 
 func _test_halving_box_returns_total_override() -> void:
 	var dice := [_make_die(6, 4), _make_die(6, 6)]  # total=10 → 5
-	var result := BoxRollModifiers.compute_total("halving_box", dice)
+	var result: int = BoxRollModifiers.compute_total("halving_box", dice)
 	assert(result == 5, "halving_box: 10/2=5, got %d" % result)
 
 func _test_halving_box_floors() -> void:
 	var dice := [_make_die(6, 3), _make_die(6, 4)]  # total=7 → floor(7/2)=3
-	var result := BoxRollModifiers.compute_total("halving_box", dice)
+	var result: int = BoxRollModifiers.compute_total("halving_box", dice)
 	assert(result == 3, "halving_box: floor(7/2)=3, got %d" % result)
 
 func _test_halving_box_does_not_mutate_dice() -> void:
@@ -162,7 +162,7 @@ func _test_halving_box_does_not_mutate_dice() -> void:
 
 func _test_doubling_box_returns_total_override() -> void:
 	var dice := [_make_die(6, 3), _make_die(6, 4)]  # total=7 → 14
-	var result := BoxRollModifiers.compute_total("doubling_box", dice)
+	var result: int = BoxRollModifiers.compute_total("doubling_box", dice)
 	assert(result == 14, "doubling_box: 7*2=14, got %d" % result)
 
 func _test_doubling_box_does_not_mutate_dice() -> void:
@@ -266,19 +266,19 @@ func _test_pair_swallows_drops_second_die() -> void:
 func _test_high_die_doubles_highest_counts_double() -> void:
 	# [3, 5, 2] → highest=5, total = 3 + 5*2 + 2 = 15.
 	var dice := [_make_die(6, 3), _make_die(8, 5), _make_die(6, 2)]
-	var result := BoxRollModifiers.compute_total("high_die_doubles", dice)
+	var result: int = BoxRollModifiers.compute_total("high_die_doubles", dice)
 	assert(result == 15, "high_die_doubles: [3,5,2] → 3+10+2=15, got %d" % result)
 
 func _test_high_die_doubles_single_die() -> void:
 	var dice := [_make_die(6, 4)]
-	var result := BoxRollModifiers.compute_total("high_die_doubles", dice)
+	var result: int = BoxRollModifiers.compute_total("high_die_doubles", dice)
 	assert(result == 8, "high_die_doubles: single die 4 → 4*2=8, got %d" % result)
 
 func _test_high_die_doubles_tie_only_one_doubled() -> void:
 	# [5, 5, 3] — both dice are tied at max. Only one should be doubled.
 	# Total = 5*2 + 5 + 3 = 18 (or 5 + 5*2 + 3 = 18 either way).
 	var dice := [_make_die(6, 5), _make_die(6, 5), _make_die(6, 3)]
-	var result := BoxRollModifiers.compute_total("high_die_doubles", dice)
+	var result: int = BoxRollModifiers.compute_total("high_die_doubles", dice)
 	assert(result == 18, "high_die_doubles: [5,5,3] tie → one doubled: 10+5+3=18, got %d" % result)
 
 # ---------------------------------------------------------------------------
