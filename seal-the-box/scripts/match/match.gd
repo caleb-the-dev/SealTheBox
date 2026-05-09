@@ -30,6 +30,7 @@ var _act_label: Label
 var _tier_label: Label
 var _box_name_label: Label
 var _box_mod_hint: Label
+var _mod_hint_time: float = 0.0
 var _mod_tooltip: PanelContainer
 var _mod_tooltip_label: Label
 var _run_won_overlay: Control
@@ -1511,6 +1512,12 @@ func _on_mod_hint_entered() -> void:
 func _on_mod_hint_exited() -> void:
 	_mod_tooltip.visible = false
 
+func _process(delta: float) -> void:
+	if _box_mod_hint != null and _box_mod_hint.visible:
+		_mod_hint_time += delta
+		var hue := fmod(_mod_hint_time * 0.15, 1.0)
+		_box_mod_hint.add_theme_color_override("font_color", Color.from_hsv(hue, 0.85, 1.0))
+
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
 
@@ -1902,9 +1909,14 @@ func _refresh_ui() -> void:
 		_tier_label.text = "BOSS" if tier == "boss" else tier
 		_box_name_label.text = GameState.current_box.name
 		var box_id := GameState.current_box.id
-		if BoxRollModifiers.has_modifier(box_id):
+		var has_roll_mod := BoxRollModifiers.has_modifier(box_id)
+		var has_win_mod := BoxWinConditions.has_override(box_id)
+		if has_roll_mod or has_win_mod:
 			_box_mod_hint.visible = true
-			_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
+			if has_roll_mod:
+				_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
+			else:
+				_mod_tooltip_label.text = BoxWinConditions.get_description(box_id)
 		else:
 			_box_mod_hint.visible = false
 			_mod_tooltip.visible = false

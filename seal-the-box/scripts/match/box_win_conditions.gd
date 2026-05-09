@@ -22,6 +22,14 @@ extends RefCounted
 static var _registry: Dictionary = {}
 static var _initialized: bool = false
 
+static var _descriptions: Dictionary = {
+	"crit_only":            "Must seal every tab. The Continue button is disabled — only a full shutdown wins.",
+	"escalating_threshold": "Win threshold drops each round: ≤30 → ≤25 → ≤20 → ≤15. Seal fast or the window closes.",
+}
+
+static func get_description(box_id: String) -> String:
+	return _descriptions.get(box_id, "")
+
 static func _ensure_init() -> void:
 	if _initialized:
 		return
