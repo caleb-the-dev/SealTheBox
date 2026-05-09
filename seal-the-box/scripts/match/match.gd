@@ -30,6 +30,7 @@ var _act_label: Label
 var _tier_label: Label
 var _box_name_label: Label
 var _box_mod_hint: Label
+var _mod_hint_time: float = 0.0
 var _mod_tooltip: PanelContainer
 var _mod_tooltip_label: Label
 var _run_won_overlay: Control
@@ -72,6 +73,7 @@ var _selected_swap_offered_idx: int = -1
 var _selected_swap_pool_die = null
 var _selected_swap_pool_idx: int = -1
 var _dev_die_swap_mode: bool = false
+var _dev_force_round_overlay: Control
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -764,6 +766,13 @@ func _setup_ui() -> void:
 	dev_hp_btn.pressed.connect(_on_dev_give_hp_pressed)
 	dev_btns.add_child(dev_hp_btn)
 
+	var dev_force_round_btn = Button.new()
+	dev_force_round_btn.text = "Force Round → (escalating)"
+	dev_force_round_btn.custom_minimum_size = Vector2(0, 56)
+	dev_force_round_btn.add_theme_font_size_override("font_size", 17)
+	dev_force_round_btn.pressed.connect(_on_dev_force_round_menu_pressed)
+	dev_btns.add_child(dev_force_round_btn)
+
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
 	dev_close_btn.custom_minimum_size = Vector2(0, 44)
@@ -1056,6 +1065,55 @@ func _setup_ui() -> void:
 
 	root.add_child(swap_overlay)
 	_die_swap_overlay = swap_overlay
+
+	# ── Dev force-round overlay (for testing escalating_threshold) ────────────
+	var force_round_overlay = Control.new()
+	force_round_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	force_round_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	force_round_overlay.visible = false
+	var fr_bg = ColorRect.new()
+	fr_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fr_bg.color = Color(0, 0, 0, 1.0)
+	force_round_overlay.add_child(fr_bg)
+
+	var fr_panel = VBoxContainer.new()
+	fr_panel.anchor_left = 0.3
+	fr_panel.anchor_right = 0.7
+	fr_panel.anchor_top = 0.2
+	fr_panel.anchor_bottom = 0.8
+	fr_panel.add_theme_constant_override("separation", 16)
+	force_round_overlay.add_child(fr_panel)
+
+	var fr_title = Label.new()
+	fr_title.text = "— FORCE ROUND —"
+	fr_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fr_title.add_theme_font_size_override("font_size", 22)
+	fr_panel.add_child(fr_title)
+
+	var fr_sub = Label.new()
+	fr_sub.text = "Sets GameState.round so the next win-check uses that round's threshold.\nUse with escalating_threshold box."
+	fr_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fr_sub.add_theme_font_size_override("font_size", 14)
+	fr_sub.modulate = Color(0.75, 0.75, 0.75)
+	fr_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	fr_panel.add_child(fr_sub)
+
+	for round_num in [1, 2, 3, 4]:
+		var fr_btn = Button.new()
+		fr_btn.text = "Round %d  (threshold ≤%d)" % [round_num, BoxWinConditions.get_escalating_threshold(round_num)]
+		fr_btn.custom_minimum_size = Vector2(0, 52)
+		fr_btn.add_theme_font_size_override("font_size", 17)
+		fr_btn.pressed.connect(_on_dev_force_round_pressed.bind(round_num))
+		fr_panel.add_child(fr_btn)
+
+	var fr_back_btn = Button.new()
+	fr_back_btn.text = "← Back"
+	fr_back_btn.custom_minimum_size = Vector2(0, 44)
+	fr_back_btn.pressed.connect(_on_dev_force_round_back_pressed)
+	fr_panel.add_child(fr_back_btn)
+
+	root.add_child(force_round_overlay)
+	_dev_force_round_overlay = force_round_overlay
 
 	# ── Run-won overlay ────────────────────────────────────────────────────────
 	var won_overlay = Control.new()
@@ -1454,6 +1512,12 @@ func _on_mod_hint_entered() -> void:
 func _on_mod_hint_exited() -> void:
 	_mod_tooltip.visible = false
 
+func _process(delta: float) -> void:
+	if _box_mod_hint != null and _box_mod_hint.visible:
+		_mod_hint_time += delta
+		var hue := fmod(_mod_hint_time * 0.15, 1.0)
+		_box_mod_hint.add_theme_color_override("font_color", Color.from_hsv(hue, 0.85, 1.0))
+
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
 
@@ -1620,6 +1684,24 @@ func _on_dev_goto_box_pressed(box: BoxDefinition) -> void:
 func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
 	_refresh_ui()
+
+func _on_dev_force_round_menu_pressed() -> void:
+	_dev_overlay.visible = false
+	_dev_force_round_overlay.visible = true
+
+func _on_dev_force_round_pressed(round_num: int) -> void:
+	# Set GameState.round to round_num so the current round reflects that value.
+	# Also update win_threshold for escalating_threshold boxes.
+	GameState.round = round_num
+	_dev_force_round_overlay.visible = false
+	# Update the escalating threshold directly using the helper.
+	if GameState.current_box != null and GameState.current_box.id == "escalating_threshold":
+		GameState.win_threshold = BoxWinConditions.get_escalating_threshold(round_num)
+	_refresh_ui()
+
+func _on_dev_force_round_back_pressed() -> void:
+	_dev_force_round_overlay.visible = false
+	_dev_overlay.visible = true
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false
@@ -1827,9 +1909,14 @@ func _refresh_ui() -> void:
 		_tier_label.text = "BOSS" if tier == "boss" else tier
 		_box_name_label.text = GameState.current_box.name
 		var box_id := GameState.current_box.id
-		if BoxRollModifiers.has_modifier(box_id):
+		var has_roll_mod := BoxRollModifiers.has_modifier(box_id)
+		var has_win_mod := BoxWinConditions.has_override(box_id)
+		if has_roll_mod or has_win_mod:
 			_box_mod_hint.visible = true
-			_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
+			if has_roll_mod:
+				_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
+			else:
+				_mod_tooltip_label.text = BoxWinConditions.get_description(box_id)
 		else:
 			_box_mod_hint.visible = false
 			_mod_tooltip.visible = false
