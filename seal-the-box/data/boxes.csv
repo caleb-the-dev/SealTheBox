@@ -1,18 +1,29 @@
 id,name,tabs,win_threshold,tier,source_for
 classic,Classic,1;2;3;4;5;6;7;8;9,11,easy,
 low_evens,Low Evens,2;3;4;5;6;7;8,10,easy,
-high_odds,High Odds,3;5;7;9;11,10,medium,
-compressed,Compressed,2;4;5;6;8,8,hard,
-stairs,Stairs,1;3;5;6;7;9,9,medium,
-source_devil,the Pact,1;2;3;4;5;6;7;8;9,11,boss,diabolic
-source_cosmic,the Veil,2;3;4;5;6;7;8;9;10,11,boss,cosmic
-source_ghost,the Anchor,1;3;5;6;7;8;9;11;13,13,boss,ethereal
-heavy_dice,Heavy Dice,2;3;4;5;6;7;8;9,12,medium,
-weak_dice,Weak Dice,1;2;3;4;5;6;7;8;9,14,hard,
+high_odds,High Odds,3;5;7;9;11,10,hard,
+compressed,Compressed,2;4;5;6;8,8,easy,
+stairs,Stairs,1;3;5;6;7;9,9,easy,
+source_devil,the Pact,1;2;3;4;5;6;7;8;9,7,boss,diabolic
+source_cosmic,the Veil,2;3;4;5;6;7;8;9;10,20,easy,cosmic
+source_ghost,the Anchor,1;3;5;6;7;8;9;11;13,10,boss,ethereal
+lopsided_giant,Lopsided Giant,1;1;1;1;1;1;1;9,5,medium,
+easy_starter,Easy Starter,1;2;2;3;3;4;5,6,easy,
+crowded_low,Crowded Low,1;1;1;1;2;2;2;3;3;3;4;4,7,easy,
+cluster_of_twos,Cluster of Twos,2;2;2;2;2;2;2;2;2;2,6,medium,
+triple_triplets,Triple Triplets,1;1;1;5;5;5;9;9;9,12,medium,
+mirror_ladder,Mirror Ladder,1;2;3;4;5;6;5;4;3;2;1,10,medium,
+high_wall,High Wall,5;6;7;8;9;10,12,hard,
+exact_evens,Exact Evens,2;4;6;8;10;12,11,hard,
+prime_pyramid,Prime Pyramid,2;3;5;7;11;13,11,hard,
+den_of_sevens,Den of Sevens,7;7;7;7;7;7;7,12,boss,final
+the_long_count,The Long Count,1;2;3;4;5;6;7;8;9;1;2;3;4;5;6;7;8;9,24,hard,
+avalanche,Avalanche,1;2;3;4;5;6;7;8;9;10;11;12,21,medium,
+heavy_dice,Heavy Dice,2;3;4;5;6;7;8;9,12,easy,
+weak_dice,Weak Dice,1;2;3;4;5;6;7;8;9,10,hard,
 halving_box,Halving Box,1;2;3;4;5;6,6,hard,
 doubling_box,Doubling Box,4;6;8;10;12;14;16,20,medium,
-exploding_ones,Exploding Ones,1;2;3;4;5;6;7;8;9,12,medium,
-pair_swallows,Pair Swallows,1;2;3;4;5;6;7;8;9,13,medium,
-high_die_doubles,High Die Doubles,1;2;3;4;5;6;7;8;9,13,medium,
+exploding_ones,Exploding Ones,2;3;4;5;6;7;8;9;10,12,easy,
+high_die_doubles,High Die Doubles,3;5;7;9;11;13,12,medium,
 crit_only,Crit Only,1;2;3;4;5;6;7;8;9,44,hard,
 escalating_threshold,Escalating Threshold,1;2;3;4;5;6;7;8;9,30,hard,

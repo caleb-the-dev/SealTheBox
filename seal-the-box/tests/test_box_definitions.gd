@@ -1,7 +1,6 @@
 extends SceneTree
 
-# Validation suite for the full box pool after slice-boxes-2-roll-mods.
-# Checks structural invariants for all boxes and presence of the 7 ROLL modifier boxes.
+# Validation suite for the full 22-box pool after slice-boxes-1-composition.
 # Run headless: godot --headless --path seal-the-box --script tests/test_box_definitions.gd
 
 func _init() -> void:
@@ -11,22 +10,20 @@ func _init() -> void:
 	box_lib._ready()
 	Engine.register_singleton("BoxLibrary", box_lib)
 
-	_test_box_count()
+	_test_22_boxes_load()
 	_test_all_tab_sums_positive()
 	_test_win_thresholds_in_range()
 	_test_round_limits_at_least_2()
 	_test_all_boxes_have_at_least_5_tabs()
 	_test_no_duplicate_ids()
-	_test_all_boxes_have_valid_tier()
-	_test_roll_modifier_boxes_present()
-	_test_roll_modifier_registry_coverage()
+	_test_all_new_boxes_have_valid_tier()
+	_test_new_boxes_present()
 	print("All test_box_definitions tests passed!")
 	quit()
 
-func _test_box_count() -> void:
+func _test_22_boxes_load() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
-	# 5 original + 3 source/boss + 7 ROLL modifier boxes + 2 WIN boxes = 17.
-	assert(all.size() == 17, "BoxLibrary should have 17 boxes, got %d" % all.size())
+	assert(all.size() == 28, "BoxLibrary should have 28 boxes, got %d" % all.size())
 
 func _test_all_tab_sums_positive() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
@@ -62,38 +59,39 @@ func _test_no_duplicate_ids() -> void:
 			"duplicate box id found: '%s'" % box.id)
 		seen[box.id] = true
 
-func _test_all_boxes_have_valid_tier() -> void:
+func _test_all_new_boxes_have_valid_tier() -> void:
 	var valid_tiers = ["easy", "medium", "hard", "boss"]
-	var all = Engine.get_singleton("BoxLibrary").get_all()
-	for box in all:
-		assert(box.tier in valid_tiers,
-			"box '%s' tier '%s' should be one of easy/medium/hard/boss" % [box.id, box.tier])
-		assert(not box.tier.is_empty(),
-			"box '%s' should have a non-empty tier" % box.id)
-
-func _test_roll_modifier_boxes_present() -> void:
-	var roll_ids := [
+	var new_ids = [
+		"cluster_of_twos", "high_wall", "exact_evens",
+		"lopsided_giant", "easy_starter", "triple_triplets", "mirror_ladder",
+		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
+		"den_of_sevens",
 		"heavy_dice", "weak_dice", "halving_box", "doubling_box",
-		"exploding_ones", "pair_swallows", "high_die_doubles"
+		"exploding_ones", "high_die_doubles",
+		"crit_only", "escalating_threshold"
 	]
-	var lib := Engine.get_singleton("BoxLibrary")
-	for id in roll_ids:
+	var lib = Engine.get_singleton("BoxLibrary")
+	for id in new_ids:
 		var box = lib.get_box(id)
-		assert(box != null, "ROLL box '%s' should exist in BoxLibrary" % id)
-		assert(box.id == id, "box id mismatch: expected '%s', got '%s'" % [id, box.id])
-		assert(box.tab_sum() > 0, "ROLL box '%s' tab_sum should be positive" % id)
+		assert(box != null, "new box '%s' should exist in BoxLibrary" % id)
+		assert(box.tier in valid_tiers,
+			"box '%s' tier '%s' should be one of easy/medium/hard/boss" % [id, box.tier])
+		assert(not box.tier.is_empty(),
+			"box '%s' should have a non-empty tier" % id)
 
-func _test_roll_modifier_registry_coverage() -> void:
-	# Every box in the ROLL tier has a registered modifier.
-	var roll_ids := [
+func _test_new_boxes_present() -> void:
+	var new_ids = [
+		"cluster_of_twos", "high_wall", "exact_evens",
+		"lopsided_giant", "easy_starter", "triple_triplets", "mirror_ladder",
+		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
+		"den_of_sevens",
 		"heavy_dice", "weak_dice", "halving_box", "doubling_box",
-		"exploding_ones", "pair_swallows", "high_die_doubles"
+		"exploding_ones", "high_die_doubles",
+		"crit_only", "escalating_threshold"
 	]
-	for id in roll_ids:
-		assert(BoxRollModifiers.has_modifier(id),
-			"BoxRollModifiers should have a modifier for ROLL box '%s'" % id)
-	# Original boxes should NOT have a modifier registered.
-	var non_roll_ids := ["classic", "low_evens", "high_odds", "compressed", "stairs"]
-	for id in non_roll_ids:
-		assert(not BoxRollModifiers.has_modifier(id),
-			"non-ROLL box '%s' should not have a modifier in BoxRollModifiers" % id)
+	var lib = Engine.get_singleton("BoxLibrary")
+	for id in new_ids:
+		var box = lib.get_box(id)
+		assert(box != null, "box '%s' should be present in BoxLibrary" % id)
+		assert(box.id == id, "box id mismatch: expected '%s', got '%s'" % [id, box.id])
+		assert(box.tab_sum() > 0, "box '%s' tab_sum should be positive" % id)

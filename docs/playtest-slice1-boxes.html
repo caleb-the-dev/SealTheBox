@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Slice 1 — Box Playtest Checklist</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #111;
+    color: #ddd;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 24px;
+  }
+  h1 { color: #fff; font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #777; font-size: 13px; margin-bottom: 20px; }
+  .progress-bar-wrap { background: #222; border-radius: 6px; height: 10px; margin-bottom: 6px; }
+  .progress-bar { background: #4caf50; border-radius: 6px; height: 10px; transition: width 0.3s; }
+  #progress-text { color: #aaa; font-size: 13px; margin-bottom: 24px; }
+
+  .tier-section { margin-bottom: 32px; }
+  .tier-header {
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 6px 0 6px 4px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 10px;
+  }
+  .tier-easy   { color: #8bc34a; }
+  .tier-medium { color: #ffd54f; }
+  .tier-hard   { color: #ef9a9a; }
+  .tier-boss   { color: #ff9800; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 8px 8px;
+    white-space: nowrap;
+  }
+  td { padding: 6px 8px; vertical-align: top; }
+  tr { border-bottom: 1px solid #1e1e1e; }
+  tr:hover { background: #1a1a1a; }
+  tr.tested { opacity: 0.55; }
+
+  .check-col { width: 32px; text-align: center; }
+  input[type=checkbox] {
+    width: 18px; height: 18px;
+    cursor: pointer;
+    accent-color: #4caf50;
+  }
+  .name-col { width: 160px; font-weight: bold; color: #eee; }
+  .new-badge {
+    display: inline-block;
+    background: #2a4a2a;
+    color: #8bc34a;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+  .tabs-col { width: 260px; color: #aaa; font-size: 12px; line-height: 1.6; }
+  .stat { color: #888; }
+  .stat strong { color: #ccc; }
+  .rating-col { width: 140px; }
+  select {
+    background: #1e1e1e;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 13px;
+    width: 132px;
+  }
+  select:focus { outline: 1px solid #555; }
+  option { background: #1e1e1e; }
+  .memo-col { width: 36px; text-align: center; }
+  .memo-col input { accent-color: #ffd54f; }
+  .notes-col { min-width: 200px; }
+  textarea {
+    background: #1a1a1a;
+    color: #bbb;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 100%;
+    resize: vertical;
+    padding: 4px 6px;
+    min-height: 30px;
+  }
+  textarea:focus { outline: 1px solid #444; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+  button {
+    background: #222;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button:hover { background: #2a2a2a; border-color: #555; }
+  .btn-danger { color: #ef9a9a; }
+  .btn-danger:hover { border-color: #ef9a9a; }
+
+  .key-questions {
+    background: #161616;
+    border-left: 3px solid #555;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    border-radius: 0 6px 6px 0;
+  }
+  .key-questions h2 { color: #aaa; font-size: 13px; letter-spacing: 1px; margin-bottom: 10px; }
+  .key-questions ol { padding-left: 18px; color: #888; line-height: 2; font-size: 13px; }
+  .key-questions li strong { color: #bbb; }
+</style>
+</head>
+<body>
+
+<h1>Slice 1 — Box Playtest Checklist</h1>
+<p class="subtitle">feature/boxes-composition &nbsp;·&nbsp; 22 boxes total &nbsp;·&nbsp; 14 new (marked NEW)</p>
+
+<div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar" style="width:0%"></div></div>
+<div id="progress-text">0 / 22 tested</div>
+
+<div class="controls">
+  <button onclick="clearAll()" class="btn-danger">Clear All</button>
+  <button onclick="copyNotes()">Copy Notes Summary</button>
+</div>
+
+<div class="key-questions">
+  <h2>KEY QUESTIONS THIS SLICE IS TESTING</h2>
+  <ol>
+    <li><strong>Memorable?</strong> Are 3+ boxes immediately distinctive — "oh, the all-nines one"?</li>
+    <li><strong>Thresholds right?</strong> No box trivially won round 1 or impossible by round 4?</li>
+    <li><strong>Rich enough?</strong> Does 22-box rotation feel varied, or does every match still feel the same?</li>
+  </ol>
+</div>
+
+<!-- ── EASY ── -->
+<div class="tier-section">
+<div class="tier-header tier-easy">── EASY ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Threshold &nbsp;·&nbsp; Rounds</th>
+  <th class="rating-col">Threshold feel</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-classic">
+  <td class="check-col"><input type="checkbox" data-id="classic" onchange="toggle(this)"></td>
+  <td class="name-col">Classic</td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>11</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="classic-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="classic-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="classic-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-low_evens">
+  <td class="check-col"><input type="checkbox" data-id="low_evens" onchange="toggle(this)"></td>
+  <td class="name-col">Low Evens</td>
+  <td class="tabs-col">
+    2 3 4 5 6 7 8<br>
+    <span class="stat">sum <strong>35</strong> &nbsp;·&nbsp; ≤<strong>10</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="low_evens-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="low_evens-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="low_evens-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-lopsided_giant">
+  <td class="check-col"><input type="checkbox" data-id="lopsided_giant" onchange="toggle(this)"></td>
+  <td class="name-col">Lopsided Giant <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    1 1 1 1 1 1 1 9<br>
+    <span class="stat">sum <strong>16</strong> &nbsp;·&nbsp; ≤<strong>5</strong> to win &nbsp;·&nbsp; <strong>3</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="lopsided_giant-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="lopsided_giant-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="lopsided_giant-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-easy_starter">
+  <td class="check-col"><input type="checkbox" data-id="easy_starter" onchange="toggle(this)"></td>
+  <td class="name-col">Easy Starter <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    1 2 2 3 3 4 5<br>
+    <span class="stat">sum <strong>20</strong> &nbsp;·&nbsp; ≤<strong>6</strong> to win &nbsp;·&nbsp; <strong>3</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="easy_starter-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="easy_starter-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="easy_starter-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-crowded_low">
+  <td class="check-col"><input type="checkbox" data-id="crowded_low" onchange="toggle(this)"></td>
+  <td class="name-col">Crowded Low <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    1 1 1 1 2 2 2 3 3 3 4 4<br>
+    <span class="stat">sum <strong>27</strong> &nbsp;·&nbsp; ≤<strong>7</strong> to win &nbsp;·&nbsp; <strong>3</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="crowded_low-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="crowded_low-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="crowded_low-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody></table>
+</div>
+
+<!-- ── MEDIUM ── -->
+<div class="tier-section">
+<div class="tier-header tier-medium">── MEDIUM ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Threshold &nbsp;·&nbsp; Rounds</th>
+  <th class="rating-col">Threshold feel</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-high_odds">
+  <td class="check-col"><input type="checkbox" data-id="high_odds" onchange="toggle(this)"></td>
+  <td class="name-col">High Odds</td>
+  <td class="tabs-col">
+    3 5 7 9 11<br>
+    <span class="stat">sum <strong>35</strong> &nbsp;·&nbsp; ≤<strong>10</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="high_odds-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="high_odds-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="high_odds-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-stairs">
+  <td class="check-col"><input type="checkbox" data-id="stairs" onchange="toggle(this)"></td>
+  <td class="name-col">Stairs</td>
+  <td class="tabs-col">
+    1 3 5 6 7 9<br>
+    <span class="stat">sum <strong>31</strong> &nbsp;·&nbsp; ≤<strong>9</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="stairs-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="stairs-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="stairs-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-cluster_of_fours">
+  <td class="check-col"><input type="checkbox" data-id="cluster_of_fours" onchange="toggle(this)"></td>
+  <td class="name-col">Cluster of Fours <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    4 4 4 4 4 4 4 4 4 4<br>
+    <span class="stat">sum <strong>40</strong> &nbsp;·&nbsp; ≤<strong>11</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="cluster_of_fours-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="cluster_of_fours-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="cluster_of_fours-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-triple_triplets">
+  <td class="check-col"><input type="checkbox" data-id="triple_triplets" onchange="toggle(this)"></td>
+  <td class="name-col">Triple Triplets <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    1 1 1 5 5 5 9 9 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>12</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="triple_triplets-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="triple_triplets-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="triple_triplets-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-mirror_ladder">
+  <td class="check-col"><input type="checkbox" data-id="mirror_ladder" onchange="toggle(this)"></td>
+  <td class="name-col">Mirror Ladder <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 5 4 3 2 1<br>
+    <span class="stat">sum <strong>30</strong> &nbsp;·&nbsp; ≤<strong>8</strong> to win &nbsp;·&nbsp; <strong>3</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="mirror_ladder-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="mirror_ladder-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="mirror_ladder-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody></table>
+</div>
+
+<!-- ── HARD ── -->
+<div class="tier-section">
+<div class="tier-header tier-hard">── HARD ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Threshold &nbsp;·&nbsp; Rounds</th>
+  <th class="rating-col">Threshold feel</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-compressed">
+  <td class="check-col"><input type="checkbox" data-id="compressed" onchange="toggle(this)"></td>
+  <td class="name-col">Compressed</td>
+  <td class="tabs-col">
+    2 4 5 6 8<br>
+    <span class="stat">sum <strong>25</strong> &nbsp;·&nbsp; ≤<strong>8</strong> to win &nbsp;·&nbsp; <strong>3</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="compressed-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="compressed-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="compressed-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-five_nines">
+  <td class="check-col"><input type="checkbox" data-id="five_nines" onchange="toggle(this)"></td>
+  <td class="name-col">Five Nines <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    9 9 9 9 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>12</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="five_nines-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="five_nines-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="five_nines-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-high_wall">
+  <td class="check-col"><input type="checkbox" data-id="high_wall" onchange="toggle(this)"></td>
+  <td class="name-col">High Wall <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    5 6 7 8 9 10<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>12</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="high_wall-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="high_wall-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="high_wall-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-exact_evens">
+  <td class="check-col"><input type="checkbox" data-id="exact_evens" onchange="toggle(this)"></td>
+  <td class="name-col">Exact Evens <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    2 4 6 8 10 12<br>
+    <span class="stat">sum <strong>42</strong> &nbsp;·&nbsp; ≤<strong>11</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="exact_evens-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="exact_evens-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="exact_evens-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-prime_pyramid">
+  <td class="check-col"><input type="checkbox" data-id="prime_pyramid" onchange="toggle(this)"></td>
+  <td class="name-col">Prime Pyramid <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    2 3 5 7 11 13<br>
+    <span class="stat">sum <strong>41</strong> &nbsp;·&nbsp; ≤<strong>11</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="prime_pyramid-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="prime_pyramid-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="prime_pyramid-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-den_of_sevens">
+  <td class="check-col"><input type="checkbox" data-id="den_of_sevens" onchange="toggle(this)"></td>
+  <td class="name-col">Den of Sevens <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    7 7 7 7 7 7 3<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>12</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="den_of_sevens-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="den_of_sevens-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="den_of_sevens-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-ten_pillars">
+  <td class="check-col"><input type="checkbox" data-id="ten_pillars" onchange="toggle(this)"></td>
+  <td class="name-col">Ten Pillars <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    10 10 10 10 10 10<br>
+    <span class="stat">sum <strong>60</strong> &nbsp;·&nbsp; ≤<strong>16</strong> to win &nbsp;·&nbsp; <strong>5</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="ten_pillars-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="ten_pillars-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="ten_pillars-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-the_long_count">
+  <td class="check-col"><input type="checkbox" data-id="the_long_count" onchange="toggle(this)"></td>
+  <td class="name-col">The Long Count <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    1–9 × 2 (18 tabs)<br>
+    <span class="stat">sum <strong>90</strong> &nbsp;·&nbsp; ≤<strong>24</strong> to win &nbsp;·&nbsp; <strong>7</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="the_long_count-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="the_long_count-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="the_long_count-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-avalanche">
+  <td class="check-col"><input type="checkbox" data-id="avalanche" onchange="toggle(this)"></td>
+  <td class="name-col">Avalanche <span class="new-badge">NEW</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9 10 11 12<br>
+    <span class="stat">sum <strong>78</strong> &nbsp;·&nbsp; ≤<strong>21</strong> to win &nbsp;·&nbsp; <strong>7</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="avalanche-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="avalanche-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="avalanche-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody></table>
+</div>
+
+<!-- ── BOSS ── -->
+<div class="tier-section">
+<div class="tier-header tier-boss">── BOSS ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Threshold &nbsp;·&nbsp; Rounds</th>
+  <th class="rating-col">Threshold feel</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-source_devil">
+  <td class="check-col"><input type="checkbox" data-id="source_devil" onchange="toggle(this)"></td>
+  <td class="name-col">the Pact</td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>11</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="source_devil-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="source_devil-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="source_devil-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-source_cosmic">
+  <td class="check-col"><input type="checkbox" data-id="source_cosmic" onchange="toggle(this)"></td>
+  <td class="name-col">the Veil</td>
+  <td class="tabs-col">
+    2 3 4 5 6 7 8 9 10<br>
+    <span class="stat">sum <strong>54</strong> &nbsp;·&nbsp; ≤<strong>11</strong> to win &nbsp;·&nbsp; <strong>5</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="source_cosmic-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="source_cosmic-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="source_cosmic-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-source_ghost">
+  <td class="check-col"><input type="checkbox" data-id="source_ghost" onchange="toggle(this)"></td>
+  <td class="name-col">the Anchor</td>
+  <td class="tabs-col">
+    1 3 5 6 7 8 9 11 13<br>
+    <span class="stat">sum <strong>63</strong> &nbsp;·&nbsp; ≤<strong>13</strong> to win &nbsp;·&nbsp; <strong>6</strong> rounds</span>
+  </td>
+  <td class="rating-col"><select data-id="source_ghost-rating" onchange="save(this)"><option value="">— rate —</option><option>Too Easy</option><option>Felt Right</option><option>Too Hard</option><option>DNT</option></select></td>
+  <td class="memo-col"><input type="checkbox" data-id="source_ghost-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="source_ghost-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody></table>
+</div>
+
+<script>
+const STORE_KEY = 'stb_slice1_checklist';
+const TOTAL = 22;
+
+function getStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch { return {}; }
+}
+function setStore(data) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+function save(el) {
+  const data = getStore();
+  const key = el.dataset.id;
+  if (el.type === 'checkbox') data[key] = el.checked;
+  else data[key] = el.value;
+  setStore(data);
+}
+
+function toggle(checkbox) {
+  save(checkbox);
+  const row = document.getElementById('row-' + checkbox.dataset.id);
+  if (row) row.classList.toggle('tested', checkbox.checked);
+  updateProgress();
+}
+
+function updateProgress() {
+  const checkboxes = document.querySelectorAll('input[type=checkbox]:not([data-id$="-memo"])');
+  const done = Array.from(checkboxes).filter(c => c.checked).length;
+  document.getElementById('prog-bar').style.width = (done / TOTAL * 100) + '%';
+  document.getElementById('progress-text').textContent = done + ' / ' + TOTAL + ' tested';
+}
+
+function clearAll() {
+  if (!confirm('Clear all checks and notes? This cannot be undone.')) return;
+  localStorage.removeItem(STORE_KEY);
+  location.reload();
+}
+
+function copyNotes() {
+  const data = getStore();
+  const ids = [
+    'classic','low_evens','lopsided_giant','easy_starter','crowded_low',
+    'high_odds','stairs','cluster_of_fours','triple_triplets','mirror_ladder',
+    'compressed','five_nines','high_wall','exact_evens','prime_pyramid',
+    'den_of_sevens','ten_pillars','the_long_count','avalanche',
+    'source_devil','source_cosmic','source_ghost'
+  ];
+  const names = {
+    classic:'Classic',low_evens:'Low Evens',lopsided_giant:'Lopsided Giant',
+    easy_starter:'Easy Starter',crowded_low:'Crowded Low',high_odds:'High Odds',
+    stairs:'Stairs',cluster_of_fours:'Cluster of Fours',triple_triplets:'Triple Triplets',
+    mirror_ladder:'Mirror Ladder',compressed:'Compressed',five_nines:'Five Nines',
+    high_wall:'High Wall',exact_evens:'Exact Evens',prime_pyramid:'Prime Pyramid',
+    den_of_sevens:'Den of Sevens',ten_pillars:'Ten Pillars',the_long_count:'The Long Count',
+    avalanche:'Avalanche',source_devil:'the Pact',source_cosmic:'the Veil',source_ghost:'the Anchor'
+  };
+  let out = 'Slice 1 Playtest Notes\n======================\n\n';
+  for (const id of ids) {
+    const checked = data[id] ? '✓' : '○';
+    const rating  = data[id + '-rating'] || '—';
+    const memo    = data[id + '-memo'] ? ' ★' : '';
+    const notes   = data[id + '-notes'] || '';
+    out += checked + ' ' + names[id] + memo + '  [' + rating + ']\n';
+    if (notes) out += '   ' + notes.replace(/\n/g, '\n   ') + '\n';
+  }
+  navigator.clipboard.writeText(out).then(() => alert('Notes copied to clipboard!'));
+}
+
+// Restore state on load
+window.addEventListener('DOMContentLoaded', () => {
+  const data = getStore();
+  document.querySelectorAll('input[type=checkbox], select, textarea').forEach(el => {
+    const key = el.dataset.id;
+    if (!(key in data)) return;
+    if (el.type === 'checkbox') {
+      el.checked = data[key];
+      if (!key.endsWith('-memo')) {
+        const row = document.getElementById('row-' + key);
+        if (row) row.classList.toggle('tested', el.checked);
+      }
+    } else {
+      el.value = data[key];
+    }
+  });
+  updateProgress();
+});
+</script>
+</body>
+</html>

@@ -23,7 +23,7 @@ func _init() -> void:
 	Engine.register_singleton("GameState", gs)
 
 	# Run unit tests (registry, per-modifier logic).
-	_test_registry_has_all_seven_modifiers()
+	_test_registry_has_all_six_modifiers()
 	_test_heavy_dice_adds_one_to_each_die()
 	_test_heavy_dice_ignores_dropped()
 	_test_weak_dice_subtracts_one_floor_one()
@@ -37,10 +37,6 @@ func _init() -> void:
 	_test_exploding_ones_value_increases()
 	_test_exploding_ones_non_one_unchanged()
 	_test_exploding_ones_chain_depth_cap()
-	_test_pair_swallows_merges_one_pair()
-	_test_pair_swallows_no_pairs_unchanged()
-	_test_pair_swallows_three_of_kind_merges_first_pair()
-	_test_pair_swallows_drops_second_die()
 	_test_high_die_doubles_highest_counts_double()
 	_test_high_die_doubles_single_die()
 	_test_high_die_doubles_tie_only_one_doubled()
@@ -75,9 +71,9 @@ func _make_dropped_die(faces: int, value: int) -> Die:
 # Registry tests
 # ---------------------------------------------------------------------------
 
-func _test_registry_has_all_seven_modifiers() -> void:
+func _test_registry_has_all_six_modifiers() -> void:
 	var ids := ["heavy_dice", "weak_dice", "halving_box", "doubling_box",
-				"exploding_ones", "pair_swallows", "high_die_doubles"]
+				"exploding_ones", "high_die_doubles"]
 	for id in ids:
 		assert(BoxRollModifiers.has_modifier(id),
 			"BoxRollModifiers should have modifier for '%s'" % id)
@@ -95,7 +91,6 @@ func _test_is_total_override_flags() -> void:
 	assert(not BoxRollModifiers.is_total_override("heavy_dice"),  "heavy_dice should not be total-override")
 	assert(not BoxRollModifiers.is_total_override("weak_dice"),   "weak_dice should not be total-override")
 	assert(not BoxRollModifiers.is_total_override("exploding_ones"), "exploding_ones should not be total-override")
-	assert(not BoxRollModifiers.is_total_override("pair_swallows"),  "pair_swallows should not be total-override")
 
 # ---------------------------------------------------------------------------
 # heavy_dice
@@ -141,12 +136,12 @@ func _test_weak_dice_ignores_dropped() -> void:
 
 func _test_halving_box_returns_total_override() -> void:
 	var dice := [_make_die(6, 4), _make_die(6, 6)]  # total=10 → 5
-	var result := BoxRollModifiers.compute_total("halving_box", dice)
+	var result: int = BoxRollModifiers.compute_total("halving_box", dice)
 	assert(result == 5, "halving_box: 10/2=5, got %d" % result)
 
 func _test_halving_box_floors() -> void:
 	var dice := [_make_die(6, 3), _make_die(6, 4)]  # total=7 → floor(7/2)=3
-	var result := BoxRollModifiers.compute_total("halving_box", dice)
+	var result: int = BoxRollModifiers.compute_total("halving_box", dice)
 	assert(result == 3, "halving_box: floor(7/2)=3, got %d" % result)
 
 func _test_halving_box_does_not_mutate_dice() -> void:
@@ -162,7 +157,7 @@ func _test_halving_box_does_not_mutate_dice() -> void:
 
 func _test_doubling_box_returns_total_override() -> void:
 	var dice := [_make_die(6, 3), _make_die(6, 4)]  # total=7 → 14
-	var result := BoxRollModifiers.compute_total("doubling_box", dice)
+	var result: int = BoxRollModifiers.compute_total("doubling_box", dice)
 	assert(result == 14, "doubling_box: 7*2=14, got %d" % result)
 
 func _test_doubling_box_does_not_mutate_dice() -> void:
@@ -200,85 +195,25 @@ func _test_exploding_ones_chain_depth_cap() -> void:
 		"exploding_ones: d1 starting at 1 with depth cap 10 should yield 11, got %d" % die.value)
 
 # ---------------------------------------------------------------------------
-# pair_swallows
-# ---------------------------------------------------------------------------
-
-func _test_pair_swallows_merges_one_pair() -> void:
-	var d1 := _make_die(6, 3)
-	var d2 := _make_die(6, 3)
-	var d3 := _make_die(6, 5)
-	BoxRollModifiers.apply_dice_mutation("pair_swallows", [d1, d2, d3])
-	# One of the 3s is dropped, the other becomes 6. The 5 is unchanged.
-	var active_values: Array = []
-	for d in [d1, d2, d3]:
-		if not d.dropped:
-			active_values.append(d.value)
-	active_values.sort()
-	assert(active_values == [5, 6],
-		"pair_swallows: [3,3,5] → active should be [5,6], got %s" % str(active_values))
-	# Exactly one die should be dropped.
-	var dropped_count := 0
-	for d in [d1, d2, d3]:
-		if d.dropped:
-			dropped_count += 1
-	assert(dropped_count == 1, "pair_swallows: exactly 1 die should be dropped, got %d" % dropped_count)
-
-func _test_pair_swallows_no_pairs_unchanged() -> void:
-	var d1 := _make_die(6, 1)
-	var d2 := _make_die(6, 3)
-	var d3 := _make_die(6, 5)
-	var original := [d1.value, d2.value, d3.value]
-	BoxRollModifiers.apply_dice_mutation("pair_swallows", [d1, d2, d3])
-	assert(d1.value == original[0], "pair_swallows: no pair — d1 unchanged")
-	assert(d2.value == original[1], "pair_swallows: no pair — d2 unchanged")
-	assert(d3.value == original[2], "pair_swallows: no pair — d3 unchanged")
-	assert(not d1.dropped and not d2.dropped and not d3.dropped,
-		"pair_swallows: no pair — no dice dropped")
-
-func _test_pair_swallows_three_of_kind_merges_first_pair() -> void:
-	# [4, 4, 4] → first pair merges to 8, third 4 remains. Active = [4, 8].
-	var d1 := _make_die(6, 4)
-	var d2 := _make_die(6, 4)
-	var d3 := _make_die(6, 4)
-	BoxRollModifiers.apply_dice_mutation("pair_swallows", [d1, d2, d3])
-	var active_values: Array = []
-	for d in [d1, d2, d3]:
-		if not d.dropped:
-			active_values.append(d.value)
-	active_values.sort()
-	assert(active_values == [4, 8],
-		"pair_swallows: [4,4,4] → active should be [4,8], got %s" % str(active_values))
-
-func _test_pair_swallows_drops_second_die() -> void:
-	# The merged die (the receiver) should NOT be dropped.
-	var d1 := _make_die(6, 5)
-	var d2 := _make_die(6, 5)
-	BoxRollModifiers.apply_dice_mutation("pair_swallows", [d1, d2])
-	var dropped_count := int(d1.dropped) + int(d2.dropped)
-	assert(dropped_count == 1, "pair_swallows: exactly one of two equal dice should be dropped, got %d" % dropped_count)
-	var survivor := d1 if not d1.dropped else d2
-	assert(survivor.value == 10, "pair_swallows: merged die should have value 10, got %d" % survivor.value)
-
-# ---------------------------------------------------------------------------
 # high_die_doubles
 # ---------------------------------------------------------------------------
 
 func _test_high_die_doubles_highest_counts_double() -> void:
 	# [3, 5, 2] → highest=5, total = 3 + 5*2 + 2 = 15.
 	var dice := [_make_die(6, 3), _make_die(8, 5), _make_die(6, 2)]
-	var result := BoxRollModifiers.compute_total("high_die_doubles", dice)
+	var result: int = BoxRollModifiers.compute_total("high_die_doubles", dice)
 	assert(result == 15, "high_die_doubles: [3,5,2] → 3+10+2=15, got %d" % result)
 
 func _test_high_die_doubles_single_die() -> void:
 	var dice := [_make_die(6, 4)]
-	var result := BoxRollModifiers.compute_total("high_die_doubles", dice)
+	var result: int = BoxRollModifiers.compute_total("high_die_doubles", dice)
 	assert(result == 8, "high_die_doubles: single die 4 → 4*2=8, got %d" % result)
 
 func _test_high_die_doubles_tie_only_one_doubled() -> void:
 	# [5, 5, 3] — both dice are tied at max. Only one should be doubled.
 	# Total = 5*2 + 5 + 3 = 18 (or 5 + 5*2 + 3 = 18 either way).
 	var dice := [_make_die(6, 5), _make_die(6, 5), _make_die(6, 3)]
-	var result := BoxRollModifiers.compute_total("high_die_doubles", dice)
+	var result: int = BoxRollModifiers.compute_total("high_die_doubles", dice)
 	assert(result == 18, "high_die_doubles: [5,5,3] tie → one doubled: 10+5+3=18, got %d" % result)
 
 # ---------------------------------------------------------------------------

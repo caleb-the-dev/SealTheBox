@@ -57,6 +57,9 @@ func start_round() -> void:
 	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
+	# Clear any modifier tags from the previous roll.
+	for die in GameState.dice_hand:
+		die.modifier_tag = ""
 	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	for die in dice:
 		_dice_pool.roll_die(die)
@@ -64,6 +67,9 @@ func commit_roll(dice: Array) -> void:
 			power_mgr.on_die_rolled(die)
 	# Apply box roll modifier after all dice are rolled (pre-player-view).
 	_apply_box_roll_modifier(GameState.dice_hand)
+	# Apply display tags (×2 on high die, +N on exploded dice, etc.).
+	if GameState.current_box != null:
+		BoxRollModifiers.apply_display_tags(GameState.current_box.id, GameState.dice_hand)
 	var total := _compute_roll_total(GameState.dice_hand)
 	_set_phase("act")
 	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
@@ -308,6 +314,10 @@ func _apply_box_roll_modifier(hand: Array) -> void:
 	BoxRollModifiers.apply_dice_mutation(GameState.current_box.id, hand)
 
 # Compute the effective roll total for the current hand, respecting any box roll modifier.
+# Public accessor used by match.gd for display and tab-selection validation.
+func get_roll_total() -> int:
+	return _compute_roll_total(GameState.dice_hand)
+
 # For total-override boxes (halving/doubling/high_die_doubles): returns modifier total.
 # For mutation-type boxes: die.value already reflects the modifier; sums naturally.
 # For boxes with no modifier: natural sum.
