@@ -58,8 +58,8 @@ func _test_stairs_box() -> void:
 
 func _test_all_boxes_load() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_ordered()
-	# 5 original + 3 source/boss + 7 ROLL modifier boxes + 2 WIN boxes + 6 DICE boxes = 23.
-	assert(all.size() == 23, "BoxLibrary should have 23 boxes, got %d" % all.size())
+	# 5 original + 3 boss + 13 comp + 6 ROLL + 2 WIN + 6 DICE = 34.
+	assert(all.size() == 34, "BoxLibrary should have 34 boxes, got %d" % all.size())
 	assert(all[0].id == "classic",    "box 0 should be classic, got %s"    % all[0].id)
 	assert(all[1].id == "low_evens",  "box 1 should be low_evens, got %s"  % all[1].id)
 	assert(all[2].id == "high_odds",  "box 2 should be high_odds, got %s"  % all[2].id)

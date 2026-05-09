@@ -24,7 +24,9 @@ signal threshold_reached()            # fires once per match when remaining sum 
 func start_match(box: BoxDefinition) -> void
     # Computes win_threshold = box.win_threshold + PowerManager.get_threshold_bonus()
     #   + GameState.pending_threshold_bonus, then resets pending_threshold_bonus to 0.
-    # Sets GameState.current_box, win_threshold, round_limit, tabs from box.
+    # Sets GameState.current_box, win_threshold, tabs from box.
+    # Sets GameState.round_limit = BoxWinConditions.get_round_limit(box.id, box.round_limit)
+    #   — routes through BoxWinConditions so boxes like crit_only can override the formula.
     # Then calls GameState.reset_match(), resets TabBoard and DicePool, calls start_round().
 
 func start_round() -> void
@@ -35,9 +37,17 @@ func start_round() -> void
     # Sets phase to "roll".
 
 func commit_roll(dice: Array) -> void
+    # Clears die.modifier_tag on all dice in hand (reset from previous roll).
     # Rolls each provided die, then calls PowerManager.on_die_rolled(die) per die.
+    # Calls BoxRollModifiers.apply_dice_mutation() (mutation-type boxes only).
+    # Calls BoxRollModifiers.apply_display_tags() (sets ×2 / 1→N tags for display).
     # Total displayed excludes dropped dice (die.rolled and not die.dropped).
     # Transitions phase to "act".
+
+func get_roll_total() -> int
+    # Returns the effective roll total for the current dice_hand, accounting for
+    # total-override box modifiers (halving_box, doubling_box, high_die_doubles).
+    # Use this everywhere a roll total is needed — never sum die.value directly in UI.
 
 func attempt_seal(dice: Array, tabs: Array) -> bool
     # Validates dice sum == tab sum and all tabs are unsealed. Seals primary tabs.
@@ -87,8 +97,20 @@ func get_discard_count() -> int
 ```
 
 ## Win Conditions
-- **Critical win** (`match_won(true)`): all tabs sealed — fires automatically via `TabBoard.check_critical_win()`. Heals player +1 HP (capped at MAX_HP) before emitting `match_won`.
+Win logic is mediated by `BoxWinConditions.evaluate()` before any default check runs.
+
+`_check_win()` calls `BoxWinConditions.evaluate(box_id, tab_board, round, win_threshold)` and interprets the return:
+- `null` — no override; fall through to default critical + threshold checks
+- `bool true` — override win (treated as critical: heals +1 HP, power offer, rotation)
+- `bool false` — suppress threshold-win path; only a full seal can win (used by `crit_only`)
+- `int` — use this int as the effective threshold for the threshold check
+
+`_apply_win_condition_threshold_update()` runs at the start of every round. If the box override returns an `int`, it writes that value to `GameState.win_threshold` so the UI label and `_check_win` see the same value.
+
+- **Critical win** (`match_won(true)`): tabs all sealed OR override returns `true`. Heals player +1 HP (capped at MAX_HP) before emitting `match_won`.
 - **Threshold win** (`match_won(false)`): player manually clicks Continue after `threshold_reached` fires. Does NOT auto-end the match — emits `threshold_reached()` once and waits. No HP heal.
+- **crit_only**: override returns `false` when tabs remain — Continue button never appears. Only a full seal wins.
+- **escalating_threshold**: override returns an int that shrinks each round (R1=25, R2=20, R3=15, R4+=5). Label updates at round start.
 
 ## Power Hooks Summary
 | Power | Hook location | When |
@@ -115,11 +137,31 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
     # return the same node.
 ```
 
+## Key Internal Methods
+```gdscript
+func _apply_win_condition_threshold_update() -> void
+    # Called at the start of every round (in start_round()).
+    # If the current box has a win-condition override that returns an int (e.g. escalating_threshold),
+    # writes that int to GameState.win_threshold so both the UI label and _check_win() see the
+    # correct per-round value. No-op for boxes with no override, or overrides that return bool.
+
+func _check_win() -> void
+    # Checks for win after every tab seal. Consults BoxWinConditions first, then falls through
+    # to default critical/threshold checks. See Win Conditions section for full logic.
+
+func _compute_roll_total(hand: Array) -> int
+    # Returns effective roll total: routes through BoxRollModifiers.compute_total() for
+    # total-override boxes; falls back to natural sum. Dropped dice excluded.
+    # All total reads must go through here — never sum die.value directly.
+```
+
 ## Dependencies
 - `GameState` — reads/writes hp, round, round_limit, win_threshold, pending_threshold_bonus, tabs, dice_hand, ability_hand, current_box
 - `TabBoard` — seals tabs, checks win condition, validates combinations
 - `DicePool` — draws hand, rolls dice, applies modifiers, discards hand
 - `PowerManager` — optional (guarded with has_singleton); called in start_match, start_round, attempt_seal
+- `BoxRollModifiers` — called in commit_roll() for mutation + display tags; called in _compute_roll_total() for override totals
+- `BoxWinConditions` — called in start_match() for round_limit override; called in start_round() for per-round threshold update; called in _check_win() for win override evaluation
 
 ## Gotchas
 - **All PowerManager calls use `Engine.has_singleton("PowerManager")` guard.** If PowerManager is not registered (e.g., headless tests without it), power effects are silently skipped. All existing tests still pass.
@@ -135,6 +177,9 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 - **Auto-seal Non-Final guard:** `put_down_highest` and `auto_seal_lowest` return false (charge NOT spent) if only 1 tab remains open.
 - **Auto-seal abilities trigger power hooks** (apply_tab9_bounty, on_tabs_sealed), same as attempt_seal(). Tab Counter and Tab 9 Bounty react to auto-sealed tabs.
 - **`start_match(box)` sets box fields BEFORE calling `reset_match()`** so the fields survive the reset. Change this order and tabs/round_limit will be wiped.
+- **round_limit routes through BoxWinConditions.get_round_limit(), not box.round_limit directly.** `box.round_limit` is a computed property; if you bypass the registry, crit_only will get 4 rounds instead of 5.
+- **crit_only's `false` return is not the same as `null`.** `false` explicitly suppresses the threshold path. `null` falls through to the default check and would allow a threshold win. Never confuse them.
+- **GDScript 4 type-comparison rule in `_check_win()`.** The code uses `(box_override is bool) and (box_override == true)` to distinguish true/false from int. Direct comparison of int to bool raises a type error in GDScript 4 — do not simplify this check.
 - **Threshold win is NOT automatic.** `_check_win` emits `threshold_reached` (once) and stops. The match stays live. The player clicks Continue → `accept_threshold_win()` → `match_won.emit(false)`.
 - **`_threshold_notified` must be reset in `start_match()`** or the Continue button will never appear in subsequent matches.
 - Phase only has two states: "roll" and "act". There is no explicit "end" phase.
@@ -142,6 +187,8 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-09 | slice-boxes-3: BoxWinConditions integrated. start_match() now sets round_limit via BoxWinConditions.get_round_limit() instead of box.round_limit. _apply_win_condition_threshold_update() added — called in start_round() to update GameState.win_threshold each round for escalating_threshold. _check_win() now consults BoxWinConditions before default checks; interprets bool true (override win), bool false (suppress threshold path), int (threshold override), null (no override). BoxWinConditions added to Dependencies. |
+| 2026-05-08 | slice-boxes-2: commit_roll() now clears die.modifier_tag on all hand dice, calls BoxRollModifiers.apply_dice_mutation() and apply_display_tags() after rolling. get_roll_total() public method added — match.gd _on_tab_pressed(), _on_end_round_pressed(), and _update_rolled_total() now route through it so total-override modifiers (doubling_box, halving_box, high_die_doubles) apply correctly everywhere. _compute_roll_total() now dependency of BoxRollModifiers (was pure internal). |
 | 2026-05-08 | Critical win path (_check_win + dev_critical_win) now heals +1 HP (capped at MAX_HP) before emitting match_won(true). |
 | 2026-05-06 | use_ability() wired for 8 new ability IDs: put_down_highest, auto_seal_lowest, multiply_2, set_max, set_min, reroll_lucky, reroll_unlucky, drop_die. Auto-seal abilities fire power hooks (apply_tab9_bounty + on_tabs_sealed). Empower/Empower II guard added: return false if die.value >= die.faces (prevents multiply-then-empower shrink). Total calculations in commit_roll() and use_ability() now exclude dropped dice (die.rolled and not die.dropped). |
 | 2026-05-06 | commit_roll() now calls PowerManager.on_die_rolled(die) per die after rolling (Diabolic Pact hook). use_ability() now calls on_die_rolled(die) for reroll_die and reroll_all (same hook). attempt_seal() now calls PowerManager.on_tabs_sealed(all_sealed.size()) after Tab 9 Bounty (Tab Counter hook). |

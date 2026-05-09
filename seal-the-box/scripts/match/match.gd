@@ -4,7 +4,8 @@ extends Node3D
 var _round_manager: RoundManager
 var _run_manager: RunManager
 var _selected_dice: Array = []
-var _selected_tabs: Array[int] = []
+var _selected_tabs: Array[int] = []      # stores button indices, not values
+var _sealed_button_indices: Array[int] = []  # which tab buttons are sealed this match
 var _selected_ability: AbilityData = null
 var _targeting_die: bool = false
 var _match_ended: bool = false
@@ -17,6 +18,7 @@ var _status_label: Label
 var _tab_buttons: Array[Button] = []
 var _dice_buttons: Array[Button] = []
 var _dice_face_labels: Array[Label] = []
+var _dice_mod_labels: Array[Label] = []
 var _ability_buttons: Array[Button] = []
 var _action_button: Button
 var _roll_hint_label: Label
@@ -26,6 +28,11 @@ var _current_phase: String = ""
 var _match_label: Label
 var _act_label: Label
 var _tier_label: Label
+var _box_name_label: Label
+var _box_mod_hint: Label
+var _mod_hint_time: float = 0.0
+var _mod_tooltip: PanelContainer
+var _mod_tooltip_label: Label
 var _run_won_overlay: Control
 var _run_won_title_label: Label
 var _dev_box_label: Label
@@ -51,6 +58,9 @@ var _dev_power_overlay: Control
 var _dev_power_list: VBoxContainer
 var _dev_ability_overlay: Control
 var _dev_ability_list: VBoxContainer
+var _dev_goto_match_overlay: Control
+var _dev_goto_box_overlay: Control
+var _dev_goto_box_list: VBoxContainer
 var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
 var _crossroads_overlay: Control
@@ -63,6 +73,7 @@ var _selected_swap_offered_idx: int = -1
 var _selected_swap_pool_die = null
 var _selected_swap_pool_idx: int = -1
 var _dev_die_swap_mode: bool = false
+var _dev_force_round_overlay: Control
 
 # ── lifecycle ───────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -167,25 +178,69 @@ func _setup_ui() -> void:
 	top_left_vbox.anchor_top = 0.0
 	top_left_vbox.anchor_bottom = 0.0
 	top_left_vbox.offset_left = 8
-	top_left_vbox.offset_right = 170
+	top_left_vbox.offset_right = 240
 	top_left_vbox.offset_top = 8
-	top_left_vbox.offset_bottom = 80
-	top_left_vbox.add_theme_constant_override("separation", 1)
+	top_left_vbox.offset_bottom = 120
+	top_left_vbox.add_theme_constant_override("separation", 2)
 	root.add_child(top_left_vbox)
 
+	# Row 1: Box name (prominent) + modifier badge
+	var box_name_row = HBoxContainer.new()
+	box_name_row.add_theme_constant_override("separation", 6)
+	top_left_vbox.add_child(box_name_row)
+
+	_box_name_label = Label.new()
+	_box_name_label.add_theme_font_size_override("font_size", 22)
+	box_name_row.add_child(_box_name_label)
+
+	_box_mod_hint = Label.new()
+	_box_mod_hint.add_theme_font_size_override("font_size", 18)
+	_box_mod_hint.text = "[!]"
+	_box_mod_hint.add_theme_color_override("font_color", Color(1.0, 0.65, 0.1))
+	_box_mod_hint.mouse_filter = Control.MOUSE_FILTER_STOP
+	_box_mod_hint.visible = false
+	_box_mod_hint.mouse_entered.connect(_on_mod_hint_entered)
+	_box_mod_hint.mouse_exited.connect(_on_mod_hint_exited)
+	box_name_row.add_child(_box_mod_hint)
+
+	# Row 2: Difficulty (small, muted)
+	_tier_label = Label.new()
+	_tier_label.add_theme_font_size_override("font_size", 12)
+	_tier_label.modulate = Color(0.6, 0.6, 0.6)
+	top_left_vbox.add_child(_tier_label)
+
+	# Row 3: Match number (medium)
 	_match_label = Label.new()
-	_match_label.add_theme_font_size_override("font_size", 17)
+	_match_label.add_theme_font_size_override("font_size", 16)
 	top_left_vbox.add_child(_match_label)
 
+	# Row 4: Act (small, muted)
 	_act_label = Label.new()
-	_act_label.add_theme_font_size_override("font_size", 13)
-	_act_label.modulate = Color(0.75, 0.75, 0.75)
+	_act_label.add_theme_font_size_override("font_size", 12)
+	_act_label.modulate = Color(0.6, 0.6, 0.6)
 	top_left_vbox.add_child(_act_label)
 
-	_tier_label = Label.new()
-	_tier_label.add_theme_font_size_override("font_size", 13)
-	_tier_label.modulate = Color(0.75, 0.75, 0.75)
-	top_left_vbox.add_child(_tier_label)
+	# Floating tooltip for the modifier badge — shown on hover, not via built-in tooltip
+	_mod_tooltip = PanelContainer.new()
+	_mod_tooltip.anchor_left = 0.0
+	_mod_tooltip.anchor_top = 0.0
+	_mod_tooltip.offset_left = 8
+	_mod_tooltip.offset_top = 130
+	_mod_tooltip.custom_minimum_size = Vector2(250, 0)
+	_mod_tooltip.visible = false
+	root.add_child(_mod_tooltip)
+
+	var tip_margin = MarginContainer.new()
+	tip_margin.add_theme_constant_override("margin_left", 10)
+	tip_margin.add_theme_constant_override("margin_right", 10)
+	tip_margin.add_theme_constant_override("margin_top", 6)
+	tip_margin.add_theme_constant_override("margin_bottom", 6)
+	_mod_tooltip.add_child(tip_margin)
+
+	_mod_tooltip_label = Label.new()
+	_mod_tooltip_label.add_theme_font_size_override("font_size", 12)
+	_mod_tooltip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip_margin.add_child(_mod_tooltip_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -350,6 +405,25 @@ func _setup_ui() -> void:
 		face_lbl.visible = false
 		btn.add_child(face_lbl)
 		_dice_face_labels.append(face_lbl)
+
+		# Bottom-left modifier tag (e.g. "×2" for high_die_doubles, "+N" for exploding_ones)
+		var mod_lbl = Label.new()
+		mod_lbl.add_theme_font_size_override("font_size", 11)
+		mod_lbl.add_theme_color_override("font_color", Color(1.0, 0.65, 0.1))
+		mod_lbl.anchor_left = 0.0
+		mod_lbl.anchor_right = 0.0
+		mod_lbl.anchor_top = 1.0
+		mod_lbl.anchor_bottom = 1.0
+		mod_lbl.offset_left = 4
+		mod_lbl.offset_right = 36
+		mod_lbl.offset_top = -18
+		mod_lbl.offset_bottom = -3
+		mod_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		mod_lbl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		mod_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mod_lbl.visible = false
+		btn.add_child(mod_lbl)
+		_dice_mod_labels.append(mod_lbl)
 
 	# Roll hint label + single action button (inside dice panel, below dice)
 	_roll_hint_label = Label.new()
@@ -671,6 +745,20 @@ func _setup_ui() -> void:
 	dev_restart_btn.pressed.connect(_on_dev_restart_pressed)
 	dev_btns.add_child(dev_restart_btn)
 
+	var dev_goto_match_btn = Button.new()
+	dev_goto_match_btn.text = "Go to Match →"
+	dev_goto_match_btn.custom_minimum_size = Vector2(0, 56)
+	dev_goto_match_btn.add_theme_font_size_override("font_size", 17)
+	dev_goto_match_btn.pressed.connect(_on_dev_goto_match_menu_pressed)
+	dev_btns.add_child(dev_goto_match_btn)
+
+	var dev_goto_box_btn = Button.new()
+	dev_goto_box_btn.text = "Go to Box →"
+	dev_goto_box_btn.custom_minimum_size = Vector2(0, 56)
+	dev_goto_box_btn.add_theme_font_size_override("font_size", 17)
+	dev_goto_box_btn.pressed.connect(_on_dev_goto_box_menu_pressed)
+	dev_btns.add_child(dev_goto_box_btn)
+
 	var dev_hp_btn = Button.new()
 	dev_hp_btn.text = "+10 HP (Dev)"
 	dev_hp_btn.custom_minimum_size = Vector2(0, 56)
@@ -691,6 +779,13 @@ func _setup_ui() -> void:
 	dev_reset_marquee_btn.add_theme_font_size_override("font_size", 17)
 	dev_reset_marquee_btn.pressed.connect(_on_dev_reset_marquee_pressed)
 	dev_btns.add_child(dev_reset_marquee_btn)
+
+	var dev_force_round_btn = Button.new()
+	dev_force_round_btn.text = "Force Round → (escalating)"
+	dev_force_round_btn.custom_minimum_size = Vector2(0, 56)
+	dev_force_round_btn.add_theme_font_size_override("font_size", 17)
+	dev_force_round_btn.pressed.connect(_on_dev_force_round_menu_pressed)
+	dev_btns.add_child(dev_force_round_btn)
 
 	var dev_close_btn = Button.new()
 	dev_close_btn.text = "Close  [T]"
@@ -785,6 +880,123 @@ func _setup_ui() -> void:
 	root.add_child(dev_ability_overlay)
 	_dev_ability_overlay = dev_ability_overlay
 
+	# ── Dev go-to-match sub-overlay ──────────────────────────────────────────────
+	var dev_goto_overlay = Control.new()
+	dev_goto_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_goto_overlay.visible = false
+	var dev_goto_bg = ColorRect.new()
+	dev_goto_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_bg.color = Color(0, 0, 0, 1.0)
+	dev_goto_overlay.add_child(dev_goto_bg)
+
+	var dev_goto_panel = VBoxContainer.new()
+	dev_goto_panel.anchor_left = 0.25
+	dev_goto_panel.anchor_right = 0.75
+	dev_goto_panel.anchor_top = 0.05
+	dev_goto_panel.anchor_bottom = 0.95
+	dev_goto_panel.add_theme_constant_override("separation", 10)
+	dev_goto_overlay.add_child(dev_goto_panel)
+
+	var dev_goto_title = Label.new()
+	dev_goto_title.text = "— GO TO MATCH —"
+	dev_goto_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_title.add_theme_font_size_override("font_size", 22)
+	dev_goto_panel.add_child(dev_goto_title)
+
+	var dev_goto_subtitle = Label.new()
+	dev_goto_subtitle.text = "Restarts the run and fast-forwards to the selected match."
+	dev_goto_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_subtitle.add_theme_font_size_override("font_size", 13)
+	dev_goto_subtitle.modulate = Color(0.6, 0.6, 0.6)
+	dev_goto_panel.add_child(dev_goto_subtitle)
+
+	var dev_goto_scroll = ScrollContainer.new()
+	dev_goto_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_goto_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var dev_goto_list = VBoxContainer.new()
+	dev_goto_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dev_goto_list.add_theme_constant_override("separation", 8)
+	dev_goto_scroll.add_child(dev_goto_list)
+	dev_goto_panel.add_child(dev_goto_scroll)
+
+	for match_n in range(1, 28):
+		var tier_hint: String
+		if match_n == 9 or match_n == 21 or match_n == 27:
+			tier_hint = "BOSS"
+		elif match_n <= 8:
+			tier_hint = "easy"
+		elif match_n <= 20:
+			tier_hint = "medium"
+		else:
+			tier_hint = "hard"
+		var mb = Button.new()
+		mb.text = "Match %d  —  %s" % [match_n, tier_hint]
+		mb.custom_minimum_size = Vector2(0, 44)
+		mb.add_theme_font_size_override("font_size", 15)
+		if tier_hint == "BOSS":
+			mb.modulate = Color(1.0, 0.7, 0.3)
+		mb.pressed.connect(_on_dev_goto_match_pressed.bind(match_n))
+		dev_goto_list.add_child(mb)
+
+	var dev_goto_back_btn = Button.new()
+	dev_goto_back_btn.text = "← Back"
+	dev_goto_back_btn.custom_minimum_size = Vector2(0, 44)
+	dev_goto_back_btn.pressed.connect(func(): dev_goto_overlay.visible = false; _dev_overlay.visible = true)
+	dev_goto_panel.add_child(dev_goto_back_btn)
+
+	root.add_child(dev_goto_overlay)
+	_dev_goto_match_overlay = dev_goto_overlay
+
+	# ── Dev go-to-box sub-overlay ──────────────────────────────────────────────
+	var dev_goto_box_overlay = Control.new()
+	dev_goto_box_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_box_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_goto_box_overlay.visible = false
+	var dev_goto_box_bg = ColorRect.new()
+	dev_goto_box_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_box_bg.color = Color(0, 0, 0, 1.0)
+	dev_goto_box_overlay.add_child(dev_goto_box_bg)
+
+	var dev_goto_box_panel = VBoxContainer.new()
+	dev_goto_box_panel.anchor_left = 0.25
+	dev_goto_box_panel.anchor_right = 0.75
+	dev_goto_box_panel.anchor_top = 0.05
+	dev_goto_box_panel.anchor_bottom = 0.95
+	dev_goto_box_panel.add_theme_constant_override("separation", 10)
+	dev_goto_box_overlay.add_child(dev_goto_box_panel)
+
+	var dev_goto_box_title = Label.new()
+	dev_goto_box_title.text = "— GO TO BOX —"
+	dev_goto_box_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_box_title.add_theme_font_size_override("font_size", 22)
+	dev_goto_box_panel.add_child(dev_goto_box_title)
+
+	var dev_goto_box_subtitle = Label.new()
+	dev_goto_box_subtitle.text = "Restarts the current match with the selected box."
+	dev_goto_box_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_box_subtitle.add_theme_font_size_override("font_size", 13)
+	dev_goto_box_subtitle.modulate = Color(0.6, 0.6, 0.6)
+	dev_goto_box_panel.add_child(dev_goto_box_subtitle)
+
+	var dev_goto_box_scroll = ScrollContainer.new()
+	dev_goto_box_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_goto_box_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_dev_goto_box_list = VBoxContainer.new()
+	_dev_goto_box_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_dev_goto_box_list.add_theme_constant_override("separation", 8)
+	dev_goto_box_scroll.add_child(_dev_goto_box_list)
+	dev_goto_box_panel.add_child(dev_goto_box_scroll)
+
+	var dev_goto_box_back_btn = Button.new()
+	dev_goto_box_back_btn.text = "← Back"
+	dev_goto_box_back_btn.custom_minimum_size = Vector2(0, 44)
+	dev_goto_box_back_btn.pressed.connect(func(): dev_goto_box_overlay.visible = false; _dev_overlay.visible = true)
+	dev_goto_box_panel.add_child(dev_goto_box_back_btn)
+
+	root.add_child(dev_goto_box_overlay)
+	_dev_goto_box_overlay = dev_goto_box_overlay
+
 	# ── Die swap overlay ────────────────────────────────────────────────────────
 	var swap_overlay = Control.new()
 	swap_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -867,6 +1079,55 @@ func _setup_ui() -> void:
 
 	root.add_child(swap_overlay)
 	_die_swap_overlay = swap_overlay
+
+	# ── Dev force-round overlay (for testing escalating_threshold) ────────────
+	var force_round_overlay = Control.new()
+	force_round_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	force_round_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	force_round_overlay.visible = false
+	var fr_bg = ColorRect.new()
+	fr_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fr_bg.color = Color(0, 0, 0, 1.0)
+	force_round_overlay.add_child(fr_bg)
+
+	var fr_panel = VBoxContainer.new()
+	fr_panel.anchor_left = 0.3
+	fr_panel.anchor_right = 0.7
+	fr_panel.anchor_top = 0.2
+	fr_panel.anchor_bottom = 0.8
+	fr_panel.add_theme_constant_override("separation", 16)
+	force_round_overlay.add_child(fr_panel)
+
+	var fr_title = Label.new()
+	fr_title.text = "— FORCE ROUND —"
+	fr_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fr_title.add_theme_font_size_override("font_size", 22)
+	fr_panel.add_child(fr_title)
+
+	var fr_sub = Label.new()
+	fr_sub.text = "Sets GameState.round so the next win-check uses that round's threshold.\nUse with escalating_threshold box."
+	fr_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fr_sub.add_theme_font_size_override("font_size", 14)
+	fr_sub.modulate = Color(0.75, 0.75, 0.75)
+	fr_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	fr_panel.add_child(fr_sub)
+
+	for round_num in [1, 2, 3, 4]:
+		var fr_btn = Button.new()
+		fr_btn.text = "Round %d  (threshold ≤%d)" % [round_num, BoxWinConditions.get_escalating_threshold(round_num)]
+		fr_btn.custom_minimum_size = Vector2(0, 52)
+		fr_btn.add_theme_font_size_override("font_size", 17)
+		fr_btn.pressed.connect(_on_dev_force_round_pressed.bind(round_num))
+		fr_panel.add_child(fr_btn)
+
+	var fr_back_btn = Button.new()
+	fr_back_btn.text = "← Back"
+	fr_back_btn.custom_minimum_size = Vector2(0, 44)
+	fr_back_btn.pressed.connect(_on_dev_force_round_back_pressed)
+	fr_panel.add_child(fr_back_btn)
+
+	root.add_child(force_round_overlay)
+	_dev_force_round_overlay = force_round_overlay
 
 	# ── Run-won overlay ────────────────────────────────────────────────────────
 	var won_overlay = Control.new()
@@ -1071,6 +1332,10 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_dev_power_overlay.visible = false
 	if _dev_ability_overlay:
 		_dev_ability_overlay.visible = false
+	if _dev_goto_match_overlay:
+		_dev_goto_match_overlay.visible = false
+	if _dev_goto_box_overlay:
+		_dev_goto_box_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
 	if _rotation_overlay:
@@ -1255,6 +1520,18 @@ func _on_crossroads_whetstone_pressed() -> void:
 	_crossroads_overlay.visible = false
 	_run_manager.handle_crossroads_whetstone()
 
+func _on_mod_hint_entered() -> void:
+	_mod_tooltip.visible = true
+
+func _on_mod_hint_exited() -> void:
+	_mod_tooltip.visible = false
+
+func _process(delta: float) -> void:
+	if _box_mod_hint != null and _box_mod_hint.visible:
+		_mod_hint_time += delta
+		var hue := fmod(_mod_hint_time * 0.15, 1.0)
+		_box_mod_hint.add_theme_color_override("font_color", Color.from_hsv(hue, 0.85, 1.0))
+
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
 
@@ -1339,12 +1616,90 @@ func _on_dev_restart_pressed() -> void:
 	_dev_overlay.visible = false
 	_run_manager.start_run()
 
+func _on_dev_goto_match_menu_pressed() -> void:
+	_dev_overlay.visible = false
+	_dev_goto_match_overlay.visible = true
+
+func _on_dev_goto_match_pressed(target: int) -> void:
+	_dev_goto_match_overlay.visible = false
+	_run_manager.start_run()
+	var safety := 0
+	while _run_manager.match_number < target and safety < 30:
+		safety += 1
+		_round_manager.dev_win_match()
+		_run_manager.dev_skip_rotation()
+		_run_manager.dev_skip_crossroads()
+
+func _on_dev_goto_box_menu_pressed() -> void:
+	for child in _dev_goto_box_list.get_children():
+		child.queue_free()
+	var lib = Engine.get_singleton("BoxLibrary") if Engine.has_singleton("BoxLibrary") else BoxLibrary
+	var tier_colors := {"easy": Color.WHITE, "medium": Color(0.7, 1.0, 0.7), "hard": Color(1.0, 0.7, 0.7), "boss": Color(1.0, 0.7, 0.3)}
+	for tier in ["easy", "medium", "hard", "boss"]:
+		var boxes: Array = lib.get_by_tier(tier)
+		if boxes.is_empty():
+			continue
+		var sep_lbl = Label.new()
+		sep_lbl.text = "── %s ──" % tier.to_upper()
+		sep_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sep_lbl.add_theme_font_size_override("font_size", 14)
+		sep_lbl.modulate = tier_colors.get(tier, Color.WHITE)
+		_dev_goto_box_list.add_child(sep_lbl)
+		for box in boxes:
+			var bbtn = Button.new()
+			bbtn.text = "%s  (%d tabs, ≤%d to win)" % [box.name, box.tabs.size(), box.win_threshold]
+			bbtn.custom_minimum_size = Vector2(0, 44)
+			bbtn.add_theme_font_size_override("font_size", 15)
+			bbtn.modulate = tier_colors.get(tier, Color.WHITE)
+			bbtn.pressed.connect(_on_dev_goto_box_pressed.bind(box))
+			_dev_goto_box_list.add_child(bbtn)
+	_dev_overlay.visible = false
+	_dev_goto_box_overlay.visible = true
+
+func _on_dev_goto_box_pressed(box: BoxDefinition) -> void:
+	_dev_goto_box_overlay.visible = false
+	_match_ended = false
+	_selected_dice = []
+	_selected_tabs = []
+	_selected_ability = null
+	_targeting_die = false
+	_continue_button.visible = false
+	_continue_button.scale = Vector2.ONE
+	_continue_button.modulate = Color.WHITE
+	if _power_offer_overlay:
+		_power_offer_overlay.visible = false
+	if _dev_power_overlay:
+		_dev_power_overlay.visible = false
+	if _dev_ability_overlay:
+		_dev_ability_overlay.visible = false
+	if _dev_goto_match_overlay:
+		_dev_goto_match_overlay.visible = false
+	if _run_over_overlay:
+		_run_over_overlay.visible = false
+	if _rotation_overlay:
+		_rotation_overlay.visible = false
+	if _die_swap_overlay:
+		_die_swap_overlay.visible = false
+	if _run_won_overlay:
+		_run_won_overlay.visible = false
+	if _crossroads_overlay:
+		_crossroads_overlay.visible = false
+	_action_button.disabled = false
+	for btn in _dice_buttons + _ability_buttons:
+		btn.disabled = false
+	_dev_box_label.text = "Box: %s [DEV]" % box.name
+	_round_manager.start_match(box)
+	_rebuild_tab_buttons()
+	_update_tabs_header_widths()
+	for btn in _tab_buttons:
+		btn.disabled = false
+	_refresh_powers_panel()
+
 func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
 	_refresh_ui()
 
 func _on_dev_force_bounty_box_pressed() -> void:
-	# Force the next match to be bounty_box regardless of the run sequence.
 	_dev_overlay.visible = false
 	var bounty = Engine.get_singleton("BoxLibrary").get_box("bounty_box") if Engine.has_singleton("BoxLibrary") else null
 	if bounty == null:
@@ -1352,15 +1707,28 @@ func _on_dev_force_bounty_box_pressed() -> void:
 		return
 	if not _match_ended:
 		_round_manager.dev_win_match()
-	# Override: start the match directly with bounty_box.
 	_round_manager.start_match(bounty)
 	_rebuild_tab_buttons()
 	_refresh_ui()
 
 func _on_dev_reset_marquee_pressed() -> void:
-	# Clear the marquee_seen set so bounty_box can grant its entry power again.
 	GameState.marquee_seen.clear()
 	_dev_overlay.visible = false
+
+func _on_dev_force_round_menu_pressed() -> void:
+	_dev_overlay.visible = false
+	_dev_force_round_overlay.visible = true
+
+func _on_dev_force_round_pressed(round_num: int) -> void:
+	GameState.round = round_num
+	_dev_force_round_overlay.visible = false
+	if GameState.current_box != null and GameState.current_box.id == "escalating_threshold":
+		GameState.win_threshold = BoxWinConditions.get_escalating_threshold(round_num)
+	_refresh_ui()
+
+func _on_dev_force_round_back_pressed() -> void:
+	_dev_force_round_overlay.visible = false
+	_dev_overlay.visible = true
 
 func _on_dev_win_series_pressed() -> void:
 	_dev_overlay.visible = false
@@ -1383,9 +1751,21 @@ func _on_run_won_new_case_pressed() -> void:
 	_run_won_overlay.visible = false
 	_run_manager.start_run()
 
-func _on_tabs_sealed(_tabs: Array) -> void:
+func _on_tabs_sealed(sealed_values: Array) -> void:
 	_selected_tabs = []
 	_selected_dice = []
+	# For each sealed value, mark the first unsealed button with that value as sealed.
+	var counts: Dictionary = {}
+	for v in sealed_values:
+		counts[v] = counts.get(v, 0) + 1
+	for v in counts:
+		var remaining: int = counts[v]
+		for i in _tab_buttons.size():
+			if remaining <= 0:
+				break
+			if i not in _sealed_button_indices and int(_tab_buttons[i].text) == v:
+				_sealed_button_indices.append(i)
+				remaining -= 1
 	_refresh_ui()
 
 func _on_status_updated(text: String) -> void:
@@ -1423,27 +1803,27 @@ func _on_die_pressed(index: int) -> void:
 	_refresh_dice_highlight()
 	_update_roll_button_text()
 
-func _on_tab_pressed(tab_value: int) -> void:
+func _on_tab_pressed(idx: int) -> void:
 	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if rolled.is_empty():
 		_status_label.text = "Roll your dice first, then click tabs that sum to your total."
 		return
 
-	var rolled_total := 0
-	for d in rolled:
-		rolled_total += d.value
+	var rolled_total := _round_manager.get_roll_total()
 
-	if tab_value in _selected_tabs:
-		_selected_tabs.erase(tab_value)
+	var tab_value := int(_tab_buttons[idx].text)
+
+	if idx in _selected_tabs:
+		_selected_tabs.erase(idx)
 	else:
-		_selected_tabs.append(tab_value)
+		_selected_tabs.append(idx)
 
 	var tab_sum := 0
-	for t in _selected_tabs:
-		tab_sum += t
+	for i in _selected_tabs:
+		tab_sum += int(_tab_buttons[i].text)
 
 	if tab_sum > rolled_total:
-		_selected_tabs.erase(tab_value)
+		_selected_tabs.erase(idx)
 		tab_sum -= tab_value
 		_status_label.text = "Tab %d would exceed rolled total %d (currently at %d)." % [tab_value, rolled_total, tab_sum]
 	elif tab_sum == rolled_total and not _selected_tabs.is_empty():
@@ -1490,17 +1870,18 @@ func _on_ability_pressed(index: int) -> void:
 func _on_end_round_pressed() -> void:
 	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if not _selected_tabs.is_empty() and not rolled.is_empty():
-		var rolled_total := 0
-		for d in rolled:
-			rolled_total += d.value
+		var rolled_total := _round_manager.get_roll_total()
 		var tab_sum := 0
-		for t in _selected_tabs:
-			tab_sum += t
+		for i in _selected_tabs:
+			tab_sum += int(_tab_buttons[i].text)
 		if tab_sum != rolled_total:
 			_status_label.text = "Selected tabs sum to %d but rolled total is %d — adjust your selection." % [tab_sum, rolled_total]
 			return
+		var selected_values: Array = []
+		for i in _selected_tabs:
+			selected_values.append(int(_tab_buttons[i].text))
 		var match_before := _run_manager.match_number
-		if not _round_manager.attempt_seal(rolled, _selected_tabs.duplicate()):
+		if not _round_manager.attempt_seal(rolled, selected_values):
 			_status_label.text = "Can't seal — invalid combination."
 			_selected_tabs = []
 			_refresh_tab_display()
@@ -1553,8 +1934,24 @@ func _refresh_ui() -> void:
 	if GameState.current_box:
 		var tier := GameState.current_box.tier
 		_tier_label.text = "BOSS" if tier == "boss" else tier
+		_box_name_label.text = GameState.current_box.name
+		var box_id := GameState.current_box.id
+		var has_roll_mod := BoxRollModifiers.has_modifier(box_id)
+		var has_win_mod := BoxWinConditions.has_override(box_id)
+		if has_roll_mod or has_win_mod:
+			_box_mod_hint.visible = true
+			if has_roll_mod:
+				_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
+			else:
+				_mod_tooltip_label.text = BoxWinConditions.get_description(box_id)
+		else:
+			_box_mod_hint.visible = false
+			_mod_tooltip.visible = false
 	else:
 		_tier_label.text = ""
+		_box_name_label.text = ""
+		_box_mod_hint.visible = false
+		_mod_tooltip.visible = false
 	if GameState.current_box:
 		var remaining_sum := 0
 		for t in GameState.tabs:
@@ -1579,23 +1976,34 @@ func _rebuild_tab_buttons() -> void:
 	for child in _tab_row.get_children():
 		child.queue_free()
 	_tab_buttons.clear()
-	for tab_val in GameState.tabs:
+	_sealed_button_indices = []
+	var tab_count := GameState.tabs.size()
+	var btn_w: int; var btn_h: int; var font_sz: int; var sep: int
+	if tab_count <= 9:
+		btn_w = 62; btn_h = 88; font_sz = 0; sep = 8
+	elif tab_count <= 12:
+		btn_w = 52; btn_h = 80; font_sz = 18; sep = 6
+	else:
+		btn_w = 36; btn_h = 66; font_sz = 14; sep = 4
+	_tab_row.add_theme_constant_override("separation", sep)
+	for i in tab_count:
+		var tab_val = GameState.tabs[i]
 		var btn = Button.new()
 		btn.text = str(tab_val)
-		btn.custom_minimum_size = Vector2(62, 88)
-		btn.pressed.connect(_on_tab_pressed.bind(tab_val))
+		btn.custom_minimum_size = Vector2(btn_w, btn_h)
+		if font_sz > 0:
+			btn.add_theme_font_size_override("font_size", font_sz)
+		btn.pressed.connect(_on_tab_pressed.bind(i))
 		_tab_row.add_child(btn)
 		_tab_buttons.append(btn)
 
 func _refresh_tab_display() -> void:
-	var remaining = GameState.tabs
-	for btn in _tab_buttons:
-		var tab_val = btn.text.to_int()
-		var sealed = not (tab_val in remaining)
-		if sealed:
+	for i in _tab_buttons.size():
+		var btn = _tab_buttons[i]
+		if i in _sealed_button_indices:
 			btn.disabled = true
 			btn.modulate = Color(0.4, 0.4, 0.4)
-		elif tab_val in _selected_tabs:
+		elif i in _selected_tabs:
 			btn.disabled = false
 			btn.modulate = Color(1.5, 1.5, 0.3)
 		else:
@@ -1607,13 +2015,14 @@ func _refresh_dice_display() -> void:
 	for i in 3:
 		var btn = _dice_buttons[i]
 		var face_lbl = _dice_face_labels[i] if i < _dice_face_labels.size() else null
+		var mod_lbl = _dice_mod_labels[i] if i < _dice_mod_labels.size() else null
 		if i < hand.size():
 			var die = hand[i]
 			if die.dropped:
 				btn.text = "[X] %d" % die.value
 				btn.disabled = true
-				if face_lbl:
-					face_lbl.visible = false
+				if face_lbl: face_lbl.visible = false
+				if mod_lbl:  mod_lbl.visible = false
 			else:
 				btn.text = str(die.value) if die.rolled else "d%d" % die.faces
 				btn.disabled = false
@@ -1623,11 +2032,17 @@ func _refresh_dice_display() -> void:
 						face_lbl.visible = true
 					else:
 						face_lbl.visible = false
+				if mod_lbl:
+					if die.rolled and die.modifier_tag != "":
+						mod_lbl.text = die.modifier_tag
+						mod_lbl.visible = true
+					else:
+						mod_lbl.visible = false
 		else:
 			btn.text = "—"
 			btn.disabled = true
-			if face_lbl:
-				face_lbl.visible = false
+			if face_lbl: face_lbl.visible = false
+			if mod_lbl:  mod_lbl.visible = false
 
 func _refresh_dice_highlight() -> void:
 	var hand = GameState.dice_hand
@@ -1670,10 +2085,7 @@ func _refresh_ability_display() -> void:
 			btn.modulate = Color(0.3, 0.3, 0.3)
 
 func _update_rolled_total() -> void:
-	var total = 0
-	for d in GameState.dice_hand:
-		if d.rolled and not d.dropped:
-			total += d.value
+	var total := _round_manager.get_roll_total()
 	_status_label.text = "Rolled total: %d — click a tab to seal." % total
 
 func _flash_ability_used(idx: int) -> void:

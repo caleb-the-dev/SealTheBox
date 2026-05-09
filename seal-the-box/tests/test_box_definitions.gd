@@ -1,12 +1,9 @@
 extends SceneTree
 
 # Validation suite for the full box pool after slice-boxes-4-dice-access.
-# Checks structural invariants for all boxes and presence of the 6 DICE boxes.
 # Run headless: godot --headless --path seal-the-box --script tests/test_box_definitions.gd
 
-# Preload so BDA is available in headless --script mode.
-# In headless mode class_name types in subdirectories may not be registered at parse time;
-# preload forces the script to be loaded and available as a constant.
+# Preload BDA so its static methods are available in headless --script mode.
 const BDA = preload("res://scripts/match/box_dice_access.gd")
 
 func _init() -> void:
@@ -30,8 +27,8 @@ func _init() -> void:
 
 func _test_box_count() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
-	# 5 original + 3 source/boss + 7 ROLL + 2 WIN + 6 DICE = 23.
-	assert(all.size() == 23, "BoxLibrary should have 23 boxes, got %d" % all.size())
+	# 5 original + 3 boss + 13 comp + 6 ROLL + 2 WIN + 6 DICE = 34 boxes.
+	assert(all.size() == 34, "BoxLibrary should have 34 boxes, got %d" % all.size())
 
 func _test_all_tab_sums_positive() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()

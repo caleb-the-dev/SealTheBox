@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 15 |
+| Sessions since groom | 18 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -38,6 +38,8 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Tab Board | [tab_board.md](tab_board.md) | Active |
 | Dice Pool | [dice_pool.md](dice_pool.md) | Active |
 | Round Manager | [round_manager.md](round_manager.md) | Active |
+| Box Roll Modifiers (static) | [box_roll_modifiers.md](box_roll_modifiers.md) | Active |
+| Box Win Conditions (static) | [box_win_conditions.md](box_win_conditions.md) | Active |
 | Match Scene + HUD | [match_scene.md](match_scene.md) | Active |
 | HUD detail | [hud.md](hud.md) | Active |
 | Ability Hand (UI) | [ability_hand.md](ability_hand.md) | Active |
@@ -52,7 +54,7 @@ seal-the-box/
   project.godot
   data/
     abilities.csv          # ability definitions (22 abilities; 14 in rotation pool with charges 1–3)
-    boxes.csv              # box definitions (8 boxes: 5 regular tiers + 3 boss-tier Source boxes — source_devil/source_cosmic/source_ghost)
+    boxes.csv              # box definitions (26 boxes: 9 easy / 7 medium / 7 hard / 3 boss; boss = the Pact / the Anchor / Den of Sevens; ROLL boxes distributed across tiers)
     powers.csv             # power definitions (11 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor, tax_collector, diabolic_pact, tab_counter)
   resources/
     ability_data.gd        # AbilityData Resource subclass
@@ -69,7 +71,9 @@ seal-the-box/
       round_manager.gd     # Match-level orchestration + power effect hooks
       tab_board.gd         # Tab sealing logic
       dice_pool.gd         # Dice draw/roll/discard
-      die.gd               # Die class (class_name Die) — single die object with faces, value, rolled, dropped
+      die.gd               # Die class (class_name Die) — single die object with faces, value, rolled, dropped, modifier_tag
+      box_roll_modifiers.gd # Static class — 6 roll modifier callables; apply_dice_mutation, compute_total, apply_display_tags, get_description
+      box_win_conditions.gd # Static class — 2 win-condition override callables; evaluate, has_override, get_description, get_round_limit, get_escalating_threshold
     run/
       case_manager.gd      # Autoload: CaseManager — 27-match Case sequence, run_won signal
       run_manager.gd       # Series sequencing; power offer + rotation after each match; crossroads at act boundaries
@@ -83,6 +87,9 @@ seal-the-box/
     test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 46 tests
     test_power_effects.gd  # Tests for all 8 power effects via PowerManager (headless) — 30 tests
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
+    test_box_definitions.gd # Validates full 26-box pool: counts, tab sums, thresholds, tier validity, no duplicate ids (headless)
+    test_box_roll_modifiers.gd # Tests BoxRollModifiers registry + all 6 modifiers + RoundManager integration (headless)
+    test_box_win_conditions.gd # Tests BoxWinConditions registry + crit_only + escalating_threshold + round_limit override + RoundManager integration (headless) — 18 tests
     test_case_manager.gd   # Tests for CaseManager (headless) — 15 tests (new difficulty structure: boss@9/21/27, no repeats)
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap (headless) — 8 tests
     test_entity.gd         # Stub — entity system removed 2026-05-08
@@ -111,6 +118,9 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-09 | Slice 3 (feature/boxes-win-conditions) merged to master. BoxWinConditions static class added (2 WIN boxes: crit_only, escalating_threshold). crit_only: suppresses threshold path entirely — only a full seal wins; 5-round override via get_round_limit(). escalating_threshold: per-round threshold int R1=25→R2=20→R3=15→R4+=5; GameState.win_threshold updated each round start via _apply_win_condition_threshold_update(). [!] badge extended to WIN boxes with slowly cycling hue animation (_mod_hint_time accumulator + _process delta loop). Playtest tuning: crit_only round_limit 4→5; escalating_threshold curve tightened (R1 25, R4 5). Pool now 28 boxes. test_box_win_conditions.gd added (18 tests including RoundManager integration). Playtest checklist: docs/playtest-slice3-win-conditions.html. |
+| 2026-05-08 | Slice 2 (feature/boxes-roll-mods) merged to master. BoxRollModifiers static class added (6 ROLL modifier boxes: heavy_dice, weak_dice, halving_box, doubling_box, exploding_ones, high_die_doubles). pair_swallows added and immediately dropped on playtest. Die.modifier_tag field added — shown bottom-left on die buttons in orange after rolling (e.g. "1→7", "×2"). Doubling-box validation bug fixed: tab selection now routes through RoundManager.get_roll_total() everywhere. Top-left HUD reordered: box name (large, prominent) → difficulty → match → act; [!] badge with floating hover tooltip for ROLL boxes. Playtest tuning: heavy_dice/exploding_ones→easy, high_die_doubles tabs→3–13 odds, weak_dice threshold→10. Pool now 26 boxes (9 easy / 7 medium / 7 hard / 3 boss). test_box_roll_modifiers.gd added (covers registry + all 6 modifiers + RoundManager integration). |
+| 2026-05-08 | Slice 1 (feature/boxes-composition) merged to master. 14 new COMP-axis boxes added, pool expanded to 20 (7 easy / 5 medium / 5 hard / 3 boss). Two boxes dropped after playtest (Five Nines, Ten Pillars). Major tuning: tier rebalancing (stairs→easy, lopsided_giant→medium, high_odds→hard, source_cosmic→easy, avalanche→medium, den_of_sevens→boss). cluster_of_fours renamed cluster_of_twos. mirror_ladder gained center-6 tab. Boss box thresholds tightened (the Pact 11→7, the Anchor 13→10). Den of Sevens (7×7 tabs, threshold 12) locked to match 27 as fixed final boss via source_for="final". Tab selection bug fixed (index-based, not value-based). Dynamic tab button sizing added for 10+ tab boxes. Dev menu: "Go to Match →" and "Go to Box →" submenus added. test_box_definitions.gd added (validates full pool). |
 | 2026-05-08 | Playtest tuning (session 2). Draw count restored to 3 (was 2 — Weaken abilities were too powerful with guaranteed low rolls). All box win_thresholds cut 25% (classic 15→11, low_evens 13→10, high_odds 13→10, stairs 12→9, compressed 10→8, boss boxes 14/15/17→11/11/13). Critical win now heals +1 HP before power offer; "Healed 1 HP!" notice shown on power offer overlay. HP display updated to show N/MAX with smaller grey max. Slot-1 ability tooltip appends "— lose after this round". Tax Collector counter_target 3→2. Tab 9 Bounty converted from On-Seal to Counter (target=3, persists across matches). |
 | 2026-05-08 | Playtest session. Four changes committed directly to master: (1) draw-2 dice per turn (was 3) — game was too easy; (2) 1.5× win thresholds then immediately cut 50% — net current values: Classic 15, Low Evens 13, High Odds 13, Stairs 12, Compressed 10, boss boxes 14/15/17; (3) fixed vignette/event overlays not filling screen (layout bug — moot since both were then removed); (4) major refactor — dropped vignette/event texture system (slice 3), entity types (slice 4), entity-flavored source box assignment; new difficulty structure: 8 easy → boss@9 → 11 medium → boss@21 → 5 hard → boss@27; boss pool (3 Source boxes) shuffled per run, no repeats across the 3 boss matches; tier label ("easy"/"medium"/"hard"/"BOSS") added to top-left; +10 HP dev button added; singleton count reduced from 9 to 6. |
 | 2026-05-07 | feature/source-boxes (slice 5 — capstone of the Case meta-flow). Three themed Source boxes added to boxes.csv (source_devil/"the Pact"/diabolic, source_cosmic/"the Veil"/cosmic, source_ghost/"the Anchor"/ethereal). BoxDefinition: `source_for: String` field added. BoxLibrary: `get_source(entity_id)` added; `get_by_tier()` now excludes Source boxes. CaseManager.reset_run() forces match 27 = BoxLibrary.get_source(entity_id); matches 22–26 draw 5 regular hard-tier boxes only. match.gd _on_run_won(): overlay text updated to "[display_name] is sealed at [source_name]" (e.g. "the devil is sealed at the Pact"). 4 new tests in test_case_manager.gd (14 total); EntityLibrary added to test setup. All 5 Case meta-flow slices now shipped. |

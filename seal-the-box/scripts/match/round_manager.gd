@@ -32,7 +32,7 @@ func start_match(box: BoxDefinition) -> void:
 		threshold += GameState.pending_threshold_bonus
 		GameState.pending_threshold_bonus = 0
 	GameState.win_threshold = threshold
-	GameState.round_limit = box.round_limit
+	GameState.round_limit = BoxWinConditions.get_round_limit(box.id, box.round_limit)
 	GameState.tabs = box.tabs.duplicate()
 	_tab_board = TabBoard.new()
 	_dice_pool = DicePool.new()
@@ -59,28 +59,37 @@ func start_round() -> void:
 		if power_mgr:
 			power_mgr.apply_eager(hand)
 			power_mgr.apply_coffee_break()
+	# For boxes with a win-condition override that returns a numeric threshold
+	# (e.g. escalating_threshold), update GameState.win_threshold each round start
+	# so the UI label and _check_win() both see the current round's value.
+	_apply_win_condition_threshold_update()
 	_set_phase("roll")
 	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
+	# Clear any modifier tags from the previous roll.
+	for die in GameState.dice_hand:
+		die.modifier_tag = ""
 	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	for die in dice:
 		_dice_pool.roll_die(die)
 		if power_mgr:
 			power_mgr.on_die_rolled(die)
-	var total := 0
-	for die in GameState.dice_hand:
-		if die.rolled and not die.dropped:
-			total += die.value
+	# Apply box roll modifier after all dice are rolled (pre-player-view).
+	_apply_box_roll_modifier(GameState.dice_hand)
+	# Apply display tags (×2 on high die, +N on exploded dice, etc.).
+	if GameState.current_box != null:
+		BoxRollModifiers.apply_display_tags(GameState.current_box.id, GameState.dice_hand)
+	var total := _compute_roll_total(GameState.dice_hand)
 	_set_phase("act")
 	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 
 func attempt_seal(dice: Array, tabs: Array) -> bool:
 	if _match_over:
 		return false
-	var dice_total := 0
-	for d in dice:
-		dice_total += d.value
+	# Use _compute_roll_total so total-override modifiers (halving_box, doubling_box,
+	# high_die_doubles) apply correctly even after per-die ability use.
+	var dice_total := _compute_roll_total(GameState.dice_hand)
 	if not _tab_board.can_seal_multi(dice_total, tabs):
 		return false
 	_tab_board.seal_tabs(tabs)
@@ -193,10 +202,7 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
 			return false
 	ability.charges -= 1
-	var total := 0
-	for die in GameState.dice_hand:
-		if die.rolled and not die.dropped:
-			total += die.value
+	var total := _compute_roll_total(GameState.dice_hand)
 	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 	return true
 
@@ -244,14 +250,42 @@ func accept_threshold_win() -> void:
 	match_won.emit(false)
 
 func _check_win() -> void:
-	if _tab_board.check_critical_win():
+	# Consult the win-condition override registry for the current box.
+	# The registry callable can return:
+	#   null  → no override; fall through to default critical/threshold checks
+	#   true  → win (treat as critical win — heals, power offer, rotation)
+	#   false → suppress threshold-win; only a critical win (tab_count==0) can win
+	#   int   → use this value as the threshold override
+	#
+	# IMPORTANT: GDScript 4 raises a type error if you compare int to bool with ==.
+	# Use `is bool` before comparing to true/false, and `is int` before using as threshold.
+	var box_override: Variant = null
+	if GameState.current_box != null and BoxWinConditions.has_override(GameState.current_box.id):
+		box_override = BoxWinConditions.evaluate(
+			GameState.current_box.id, _tab_board, GameState.round, GameState.win_threshold)
+
+	# Determine if the override explicitly signals a win (returns bool true).
+	var override_is_win: bool = (box_override is bool) and (box_override == true)
+	# Determine if the override suppresses the threshold path (returns bool false).
+	var override_suppresses_threshold: bool = (box_override is bool) and (box_override == false)
+
+	# Critical win path: override signals win OR tabs all sealed (standard logic).
+	if override_is_win or _tab_board.check_critical_win():
 		_match_over = true
 		GameState.hp = min(GameState.hp + 1, GameState.MAX_HP)
 		var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 		if power_mgr:
 			power_mgr.on_match_end()
 		match_won.emit(true)
-	elif _tab_board.check_win(GameState.win_threshold) and not _threshold_notified:
+		return
+
+	# If override suppresses threshold (e.g. crit_only when tabs remain), stop here.
+	if override_suppresses_threshold:
+		return
+
+	# Threshold win path: use the override threshold if it's an int, else GameState value.
+	var effective_threshold: int = box_override if box_override is int else GameState.win_threshold
+	if _tab_board.check_win(effective_threshold) and not _threshold_notified:
 		_threshold_notified = true
 		threshold_reached.emit()
 
@@ -301,3 +335,46 @@ func _grant_bounty_box_power() -> void:
 	else:
 		GameState.owned_powers.append(power.duplicate())
 	status_updated.emit("Bounty Box — Gained: %s" % power.name)
+
+# Update GameState.win_threshold for boxes whose win-condition override returns a
+# per-round threshold (e.g. escalating_threshold). Called at the start of each round.
+# No-op if the current box has no win-condition override, or if the override does not
+# return an int (e.g. crit_only returns true/false, not a threshold value).
+func _apply_win_condition_threshold_update() -> void:
+	if GameState.current_box == null:
+		return
+	if not BoxWinConditions.has_override(GameState.current_box.id):
+		return
+	var override = BoxWinConditions.evaluate(
+		GameState.current_box.id, _tab_board, GameState.round, GameState.win_threshold)
+	if override is int:
+		GameState.win_threshold = override
+
+# Apply dice-mutation modifiers (heavy_dice, weak_dice, exploding_ones)
+# once per roll. Called from commit_roll after all dice are rolled.
+# Total-override modifiers (halving_box, doubling_box, high_die_doubles) are pure
+# functions — they are NOT applied here; they recompute from die values on demand.
+func _apply_box_roll_modifier(hand: Array) -> void:
+	if GameState.current_box == null:
+		return
+	BoxRollModifiers.apply_dice_mutation(GameState.current_box.id, hand)
+
+# Compute the effective roll total for the current hand, respecting any box roll modifier.
+# Public accessor used by match.gd for display and tab-selection validation.
+func get_roll_total() -> int:
+	return _compute_roll_total(GameState.dice_hand)
+
+# For total-override boxes (halving/doubling/high_die_doubles): returns modifier total.
+# For mutation-type boxes: die.value already reflects the modifier; sums naturally.
+# For boxes with no modifier: natural sum.
+func _compute_roll_total(hand: Array) -> int:
+	if GameState.current_box != null:
+		var override := BoxRollModifiers.compute_total(GameState.current_box.id, hand)
+		if override >= 0:
+			return override
+	# Natural sum.
+	var total := 0
+	for die in hand:
+		if die.rolled and not die.dropped:
+			total += die.value
+	return total
