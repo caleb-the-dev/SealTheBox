@@ -51,6 +51,7 @@ var _dev_power_overlay: Control
 var _dev_power_list: VBoxContainer
 var _dev_ability_overlay: Control
 var _dev_ability_list: VBoxContainer
+var _dev_goto_match_overlay: Control
 var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
 var _crossroads_overlay: Control
@@ -671,6 +672,13 @@ func _setup_ui() -> void:
 	dev_restart_btn.pressed.connect(_on_dev_restart_pressed)
 	dev_btns.add_child(dev_restart_btn)
 
+	var dev_goto_match_btn = Button.new()
+	dev_goto_match_btn.text = "Go to Match →"
+	dev_goto_match_btn.custom_minimum_size = Vector2(0, 56)
+	dev_goto_match_btn.add_theme_font_size_override("font_size", 17)
+	dev_goto_match_btn.pressed.connect(_on_dev_goto_match_menu_pressed)
+	dev_btns.add_child(dev_goto_match_btn)
+
 	var dev_hp_btn = Button.new()
 	dev_hp_btn.text = "+10 HP (Dev)"
 	dev_hp_btn.custom_minimum_size = Vector2(0, 56)
@@ -770,6 +778,74 @@ func _setup_ui() -> void:
 
 	root.add_child(dev_ability_overlay)
 	_dev_ability_overlay = dev_ability_overlay
+
+	# ── Dev go-to-match sub-overlay ──────────────────────────────────────────────
+	var dev_goto_overlay = Control.new()
+	dev_goto_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_goto_overlay.visible = false
+	var dev_goto_bg = ColorRect.new()
+	dev_goto_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_bg.color = Color(0, 0, 0, 1.0)
+	dev_goto_overlay.add_child(dev_goto_bg)
+
+	var dev_goto_panel = VBoxContainer.new()
+	dev_goto_panel.anchor_left = 0.25
+	dev_goto_panel.anchor_right = 0.75
+	dev_goto_panel.anchor_top = 0.05
+	dev_goto_panel.anchor_bottom = 0.95
+	dev_goto_panel.add_theme_constant_override("separation", 10)
+	dev_goto_overlay.add_child(dev_goto_panel)
+
+	var dev_goto_title = Label.new()
+	dev_goto_title.text = "— GO TO MATCH —"
+	dev_goto_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_title.add_theme_font_size_override("font_size", 22)
+	dev_goto_panel.add_child(dev_goto_title)
+
+	var dev_goto_subtitle = Label.new()
+	dev_goto_subtitle.text = "Restarts the run and fast-forwards to the selected match."
+	dev_goto_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_subtitle.add_theme_font_size_override("font_size", 13)
+	dev_goto_subtitle.modulate = Color(0.6, 0.6, 0.6)
+	dev_goto_panel.add_child(dev_goto_subtitle)
+
+	var dev_goto_scroll = ScrollContainer.new()
+	dev_goto_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_goto_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var dev_goto_list = VBoxContainer.new()
+	dev_goto_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dev_goto_list.add_theme_constant_override("separation", 8)
+	dev_goto_scroll.add_child(dev_goto_list)
+	dev_goto_panel.add_child(dev_goto_scroll)
+
+	for match_n in range(1, 28):
+		var tier_hint: String
+		if match_n == 9 or match_n == 21 or match_n == 27:
+			tier_hint = "BOSS"
+		elif match_n <= 8:
+			tier_hint = "easy"
+		elif match_n <= 20:
+			tier_hint = "medium"
+		else:
+			tier_hint = "hard"
+		var mb = Button.new()
+		mb.text = "Match %d  —  %s" % [match_n, tier_hint]
+		mb.custom_minimum_size = Vector2(0, 44)
+		mb.add_theme_font_size_override("font_size", 15)
+		if tier_hint == "BOSS":
+			mb.modulate = Color(1.0, 0.7, 0.3)
+		mb.pressed.connect(_on_dev_goto_match_pressed.bind(match_n))
+		dev_goto_list.add_child(mb)
+
+	var dev_goto_back_btn = Button.new()
+	dev_goto_back_btn.text = "← Back"
+	dev_goto_back_btn.custom_minimum_size = Vector2(0, 44)
+	dev_goto_back_btn.pressed.connect(func(): dev_goto_overlay.visible = false; _dev_overlay.visible = true)
+	dev_goto_panel.add_child(dev_goto_back_btn)
+
+	root.add_child(dev_goto_overlay)
+	_dev_goto_match_overlay = dev_goto_overlay
 
 	# ── Die swap overlay ────────────────────────────────────────────────────────
 	var swap_overlay = Control.new()
@@ -1057,6 +1133,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_dev_power_overlay.visible = false
 	if _dev_ability_overlay:
 		_dev_ability_overlay.visible = false
+	if _dev_goto_match_overlay:
+		_dev_goto_match_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
 	if _rotation_overlay:
@@ -1324,6 +1402,20 @@ func _on_dev_ability_back_pressed() -> void:
 func _on_dev_restart_pressed() -> void:
 	_dev_overlay.visible = false
 	_run_manager.start_run()
+
+func _on_dev_goto_match_menu_pressed() -> void:
+	_dev_overlay.visible = false
+	_dev_goto_match_overlay.visible = true
+
+func _on_dev_goto_match_pressed(target: int) -> void:
+	_dev_goto_match_overlay.visible = false
+	_run_manager.start_run()
+	var safety := 0
+	while _run_manager.match_number < target and safety < 30:
+		safety += 1
+		_round_manager.dev_win_match()
+		_run_manager.dev_skip_rotation()
+		_run_manager.dev_skip_crossroads()
 
 func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
