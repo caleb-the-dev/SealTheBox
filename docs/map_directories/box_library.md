@@ -23,13 +23,15 @@ func get_source(entity_id: String) -> BoxDefinition # legacy — returns Source 
 ```
 id,name,tabs,win_threshold,tier,source_for
 ```
-20 boxes total (7 easy / 5 medium / 5 hard / 3 boss). All columns required except tier (col 5) and source_for (col 6) which default to `""` if absent. `win_threshold` is parsed as int.
+26 boxes total (9 easy / 7 medium / 7 hard / 3 boss). All columns required except tier (col 5) and source_for (col 6) which default to `""` if absent. `win_threshold` is parsed as int.
 
 **Current pool (2026-05-08):**
-- easy (7): classic, low_evens, stairs, easy_starter, crowded_low, compressed, source_cosmic (the Veil)
-- medium (5): lopsided_giant, cluster_of_twos, triple_triplets, mirror_ladder, avalanche
-- hard (5): high_odds, high_wall, exact_evens, prime_pyramid, the_long_count
+- easy (9): classic, low_evens, stairs, easy_starter, crowded_low, compressed, source_cosmic (the Veil), heavy_dice [ROLL], exploding_ones [ROLL]
+- medium (7): lopsided_giant, cluster_of_twos, triple_triplets, mirror_ladder, avalanche, doubling_box [ROLL], high_die_doubles [ROLL]
+- hard (7): high_odds, high_wall, exact_evens, prime_pyramid, the_long_count, weak_dice [ROLL], halving_box [ROLL]
 - boss (3): source_devil (the Pact, mid-boss), source_ghost (the Anchor, mid-boss), den_of_sevens (final boss, source_for="final")
+
+**[ROLL] boxes** have a dice modifier registered in BoxRollModifiers. The [!] badge in the HUD top-left identifies them to the player at runtime.
 
 **source_for values in use:**
 - `""` — regular box; appears only in its tier draw
@@ -51,6 +53,7 @@ id,name,tabs,win_threshold,tier,source_for
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | slice-boxes-2: 6 ROLL boxes added (heavy_dice, weak_dice, halving_box, doubling_box, exploding_ones, high_die_doubles). pair_swallows added then immediately dropped on playtest (always-pair, mechanically invisible). Pool now 26 boxes (9 easy / 7 medium / 7 hard / 3 boss). Playtest tuning: heavy_dice→easy, exploding_ones→easy (tabs 2–10, removes the 1 that can't explode), high_die_doubles tabs→3;5;7;9;11;13 (threshold 12), weak_dice threshold 14→10 (no more mercy). |
 | 2026-05-08 | Slice 1 playtest: pool expanded to 20 boxes (was 8). Five Nines and Ten Pillars dropped (unplayable). Two new source_for values in use: "final" (Den of Sevens — fixed match-27 boss). Thresholds retuned across multiple playtest rounds. source_cosmic (the Veil) moved to easy tier. Pool now 7 easy / 5 medium / 5 hard / 3 boss. |
 | 2026-05-08 | Playtest refactor: Source box tier changed from "hard" to "boss" in boxes.csv. `get_by_tier()` simplified — no longer filters by source_for (boss tier is self-excluding). Added `get_random_source()`. All thresholds cut 50% (Classic 20→15, Low Evens 17→13, High Odds 17→13, Stairs 15→12, Compressed 13→10, boss boxes 18/20/22→14/15/17). |
 | 2026-05-07 | feature/source-boxes: Added source_for column, get_source(entity_id), get_by_tier() source exclusion, three Source box rows. |

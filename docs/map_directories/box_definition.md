@@ -36,12 +36,18 @@ func tab_sum() -> int    # sum of all tabs in this box
 |-----|------|---------|---------------|-------------|------|------------|
 | classic | 1–9 | 45 | 11 | 4 | easy | |
 | low_evens | 2–8 | 35 | 10 | 4 | easy | |
-| high_odds | 3,5,7,9,11 | 35 | 10 | 4 | medium | |
-| compressed | 2,4,5,6,8 | 25 | 8 | 3 | hard | |
-| stairs | 1,3,5,6,7,9 | 31 | 9 | 4 | medium | |
-| source_devil | 1–9 | 45 | 11 | 4 | boss | diabolic |
-| source_cosmic | 2–10 | 54 | 11 | 4 | boss | cosmic |
-| source_ghost | 1,3,5,6,7,8,9,11,13 | 63 | 13 | 5 | boss | ethereal |
+| high_odds | 3,5,7,9,11 | 35 | 10 | 4 | hard | |
+| compressed | 2,4,5,6,8 | 25 | 8 | 3 | easy | |
+| stairs | 1,3,5,6,7,9 | 31 | 9 | 4 | easy | |
+| source_devil | 1–9 | 45 | 7 | 4 | boss | diabolic |
+| source_cosmic | 2–10 | 54 | 20 | 4 | easy | cosmic |
+| source_ghost | 1,3,5,6,7,8,9,11,13 | 63 | 10 | 5 | boss | ethereal |
+| heavy_dice | 2–9 | 44 | 12 | 4 | easy | |
+| weak_dice | 1–9 | 45 | 10 | 4 | hard | |
+| halving_box | 1–6 | 21 | 6 | 3 | hard | |
+| doubling_box | 4,6,8,10,12,14,16 | 70 | 20 | 6 | medium | |
+| exploding_ones | 2–10 | 54 | 12 | 4 | easy | |
+| high_die_doubles | 3,5,7,9,11,13 | 48 | 12 | 4 | medium | |
 
 ## Data Source
 `data/boxes.csv` — parsed by BoxLibrary at startup. Columns: `id, name, tabs, win_threshold, tier, source_for`. Tabs are semicolon-separated ints. Column 5 (`tier`) is optional; column 6 (`source_for`) is optional — if absent, defaults to `""`. Source boxes are identified by a non-empty `source_for` value.
@@ -61,6 +67,7 @@ None — pure data object.
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | slice-boxes-2: 6 ROLL boxes added. die.modifier_tag field added to Die class — set by BoxRollModifiers during commit_roll. Playtest tuning: heavy_dice→easy, exploding_ones→easy (tabs 2–10, removed 1), high_die_doubles tabs changed to 3;5;7;9;11;13 (threshold 12), weak_dice threshold 14→10. |
 | 2026-05-08 | Slice 1 playtest: source_for gains "final" value (Den of Sevens, fixed match-27 boss). Box pool expanded to 20; thresholds retuned multiple times. The Pact threshold lowered to 7, the Anchor to 10, boss boxes tightened for difficulty. |
 | 2026-05-08 | All win_thresholds cut 25% (classic 15→11, low_evens 13→10, high_odds 13→10, compressed 10→8, stairs 12→9, source_devil 14→11, source_cosmic 15→11, source_ghost 17→13). Source box tiers corrected to "boss" in docs (was "hard" — docs were stale). |
 | 2026-05-08 | Source box tiers set to "boss" (refactored from "hard") so BoxLibrary.get_by_tier("boss") returns them exclusively. |

@@ -16,10 +16,14 @@ match.tscn  (Node3D, script: match.gd)
   CanvasLayer
     Control (root UI)
       top_bar (HBoxContainer)    — HP display (centered): _hp_label (font 28) + _hp_max_label (font 16, grey) inside an HBoxContainer showing "❤ N /MAX"
-      top_left_vbox (VBoxContainer) — anchored top-left
-        _match_label             — "Match N / 27"
-        _act_label               — "Act N" (grey, smaller)
-        _tier_label              — current box tier: "easy" / "medium" / "hard" / "BOSS" (grey, smaller)
+      top_left_vbox (VBoxContainer) — anchored top-left (offset_right=240, offset_bottom=120)
+        box_name_row (HBoxContainer)
+          _box_name_label        — box display name (font 22, white)
+          _box_mod_hint          — "[!]" badge (font 18, orange); visible only for ROLL boxes; mouse_entered/exited show/hide _mod_tooltip
+        _tier_label              — difficulty: "easy" / "medium" / "hard" / "BOSS" (font 12, muted)
+        _match_label             — "Match N / 27" (font 16)
+        _act_label               — "Act N" (font 12, muted)
+      _mod_tooltip (PanelContainer) — floating panel anchored below top_left_vbox (offset_top=130); shown on [!] hover; contains _mod_tooltip_label with modifier description
       tabs_vbox (VBoxContainer)  — tab area
         tabs_lbl                 — "── TABS ──"
         tab_area (HBoxContainer)
@@ -168,10 +172,19 @@ Done in `_ready()` for all 6 autoloads (AbilityLibrary, GameState, BoxLibrary, P
 
 `_on_phase_changed` toggles `_continue_button.disabled` — false on "roll", true on "act".
 
-## Die Face Labels
-Each die button has a small child Label (`font_size=11`, anchored to bottom-right corner).
-- **Hidden** when die is unrolled (shows "d?" as button text instead)
-- **Visible** after rolling: shows "d6", "d4", etc. so player knows the max value for Empower
+## Die Face Labels and Modifier Tags
+Each die button has two small child Labels (`font_size=11`):
+
+**Face label** (bottom-right, `_dice_face_labels[i]`):
+- Hidden when die is unrolled
+- Visible after rolling: shows "d6", "d4", etc. so player knows the max value for Empower
+
+**Modifier tag label** (bottom-left, `_dice_mod_labels[i]`, orange):
+- Hidden when unrolled or when `die.modifier_tag == ""`
+- Set by BoxRollModifiers during `commit_roll`:
+  - `"1→N"` on exploding_ones dice that exploded (e.g. `"1→7"` means die rolled 1 then exploded to 7)
+  - `"×2"` on the highest die when playing high_die_doubles
+- Cleared at the start of every `commit_roll` call in RoundManager
 
 ## Dropped Die Rendering
 When a die has `die.dropped == true` (from the Drop Die ability):
@@ -194,7 +207,7 @@ See `ability_hand.md` for full detail. Summary:
 - Null slot: darker grey, disabled
 
 ## Dependencies
-All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrary, PowerLibrary, PowerManager, TabBoard (indirect), DicePool (indirect).
+All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrary, PowerLibrary, PowerManager, BoxRollModifiers, TabBoard (indirect), DicePool (indirect).
 
 ## Gotchas
 - **All UI is code-built.** Do not add child nodes to match.tscn — add them in `_setup_ui()`.
@@ -212,6 +225,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-08 | slice-boxes-2: Top-left HUD reordered — box name (font 22) now first and prominent, then difficulty (font 12), match (font 16), act (font 12). [!] badge (_box_mod_hint) added next to box name for ROLL boxes; hover shows floating _mod_tooltip panel (not Godot built-in tooltip). _dice_mod_labels array added — each die button gains a bottom-left orange label showing modifier_tag (e.g. "1→7", "×2"). _on_tab_pressed(), _on_end_round_pressed(), _update_rolled_total() now route through _round_manager.get_roll_total() instead of raw die sum — fixes doubling_box validation bug where tab selection used unmodified total. New member vars: _box_name_label, _box_mod_hint, _mod_tooltip, _mod_tooltip_label, _dice_mod_labels. New handlers: _on_mod_hint_entered(), _on_mod_hint_exited(). |
 | 2026-05-08 | Slice 1 playtest session. Tab selection changed from value-based to index-based (fixes multi-select bug on duplicate-value tabs). `_sealed_button_indices: Array[int]` added. `_rebuild_tab_buttons()` now binds button index, resets sealed list, and applies dynamic sizing (3 tiers by tab count). Dev menu: "Go to Match →" (restarts run + fast-forwards) and "Go to Box →" (restarts match in place with chosen box) added with full sub-overlays. |
 | 2026-05-08 | UI polish: HP display now shows "❤ N /MAX" — _hp_label (font 28) + _hp_max_label (font 16, grey) in an HBoxContainer. Power offer overlay gains green "Healed 1 HP!" label in bottom-left (_heal_notice_label). Slot-0 ability tooltip charges text appends "— lose after this round". |
 | 2026-05-08 | Playtest refactor: removed _vignette_overlay, _event_overlay, _case_label, and all associated vars/handlers. Replaced _location_label with _tier_label (shows "easy"/"medium"/"hard"/"BOSS"). Removed show_texture_beat signal wiring. Removed EntityLibrary, VignetteLibrary, EventLibrary from singleton registrations (now 6 total). Run-won overlay text simplified to "sealed". Added "+10 HP (Dev)" button to dev menu. Fixed overlay layout bug: vignette and event overlays were previously loaded from external scripts (zero-size layout); rebuilt inline (this became moot when both were removed). |
