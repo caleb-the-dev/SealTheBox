@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 17 |
+| Sessions since groom | 18 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -39,6 +39,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Dice Pool | [dice_pool.md](dice_pool.md) | Active |
 | Round Manager | [round_manager.md](round_manager.md) | Active |
 | Box Roll Modifiers (static) | [box_roll_modifiers.md](box_roll_modifiers.md) | Active |
+| Box Win Conditions (static) | [box_win_conditions.md](box_win_conditions.md) | Active |
 | Match Scene + HUD | [match_scene.md](match_scene.md) | Active |
 | HUD detail | [hud.md](hud.md) | Active |
 | Ability Hand (UI) | [ability_hand.md](ability_hand.md) | Active |
@@ -72,6 +73,7 @@ seal-the-box/
       dice_pool.gd         # Dice draw/roll/discard
       die.gd               # Die class (class_name Die) — single die object with faces, value, rolled, dropped, modifier_tag
       box_roll_modifiers.gd # Static class — 6 roll modifier callables; apply_dice_mutation, compute_total, apply_display_tags, get_description
+      box_win_conditions.gd # Static class — 2 win-condition override callables; evaluate, has_override, get_description, get_round_limit, get_escalating_threshold
     run/
       case_manager.gd      # Autoload: CaseManager — 27-match Case sequence, run_won signal
       run_manager.gd       # Series sequencing; power offer + rotation after each match; crossroads at act boundaries
@@ -87,6 +89,7 @@ seal-the-box/
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
     test_box_definitions.gd # Validates full 26-box pool: counts, tab sums, thresholds, tier validity, no duplicate ids (headless)
     test_box_roll_modifiers.gd # Tests BoxRollModifiers registry + all 6 modifiers + RoundManager integration (headless)
+    test_box_win_conditions.gd # Tests BoxWinConditions registry + crit_only + escalating_threshold + round_limit override + RoundManager integration (headless) — 18 tests
     test_case_manager.gd   # Tests for CaseManager (headless) — 15 tests (new difficulty structure: boss@9/21/27, no repeats)
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap (headless) — 8 tests
     test_entity.gd         # Stub — entity system removed 2026-05-08
@@ -115,6 +118,7 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-09 | Slice 3 (feature/boxes-win-conditions) merged to master. BoxWinConditions static class added (2 WIN boxes: crit_only, escalating_threshold). crit_only: suppresses threshold path entirely — only a full seal wins; 5-round override via get_round_limit(). escalating_threshold: per-round threshold int R1=25→R2=20→R3=15→R4+=5; GameState.win_threshold updated each round start via _apply_win_condition_threshold_update(). [!] badge extended to WIN boxes with slowly cycling hue animation (_mod_hint_time accumulator + _process delta loop). Playtest tuning: crit_only round_limit 4→5; escalating_threshold curve tightened (R1 25, R4 5). Pool now 28 boxes. test_box_win_conditions.gd added (18 tests including RoundManager integration). Playtest checklist: docs/playtest-slice3-win-conditions.html. |
 | 2026-05-08 | Slice 2 (feature/boxes-roll-mods) merged to master. BoxRollModifiers static class added (6 ROLL modifier boxes: heavy_dice, weak_dice, halving_box, doubling_box, exploding_ones, high_die_doubles). pair_swallows added and immediately dropped on playtest. Die.modifier_tag field added — shown bottom-left on die buttons in orange after rolling (e.g. "1→7", "×2"). Doubling-box validation bug fixed: tab selection now routes through RoundManager.get_roll_total() everywhere. Top-left HUD reordered: box name (large, prominent) → difficulty → match → act; [!] badge with floating hover tooltip for ROLL boxes. Playtest tuning: heavy_dice/exploding_ones→easy, high_die_doubles tabs→3–13 odds, weak_dice threshold→10. Pool now 26 boxes (9 easy / 7 medium / 7 hard / 3 boss). test_box_roll_modifiers.gd added (covers registry + all 6 modifiers + RoundManager integration). |
 | 2026-05-08 | Slice 1 (feature/boxes-composition) merged to master. 14 new COMP-axis boxes added, pool expanded to 20 (7 easy / 5 medium / 5 hard / 3 boss). Two boxes dropped after playtest (Five Nines, Ten Pillars). Major tuning: tier rebalancing (stairs→easy, lopsided_giant→medium, high_odds→hard, source_cosmic→easy, avalanche→medium, den_of_sevens→boss). cluster_of_fours renamed cluster_of_twos. mirror_ladder gained center-6 tab. Boss box thresholds tightened (the Pact 11→7, the Anchor 13→10). Den of Sevens (7×7 tabs, threshold 12) locked to match 27 as fixed final boss via source_for="final". Tab selection bug fixed (index-based, not value-based). Dynamic tab button sizing added for 10+ tab boxes. Dev menu: "Go to Match →" and "Go to Box →" submenus added. test_box_definitions.gd added (validates full pool). |
 | 2026-05-08 | Playtest tuning (session 2). Draw count restored to 3 (was 2 — Weaken abilities were too powerful with guaranteed low rolls). All box win_thresholds cut 25% (classic 15→11, low_evens 13→10, high_odds 13→10, stairs 12→9, compressed 10→8, boss boxes 14/15/17→11/11/13). Critical win now heals +1 HP before power offer; "Healed 1 HP!" notice shown on power offer overlay. HP display updated to show N/MAX with smaller grey max. Slot-1 ability tooltip appends "— lose after this round". Tax Collector counter_target 3→2. Tab 9 Bounty converted from On-Seal to Counter (target=3, persists across matches). |

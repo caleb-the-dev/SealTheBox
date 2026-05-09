@@ -70,7 +70,7 @@ static func get_description(box_id: String) -> String
 
 ## Depended On By
 - `RoundManager` — calls `apply_dice_mutation`, `compute_total`, `apply_display_tags` from `commit_roll()` and `_compute_roll_total()`
-- `match.gd` — calls `has_modifier()` and `get_description()` for the [!] badge tooltip
+- `match.gd` — calls `has_modifier()` and `get_description()` for the [!] badge tooltip (badge also shows for WIN boxes via BoxWinConditions; ROLL description takes priority if both apply)
 
 ## Recent Changes
 | Date | Change |
