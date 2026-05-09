@@ -4,7 +4,8 @@ extends Node3D
 var _round_manager: RoundManager
 var _run_manager: RunManager
 var _selected_dice: Array = []
-var _selected_tabs: Array[int] = []
+var _selected_tabs: Array[int] = []      # stores button indices, not values
+var _sealed_button_indices: Array[int] = []  # which tab buttons are sealed this match
 var _selected_ability: AbilityData = null
 var _targeting_die: bool = false
 var _match_ended: bool = false
@@ -1567,9 +1568,21 @@ func _on_run_won_new_case_pressed() -> void:
 	_run_won_overlay.visible = false
 	_run_manager.start_run()
 
-func _on_tabs_sealed(_tabs: Array) -> void:
+func _on_tabs_sealed(sealed_values: Array) -> void:
 	_selected_tabs = []
 	_selected_dice = []
+	# For each sealed value, mark the first unsealed button with that value as sealed.
+	var counts: Dictionary = {}
+	for v in sealed_values:
+		counts[v] = counts.get(v, 0) + 1
+	for v in counts:
+		var remaining := counts[v]
+		for i in _tab_buttons.size():
+			if remaining <= 0:
+				break
+			if i not in _sealed_button_indices and int(_tab_buttons[i].text) == v:
+				_sealed_button_indices.append(i)
+				remaining -= 1
 	_refresh_ui()
 
 func _on_status_updated(text: String) -> void:
@@ -1607,7 +1620,7 @@ func _on_die_pressed(index: int) -> void:
 	_refresh_dice_highlight()
 	_update_roll_button_text()
 
-func _on_tab_pressed(tab_value: int) -> void:
+func _on_tab_pressed(idx: int) -> void:
 	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if rolled.is_empty():
 		_status_label.text = "Roll your dice first, then click tabs that sum to your total."
@@ -1617,17 +1630,19 @@ func _on_tab_pressed(tab_value: int) -> void:
 	for d in rolled:
 		rolled_total += d.value
 
-	if tab_value in _selected_tabs:
-		_selected_tabs.erase(tab_value)
+	var tab_value := int(_tab_buttons[idx].text)
+
+	if idx in _selected_tabs:
+		_selected_tabs.erase(idx)
 	else:
-		_selected_tabs.append(tab_value)
+		_selected_tabs.append(idx)
 
 	var tab_sum := 0
-	for t in _selected_tabs:
-		tab_sum += t
+	for i in _selected_tabs:
+		tab_sum += int(_tab_buttons[i].text)
 
 	if tab_sum > rolled_total:
-		_selected_tabs.erase(tab_value)
+		_selected_tabs.erase(idx)
 		tab_sum -= tab_value
 		_status_label.text = "Tab %d would exceed rolled total %d (currently at %d)." % [tab_value, rolled_total, tab_sum]
 	elif tab_sum == rolled_total and not _selected_tabs.is_empty():
@@ -1678,13 +1693,16 @@ func _on_end_round_pressed() -> void:
 		for d in rolled:
 			rolled_total += d.value
 		var tab_sum := 0
-		for t in _selected_tabs:
-			tab_sum += t
+		for i in _selected_tabs:
+			tab_sum += int(_tab_buttons[i].text)
 		if tab_sum != rolled_total:
 			_status_label.text = "Selected tabs sum to %d but rolled total is %d — adjust your selection." % [tab_sum, rolled_total]
 			return
+		var selected_values: Array = []
+		for i in _selected_tabs:
+			selected_values.append(int(_tab_buttons[i].text))
 		var match_before := _run_manager.match_number
-		if not _round_manager.attempt_seal(rolled, _selected_tabs.duplicate()):
+		if not _round_manager.attempt_seal(rolled, selected_values):
 			_status_label.text = "Can't seal — invalid combination."
 			_selected_tabs = []
 			_refresh_tab_display()
@@ -1763,23 +1781,23 @@ func _rebuild_tab_buttons() -> void:
 	for child in _tab_row.get_children():
 		child.queue_free()
 	_tab_buttons.clear()
-	for tab_val in GameState.tabs:
+	_sealed_button_indices = []
+	for i in GameState.tabs.size():
+		var tab_val = GameState.tabs[i]
 		var btn = Button.new()
 		btn.text = str(tab_val)
 		btn.custom_minimum_size = Vector2(62, 88)
-		btn.pressed.connect(_on_tab_pressed.bind(tab_val))
+		btn.pressed.connect(_on_tab_pressed.bind(i))
 		_tab_row.add_child(btn)
 		_tab_buttons.append(btn)
 
 func _refresh_tab_display() -> void:
-	var remaining = GameState.tabs
-	for btn in _tab_buttons:
-		var tab_val = btn.text.to_int()
-		var sealed = not (tab_val in remaining)
-		if sealed:
+	for i in _tab_buttons.size():
+		var btn = _tab_buttons[i]
+		if i in _sealed_button_indices:
 			btn.disabled = true
 			btn.modulate = Color(0.4, 0.4, 0.4)
-		elif tab_val in _selected_tabs:
+		elif i in _selected_tabs:
 			btn.disabled = false
 			btn.modulate = Color(1.5, 1.5, 0.3)
 		else:
