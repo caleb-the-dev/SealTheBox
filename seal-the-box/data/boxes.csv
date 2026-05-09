@@ -16,6 +16,6 @@ mirror_ladder,Mirror Ladder,1;2;3;4;5;6;5;4;3;2;1,10,medium,
 high_wall,High Wall,5;6;7;8;9;10,12,hard,
 exact_evens,Exact Evens,2;4;6;8;10;12,11,hard,
 prime_pyramid,Prime Pyramid,2;3;5;7;11;13,11,hard,
-den_of_sevens,Den of Sevens,7;7;7;7;7;7;7,12,boss,
+den_of_sevens,Den of Sevens,7;7;7;7;7;7;7,12,boss,final
 the_long_count,The Long Count,1;2;3;4;5;6;7;8;9;1;2;3;4;5;6;7;8;9,24,hard,
 avalanche,Avalanche,1;2;3;4;5;6;7;8;9;10;11;12,21,medium,
