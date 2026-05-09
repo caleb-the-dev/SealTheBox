@@ -1576,7 +1576,7 @@ func _on_tabs_sealed(sealed_values: Array) -> void:
 	for v in sealed_values:
 		counts[v] = counts.get(v, 0) + 1
 	for v in counts:
-		var remaining := counts[v]
+		var remaining: int = counts[v]
 		for i in _tab_buttons.size():
 			if remaining <= 0:
 				break
