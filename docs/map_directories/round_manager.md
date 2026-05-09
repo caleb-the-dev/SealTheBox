@@ -26,7 +26,11 @@ func start_match(box: BoxDefinition) -> void
     #   + GameState.pending_threshold_bonus, then resets pending_threshold_bonus to 0.
     # Sets GameState.current_box, win_threshold, tabs from box.
     # Sets GameState.round_limit = BoxWinConditions.get_round_limit(box.id, box.round_limit)
-    #   — routes through BoxWinConditions so boxes like crit_only can override the formula.
+    #   — routes through BoxWinConditions so boxes like crit_only/single_die/quick_seal can override.
+    # Calls BoxDiceAccess.get_active_pool(box.id, GameState.dice_pool) to get the match pool
+    #   — pool overrides (single_die, locked_d8, locked_d4) return a filtered copy; persistent pool untouched.
+    # If BoxDiceAccess.has_entry_power(box.id) and box not in GameState.marquee_seen:
+    #   marks box as seen, calls _grant_bounty_box_power() (no active box currently triggers this).
     # Then calls GameState.reset_match(), resets TabBoard and DicePool, calls start_round().
 
 func start_round() -> void
@@ -76,9 +80,15 @@ func use_ability(ability: AbilityData, target_die: Die) -> bool
     # Returns false if unknown ability id.
 
 func end_round() -> void
+    # forced_full_commit hook: if current box has_forced_commit, sums rolled (non-dropped) pips;
+    #   leftover = rolled_total - _tabs_sum_sealed_this_round → GameState.hp -= leftover if > 0.
+    #   (No active box triggers this as of 2026-05-09; forced_full_commit dropped from CSV.)
     # Discards hand, clears GameState.dice_hand.
+    # Overtime check: if GameState.round > GameState.round_limit → GameState.hp -= 1.
+    # tax_per_roll hook: if current box has_tax and round > 1 → GameState.hp -= 1.
+    #   (No active box triggers this as of 2026-05-09; mechanic stripped from quick_seal.)
     # Calls PowerManager.on_round_end() (increments bonus_seal counter, if owned and below target).
-    # Emits round_ended(round_num). Calls start_round() OR emits match_lost if HP=0 in overtime.
+    # Emits round_ended(round_num). Calls start_round() OR emits match_lost if HP=0 after damage.
     # PowerManager.on_match_end() is called before match_lost.emit() on the losing path.
 
 func accept_threshold_win() -> void
@@ -128,7 +138,10 @@ Win logic is mediated by `BoxWinConditions.evaluate()` before any default check 
 
 ## Key Internal State
 ```gdscript
-var _threshold_notified: bool   # true once threshold_reached has been emitted this match; reset in start_match()
+var _threshold_notified: bool          # true once threshold_reached emitted this match; reset in start_match()
+var _tabs_sum_sealed_this_round: int   # running sum of tab values sealed via attempt_seal() this round.
+                                       # Reset to 0 at start_round(). Used by has_forced_commit hook in end_round().
+                                       # Only primary seals count — bonus seals are not tracked here.
 
 # Headless test compatibility:
 var GameState: Node: get: return Engine.get_singleton("GameState")
@@ -139,6 +152,12 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 
 ## Key Internal Methods
 ```gdscript
+func _grant_bounty_box_power() -> void
+    # Grants the power named in BoxDiceAccess.BOUNTY_BOX_POWER_ID ("phoenix_down") to the player.
+    # Uses PowerManager.add_power() if available; falls back to direct GameState.owned_powers.append().
+    # Called from start_match() when has_entry_power() returns true AND the box hasn't been seen.
+    # No active box triggers this as of 2026-05-09 (bounty_box dropped from CSV).
+
 func _apply_win_condition_threshold_update() -> void
     # Called at the start of every round (in start_round()).
     # If the current box has a win-condition override that returns an int (e.g. escalating_threshold),
@@ -156,12 +175,14 @@ func _compute_roll_total(hand: Array) -> int
 ```
 
 ## Dependencies
-- `GameState` — reads/writes hp, round, round_limit, win_threshold, pending_threshold_bonus, tabs, dice_hand, ability_hand, current_box
+- `GameState` — reads/writes hp, round, round_limit, win_threshold, pending_threshold_bonus, tabs, dice_hand, ability_hand, current_box, marquee_seen
 - `TabBoard` — seals tabs, checks win condition, validates combinations
 - `DicePool` — draws hand, rolls dice, applies modifiers, discards hand
 - `PowerManager` — optional (guarded with has_singleton); called in start_match, start_round, attempt_seal
+- `PowerLibrary` — used by _grant_bounty_box_power() to look up the bounty power definition
 - `BoxRollModifiers` — called in commit_roll() for mutation + display tags; called in _compute_roll_total() for override totals
 - `BoxWinConditions` — called in start_match() for round_limit override; called in start_round() for per-round threshold update; called in _check_win() for win override evaluation
+- `BoxDiceAccess` — called in start_match() for pool override and entry power check; called in end_round() for tax and forced-commit hooks
 
 ## Gotchas
 - **All PowerManager calls use `Engine.has_singleton("PowerManager")` guard.** If PowerManager is not registered (e.g., headless tests without it), power effects are silently skipped. All existing tests still pass.
@@ -187,6 +208,8 @@ func _compute_roll_total(hand: Array) -> int
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-09 | slice-boxes-4 playtest: forced_full_commit and tax_per_roll hooks now have no active boxes (both dropped/renamed in CSV). Infrastructure retained. single_die and quick_seal round_limit overrides added via BoxWinConditions._round_limit_overrides. |
+| 2026-05-09 | slice-boxes-4: BoxDiceAccess integrated. start_match() now calls BoxDiceAccess.get_active_pool() for DICE-axis pool overrides (single_die, locked_d8, locked_d4) and checks has_entry_power() + GameState.marquee_seen for once-per-run bounty power. _grant_bounty_box_power() added. end_round() now checks has_forced_commit() (leftover pip damage) and has_tax() (-1 HP after R1). _tabs_sum_sealed_this_round field added; reset in start_round(), incremented in attempt_seal() for primary seals only. BoxDiceAccess and PowerLibrary added to Dependencies. |
 | 2026-05-09 | slice-boxes-3: BoxWinConditions integrated. start_match() now sets round_limit via BoxWinConditions.get_round_limit() instead of box.round_limit. _apply_win_condition_threshold_update() added — called in start_round() to update GameState.win_threshold each round for escalating_threshold. _check_win() now consults BoxWinConditions before default checks; interprets bool true (override win), bool false (suppress threshold path), int (threshold override), null (no override). BoxWinConditions added to Dependencies. |
 | 2026-05-08 | slice-boxes-2: commit_roll() now clears die.modifier_tag on all hand dice, calls BoxRollModifiers.apply_dice_mutation() and apply_display_tags() after rolling. get_roll_total() public method added — match.gd _on_tab_pressed(), _on_end_round_pressed(), and _update_rolled_total() now route through it so total-override modifiers (doubling_box, halving_box, high_die_doubles) apply correctly everywhere. _compute_roll_total() now dependency of BoxRollModifiers (was pure internal). |
 | 2026-05-08 | Critical win path (_check_win + dev_critical_win) now heals +1 HP (capped at MAX_HP) before emitting match_won(true). |

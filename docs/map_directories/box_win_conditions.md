@@ -49,9 +49,11 @@ static func get_escalating_threshold(current_round: int) -> int
 | escalating_threshold | int | Per-round threshold: R1=25, R2=20, R3=15, R4+=5 |
 
 ## Round Limit Overrides
-| box_id | Override |
-|--------|---------|
-| crit_only | 5 (base formula gives 4; extra round compensates for harder win condition) |
+| box_id | Override | Reason |
+|--------|---------|--------|
+| crit_only | 5 | Base formula gives 4; extra round compensates for harder win condition |
+| single_die | 3 | Base formula gives 2; playtest found 2 rounds too tight with only 1 die |
+| quick_seal | 1 | Plain box with small tab set; 1-round design creates time pressure without a punishing mechanic |
 
 ## Key Internal State
 ```gdscript
@@ -81,5 +83,6 @@ static var _round_limit_overrides: Dictionary  # box_id → int
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-09 | slice-boxes-4 playtest: round_limit overrides added for single_die (3) and quick_seal (1). No win-condition callable changes. |
 | 2026-05-09 | Playtest tuning: crit_only round_limit override 4→5 (extra round added); escalating_threshold curve tightened: was 30→25→20→15, now 25→20→15→5. Descriptions updated to match. |
 | 2026-05-09 | Created (slice-boxes-3-win-conditions). Registry pattern mirrors BoxRollModifiers. 2 overrides: crit_only (bool — suppresses threshold path) and escalating_threshold (int — per-round threshold). get_round_limit() and _round_limit_overrides added for crit_only 5-round override. get_escalating_threshold() helper exposed for display/testing. get_description() for HUD tooltip. test_box_win_conditions.gd: 14 unit tests + 4 RoundManager integration tests. |

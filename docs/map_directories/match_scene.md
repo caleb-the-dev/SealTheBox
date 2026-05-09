@@ -19,7 +19,7 @@ match.tscn  (Node3D, script: match.gd)
       top_left_vbox (VBoxContainer) — anchored top-left (offset_right=240, offset_bottom=120)
         box_name_row (HBoxContainer)
           _box_name_label        — box display name (font 22, white)
-          _box_mod_hint          — "[!]" badge (font 18); visible for ROLL boxes (BoxRollModifiers) AND WIN boxes (BoxWinConditions); hue cycles slowly via _process() delta accumulator; mouse_entered/exited show/hide _mod_tooltip
+          _box_mod_hint          — "[!]" badge (font 18); visible for ROLL (BoxRollModifiers), WIN (BoxWinConditions), and DICE (BoxDiceAccess) boxes; priority: ROLL → WIN → DICE for tooltip text; hue cycles slowly via _process() delta accumulator; mouse_entered/exited show/hide _mod_tooltip
         _tier_label              — difficulty: "easy" / "medium" / "hard" / "BOSS" (font 12, muted)
         _match_label             — "Match N / 27" (font 16)
         _act_label               — "Act N" (font 12, muted)
@@ -129,8 +129,9 @@ Open with T key or the "DEV" button (top-right corner). Full-screen opaque overl
 | Win Entire Series | Loops threshold wins + auto-rotation + auto-crossroads (Rest); terminates at match 27 win (shows run_won_overlay); no power offers |
 | Restart Run | `start_run()` — resets everything including owned powers |
 | Go to Match → | Opens `_dev_goto_match_overlay`: 27 match buttons (BOSS tinted orange). Selecting one calls `start_run()` then loops `dev_win_match()` + `dev_skip_rotation()` + `dev_skip_crossroads()` until `match_number == target`. Safety cap 30 iterations. |
-| Go to Box → | Opens `_dev_goto_box_overlay`: all 20 boxes from BoxLibrary grouped by tier (easy/medium/hard/boss), dynamically populated on open. Selecting one calls `start_match(box)` directly — no run restart, HP and powers preserved. Dev box label shows "Box: [Name] [DEV]". |
+| Go to Box → | Opens `_dev_goto_box_overlay`: all boxes from BoxLibrary grouped by tier (easy/medium/hard/boss), dynamically populated on open. Selecting one calls `start_match(box)` directly — no run restart, HP and powers preserved. Dev box label shows "Box: [Name] [DEV]". |
 | +10 HP (Dev) | `GameState.hp += 10` — uncapped, for stress-testing difficult matches |
+| Force Round → (escalating) | Opens sub-panel to force-advance to a specific round on escalating_threshold boxes (useful for testing per-round threshold values) |
 | Close [T] | Hides overlay |
 
 **Switch Dice (dev):** Opens the standard die swap overlay (d2/d4/d8/d10/d12 offered). When the player confirms, the swap writes directly to `GameState.dice_pool[_selected_swap_pool_idx]` — no RunManager involvement, no match transition. The die swap overlay's Confirm/Skip handlers check `_dev_die_swap_mode: bool` to distinguish the dev path from the post-match path. Pool index is stored as `_selected_swap_pool_idx: int` at button-press time (not resolved via Array.find() at confirm time — avoids RefCounted identity edge cases). The swap affects the persistent pool; the dice are visible in the next match's draws.
@@ -225,6 +226,7 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-09 | slice-boxes-4 playtest: [!] badge extended to DICE boxes (BoxDiceAccess.has_description()); tooltip routing is now ROLL → WIN → DICE priority. Dev menu: removed "Force Bounty Box →" and "Reset Marquee Set" buttons (bounty_box dropped). "Force Round → (escalating)" button retained. Tab alignment fix: _sealed_total_label now right-aligned, _threshold_label now left-aligned; _update_tabs_header_widths() now uses correct per-tier button widths (62/52/36). |
 | 2026-05-09 | slice-boxes-3: [!] badge extended to WIN boxes (BoxWinConditions.has_override()). Badge hue now cycles slowly via _process(delta) using a `_mod_hint_time: float` accumulator — `Color.from_hsv(fmod(time*0.15, 1.0), 0.85, 1.0)`. Tooltip text routes to BoxWinConditions.get_description() for WIN boxes (was ROLL-only). New member var: _mod_hint_time. |
 | 2026-05-08 | slice-boxes-2: Top-left HUD reordered — box name (font 22) now first and prominent, then difficulty (font 12), match (font 16), act (font 12). [!] badge (_box_mod_hint) added next to box name for ROLL boxes; hover shows floating _mod_tooltip panel (not Godot built-in tooltip). _dice_mod_labels array added — each die button gains a bottom-left orange label showing modifier_tag (e.g. "1→7", "×2"). _on_tab_pressed(), _on_end_round_pressed(), _update_rolled_total() now route through _round_manager.get_roll_total() instead of raw die sum — fixes doubling_box validation bug where tab selection used unmodified total. New member vars: _box_name_label, _box_mod_hint, _mod_tooltip, _mod_tooltip_label, _dice_mod_labels. New handlers: _on_mod_hint_entered(), _on_mod_hint_exited(). |
 | 2026-05-08 | Slice 1 playtest session. Tab selection changed from value-based to index-based (fixes multi-select bug on duplicate-value tabs). `_sealed_button_indices: Array[int]` added. `_rebuild_tab_buttons()` now binds button index, resets sealed list, and applies dynamic sizing (3 tiers by tab count). Dev menu: "Go to Match →" (restarts run + fast-forwards) and "Go to Box →" (restarts match in place with chosen box) added with full sub-overlays. |

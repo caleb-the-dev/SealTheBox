@@ -26,6 +26,10 @@ func reset_run() -> void
     #   Match   27    → ALWAYS Den of Sevens (source_for == "final")
     # Boss pool is split: boxes with source_for == "final" go to match 27;
     # the rest (mid-boss pool) are shuffled and assigned to matches 9 and 21.
+    # After building the list, runs a marquee-dedup pass: walks the list and replaces
+    # any second occurrence of a "marquee" box (currently: ["bounty_box"]) with a
+    # fresh random draw from the same tier — ensures once-per-run boxes appear at most once.
+    # No active box is in the marquee_ids list as of 2026-05-09 (bounty_box dropped from CSV).
     # Called by RunManager.start_run() after GameState.reset_run().
 
 func get_box_for_match(idx: int) -> BoxDefinition
@@ -86,6 +90,7 @@ RunManager._start_next_match()
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-09 | slice-boxes-4: marquee-dedup pass added to reset_run(). Walks the built list; any second occurrence of a marquee box (currently only "bounty_box" in the ids list) is replaced with a tier-matched non-marquee draw. bounty_box was then dropped from boxes.csv, so the pass is effectively a no-op today but the infrastructure is intact. |
 | 2026-05-08 | Slice 1 playtest: final boss separation. Boss pool split into `final_boss` (source_for=="final", always match 27) and `mid_boss` (shuffled, matches 9 and 21). Den of Sevens (all 7s) is the fixed final boss. |
 | 2026-05-08 | Playtest refactor: dropped entity selection and get_location_name(). New difficulty structure: 8 easy → boss@9 → 11 medium → boss@21 → 5 hard → boss@27. Boss pool (tier="boss") shuffled once per run; each boss match gets a unique box. EntityLibrary dependency removed. |
 | 2026-05-07 | feature/source-boxes: match 27 forced to entity's Source box via BoxLibrary.get_source(). |
