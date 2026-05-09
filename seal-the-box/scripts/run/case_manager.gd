@@ -47,6 +47,28 @@ func reset_run() -> void:
 	# Match 27: always the final boss
 	_case_list.append(final_boss)
 
+	# Marquee-box deduplication pass: ensure once-per-run boxes (e.g. bounty_box)
+	# appear at most once in the run. Walk the list; on the second encounter of a
+	# marquee box, replace it with a fresh random draw from the same tier pool.
+	# This is simpler and more reliable than "skip if seen" at runtime because the
+	# list is committed upfront at reset_run() and never changes during play.
+	var marquee_ids := ["bounty_box"]
+	for marquee_id in marquee_ids:
+		var seen_at := -1
+		for i in _case_list.size():
+			var box: BoxDefinition = _case_list[i]
+			if box.id == marquee_id:
+				if seen_at == -1:
+					seen_at = i
+				else:
+					# Replace duplicate with another box from the same tier pool.
+					var tier_pool: Array = box_lib.get_by_tier(box.tier)
+					var non_marquee := tier_pool.filter(func(b: BoxDefinition) -> bool:
+						return not b.id in marquee_ids)
+					if not non_marquee.is_empty():
+						_case_list[i] = non_marquee[randi() % non_marquee.size()]
+					# else: tier has no non-marquee options — leave as-is (very unlikely)
+
 func get_box_for_match(idx: int) -> BoxDefinition:
 	if idx < 1 or idx > _case_list.size():
 		push_error("CaseManager: match index %d out of range" % idx)

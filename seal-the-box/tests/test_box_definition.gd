@@ -12,7 +12,7 @@ func _init() -> void:
 	_test_custom_box()
 	_test_compressed_box()
 	_test_stairs_box()
-	_test_all_five_boxes_load()
+	_test_all_boxes_load()
 	print("All BoxDefinition tests passed!")
 	quit()
 
@@ -56,9 +56,10 @@ func _test_stairs_box() -> void:
 	assert(box.win_threshold == 15, "stairs win_threshold should be 15, got %d" % box.win_threshold)
 	assert(box.round_limit == 4, "stairs round_limit should be 4, got %d" % box.round_limit)
 
-func _test_all_five_boxes_load() -> void:
+func _test_all_boxes_load() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_ordered()
-	assert(all.size() == 22, "BoxLibrary should have 22 boxes, got %d" % all.size())
+	# 5 original + 3 boss + 13 comp + 6 ROLL + 2 WIN + 3 DICE = 32.
+	assert(all.size() == 32, "BoxLibrary should have 32 boxes, got %d" % all.size())
 	assert(all[0].id == "classic",    "box 0 should be classic, got %s"    % all[0].id)
 	assert(all[1].id == "low_evens",  "box 1 should be low_evens, got %s"  % all[1].id)
 	assert(all[2].id == "high_odds",  "box 2 should be high_odds, got %s"  % all[2].id)

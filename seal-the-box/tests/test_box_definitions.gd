@@ -1,7 +1,10 @@
 extends SceneTree
 
-# Validation suite for the full 22-box pool after slice-boxes-1-composition.
+# Validation suite for the full box pool after slice-boxes-4-dice-access.
 # Run headless: godot --headless --path seal-the-box --script tests/test_box_definitions.gd
+
+# Preload BDA so its static methods are available in headless --script mode.
+const BDA = preload("res://scripts/match/box_dice_access.gd")
 
 func _init() -> void:
 	var box_lib = load("res://scripts/globals/box_library.gd").new()
@@ -10,20 +13,22 @@ func _init() -> void:
 	box_lib._ready()
 	Engine.register_singleton("BoxLibrary", box_lib)
 
-	_test_22_boxes_load()
+	_test_box_count()
 	_test_all_tab_sums_positive()
 	_test_win_thresholds_in_range()
 	_test_round_limits_at_least_2()
 	_test_all_boxes_have_at_least_5_tabs()
 	_test_no_duplicate_ids()
-	_test_all_new_boxes_have_valid_tier()
-	_test_new_boxes_present()
+	_test_all_boxes_have_valid_tier()
+	_test_dice_access_boxes_present()
+	_test_dice_access_registry_coverage()
 	print("All test_box_definitions tests passed!")
 	quit()
 
-func _test_22_boxes_load() -> void:
+func _test_box_count() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
-	assert(all.size() == 28, "BoxLibrary should have 28 boxes, got %d" % all.size())
+	# 5 original + 3 boss + 13 comp + 6 ROLL + 2 WIN + 3 DICE = 32 boxes.
+	assert(all.size() == 32, "BoxLibrary should have 32 boxes, got %d" % all.size())
 
 func _test_all_tab_sums_positive() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
@@ -59,39 +64,32 @@ func _test_no_duplicate_ids() -> void:
 			"duplicate box id found: '%s'" % box.id)
 		seen[box.id] = true
 
-func _test_all_new_boxes_have_valid_tier() -> void:
+func _test_all_boxes_have_valid_tier() -> void:
 	var valid_tiers = ["easy", "medium", "hard", "boss"]
-	var new_ids = [
-		"cluster_of_twos", "high_wall", "exact_evens",
-		"lopsided_giant", "easy_starter", "triple_triplets", "mirror_ladder",
-		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
-		"den_of_sevens",
-		"heavy_dice", "weak_dice", "halving_box", "doubling_box",
-		"exploding_ones", "high_die_doubles",
-		"crit_only", "escalating_threshold"
-	]
-	var lib = Engine.get_singleton("BoxLibrary")
-	for id in new_ids:
-		var box = lib.get_box(id)
-		assert(box != null, "new box '%s' should exist in BoxLibrary" % id)
+	var all = Engine.get_singleton("BoxLibrary").get_all()
+	for box in all:
 		assert(box.tier in valid_tiers,
-			"box '%s' tier '%s' should be one of easy/medium/hard/boss" % [id, box.tier])
+			"box '%s' tier '%s' should be one of easy/medium/hard/boss" % [box.id, box.tier])
 		assert(not box.tier.is_empty(),
-			"box '%s' should have a non-empty tier" % id)
+			"box '%s' should have a non-empty tier" % box.id)
 
-func _test_new_boxes_present() -> void:
-	var new_ids = [
-		"cluster_of_twos", "high_wall", "exact_evens",
-		"lopsided_giant", "easy_starter", "triple_triplets", "mirror_ladder",
-		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
-		"den_of_sevens",
-		"heavy_dice", "weak_dice", "halving_box", "doubling_box",
-		"exploding_ones", "high_die_doubles",
-		"crit_only", "escalating_threshold"
-	]
-	var lib = Engine.get_singleton("BoxLibrary")
-	for id in new_ids:
+func _test_dice_access_boxes_present() -> void:
+	var dice_ids := ["single_die", "locked_d8", "locked_d4"]
+	var lib := Engine.get_singleton("BoxLibrary")
+	for id in dice_ids:
 		var box = lib.get_box(id)
-		assert(box != null, "box '%s' should be present in BoxLibrary" % id)
+		assert(box != null, "DICE box '%s' should exist in BoxLibrary" % id)
 		assert(box.id == id, "box id mismatch: expected '%s', got '%s'" % [id, box.id])
-		assert(box.tab_sum() > 0, "box '%s' tab_sum should be positive" % id)
+		assert(box.tab_sum() > 0, "DICE box '%s' tab_sum should be positive" % id)
+
+func _test_dice_access_registry_coverage() -> void:
+	# Pool-override boxes have a registered override.
+	var pool_override_ids := ["single_die", "locked_d8", "locked_d4"]
+	for id in pool_override_ids:
+		assert(BDA.has_override(id),
+			"BDA should have a pool override for DICE box '%s'" % id)
+	# Non-DICE boxes should not have pool overrides.
+	var non_dice_ids := ["classic", "low_evens", "high_odds", "compressed", "stairs", "quick_seal"]
+	for id in non_dice_ids:
+		assert(not BDA.has_override(id),
+			"non-DICE box '%s' should not have a pool override" % id)

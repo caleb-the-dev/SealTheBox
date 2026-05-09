@@ -28,7 +28,9 @@ static var _descriptions: Dictionary = {
 }
 
 static var _round_limit_overrides: Dictionary = {
-	"crit_only": 5,
+	"crit_only":   5,
+	"single_die":  3,
+	"quick_seal":  1,
 }
 
 static func get_round_limit(box_id: String, base_limit: int) -> int:
