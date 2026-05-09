@@ -62,6 +62,13 @@ var run_won: bool = false
     # Set to true by RunManager.handle_match_won() when the completed match was #27.
     # Checked by RunManager._start_next_match() — if true, emits CaseManager.notify_run_won() instead of starting match 28.
     # Reset to false by reset_run().
+var marquee_seen: Dictionary = {}
+    # Tracks which once-per-run box ids have already fired their entry effect (e.g. bounty_box).
+    # Dictionary used as a set: key = box_id (String), value = true.
+    # Written by RoundManager.start_match() when has_entry_power() fires; never written elsewhere.
+    # Cleared by reset_run(). Not touched by reset_match().
+    # Currently no active box uses this (bounty_box dropped from CSV 2026-05-09), but the
+    # infrastructure is intact for when once-per-run boxes return.
 
 var act: int:       # derived — read-only computed property
     get:
@@ -119,6 +126,7 @@ func _setup_ability_hand() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-09 | slice-boxes-4: added marquee_seen: Dictionary = {} field. reset_run() now clears it. Not touched by reset_match(). Written by RoundManager.start_match() for once-per-run entry-power boxes. |
 | 2026-05-08 | Playtest refactor: removed entity_id field entirely. location_index comment simplified (no longer references CaseManager.get_location_name). |
 | 2026-05-07 | feature/entity-types: Added entity_id (removed 2026-05-08). |
 | 2026-05-07 | feature/crossroads: added const MAX_HP := 6. hp field initializer and reset_run() both updated to use MAX_HP. |

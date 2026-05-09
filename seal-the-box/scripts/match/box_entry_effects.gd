@@ -41,6 +41,14 @@ static func on_box_entry(box_id: String, gs: Node) -> void:
 static func has_entry_effect(box_id: String) -> bool:
 	return box_id in ["storm_box", "cleanse_box", "borrowed_time"]
 
+# Returns a human-readable description for the [!] badge tooltip, or "" if not an ENTRY box.
+static func get_description(box_id: String) -> String:
+	match box_id:
+		"storm_box":     return "ENTRY: A random bonus die (d4, d6, or d8) is added to your pool for this match only."
+		"cleanse_box":   return "ENTRY: All ability charges are refilled to max when the match begins."
+		"borrowed_time": return "ENTRY: You lose 1 HP but gain an extra round. Only appears when HP ≥ 3."
+	return ""
+
 # ---------------------------------------------------------------------------
 # Effect implementations
 # ---------------------------------------------------------------------------
