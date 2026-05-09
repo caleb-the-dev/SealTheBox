@@ -53,24 +53,29 @@ func start_round() -> void:
 	status_updated.emit("Round %d / %d — Roll Phase: select dice to roll." % [GameState.round, GameState.round_limit])
 
 func commit_roll(dice: Array) -> void:
+	# Clear any modifier tags from the previous roll.
+	for die in GameState.dice_hand:
+		die.modifier_tag = ""
 	var power_mgr = Engine.get_singleton("PowerManager") if Engine.has_singleton("PowerManager") else null
 	for die in dice:
 		_dice_pool.roll_die(die)
 		if power_mgr:
 			power_mgr.on_die_rolled(die)
-	var total := 0
-	for die in GameState.dice_hand:
-		if die.rolled and not die.dropped:
-			total += die.value
+	# Apply box roll modifier after all dice are rolled (pre-player-view).
+	_apply_box_roll_modifier(GameState.dice_hand)
+	# Apply display tags (×2 on high die, +N on exploded dice, etc.).
+	if GameState.current_box != null:
+		BoxRollModifiers.apply_display_tags(GameState.current_box.id, GameState.dice_hand)
+	var total := _compute_roll_total(GameState.dice_hand)
 	_set_phase("act")
 	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 
 func attempt_seal(dice: Array, tabs: Array) -> bool:
 	if _match_over:
 		return false
-	var dice_total := 0
-	for d in dice:
-		dice_total += d.value
+	# Use _compute_roll_total so total-override modifiers (halving_box, doubling_box,
+	# high_die_doubles) apply correctly even after per-die ability use.
+	var dice_total := _compute_roll_total(GameState.dice_hand)
 	if not _tab_board.can_seal_multi(dice_total, tabs):
 		return false
 	_tab_board.seal_tabs(tabs)
@@ -179,10 +184,7 @@ func use_ability(ability: AbilityData, target_die) -> bool:
 			push_warning("RoundManager: unhandled ability id: %s" % ability.id)
 			return false
 	ability.charges -= 1
-	var total := 0
-	for die in GameState.dice_hand:
-		if die.rolled and not die.dropped:
-			total += die.value
+	var total := _compute_roll_total(GameState.dice_hand)
 	status_updated.emit("Seal Phase — Total: %d — select tabs that sum to it." % total)
 	return true
 
@@ -255,3 +257,32 @@ func dev_critical_win() -> void:
 func _set_phase(phase: String) -> void:
 	_current_phase = phase
 	phase_changed.emit(phase)
+
+# Apply dice-mutation modifiers (heavy_dice, weak_dice, exploding_ones, pair_swallows)
+# once per roll. Called from commit_roll after all dice are rolled.
+# Total-override modifiers (halving_box, doubling_box, high_die_doubles) are pure
+# functions — they are NOT applied here; they recompute from die values on demand.
+func _apply_box_roll_modifier(hand: Array) -> void:
+	if GameState.current_box == null:
+		return
+	BoxRollModifiers.apply_dice_mutation(GameState.current_box.id, hand)
+
+# Compute the effective roll total for the current hand, respecting any box roll modifier.
+# Public accessor used by match.gd for display and tab-selection validation.
+func get_roll_total() -> int:
+	return _compute_roll_total(GameState.dice_hand)
+
+# For total-override boxes (halving/doubling/high_die_doubles): returns modifier total.
+# For mutation-type boxes: die.value already reflects the modifier; sums naturally.
+# For boxes with no modifier: natural sum.
+func _compute_roll_total(hand: Array) -> int:
+	if GameState.current_box != null:
+		var override := BoxRollModifiers.compute_total(GameState.current_box.id, hand)
+		if override >= 0:
+			return override
+	# Natural sum.
+	var total := 0
+	for die in hand:
+		if die.rolled and not die.dropped:
+			total += die.value
+	return total
