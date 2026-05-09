@@ -23,7 +23,7 @@ func _init() -> void:
 
 func _test_22_boxes_load() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
-	assert(all.size() == 27, "BoxLibrary should have 27 boxes, got %d" % all.size())
+	assert(all.size() == 26, "BoxLibrary should have 26 boxes, got %d" % all.size())
 
 func _test_all_tab_sums_positive() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
@@ -67,7 +67,7 @@ func _test_all_new_boxes_have_valid_tier() -> void:
 		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
 		"den_of_sevens",
 		"heavy_dice", "weak_dice", "halving_box", "doubling_box",
-		"exploding_ones", "pair_swallows", "high_die_doubles"
+		"exploding_ones", "high_die_doubles"
 	]
 	var lib = Engine.get_singleton("BoxLibrary")
 	for id in new_ids:
@@ -85,7 +85,7 @@ func _test_new_boxes_present() -> void:
 		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
 		"den_of_sevens",
 		"heavy_dice", "weak_dice", "halving_box", "doubling_box",
-		"exploding_ones", "pair_swallows", "high_die_doubles"
+		"exploding_ones", "high_die_doubles"
 	]
 	var lib = Engine.get_singleton("BoxLibrary")
 	for id in new_ids:

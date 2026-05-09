@@ -18,6 +18,7 @@ var _status_label: Label
 var _tab_buttons: Array[Button] = []
 var _dice_buttons: Array[Button] = []
 var _dice_face_labels: Array[Label] = []
+var _dice_mod_labels: Array[Label] = []
 var _ability_buttons: Array[Button] = []
 var _action_button: Button
 var _roll_hint_label: Label
@@ -27,6 +28,10 @@ var _current_phase: String = ""
 var _match_label: Label
 var _act_label: Label
 var _tier_label: Label
+var _box_name_label: Label
+var _box_mod_hint: Label
+var _mod_tooltip: PanelContainer
+var _mod_tooltip_label: Label
 var _run_won_overlay: Control
 var _run_won_title_label: Label
 var _dev_box_label: Label
@@ -171,25 +176,69 @@ func _setup_ui() -> void:
 	top_left_vbox.anchor_top = 0.0
 	top_left_vbox.anchor_bottom = 0.0
 	top_left_vbox.offset_left = 8
-	top_left_vbox.offset_right = 170
+	top_left_vbox.offset_right = 240
 	top_left_vbox.offset_top = 8
-	top_left_vbox.offset_bottom = 80
-	top_left_vbox.add_theme_constant_override("separation", 1)
+	top_left_vbox.offset_bottom = 120
+	top_left_vbox.add_theme_constant_override("separation", 2)
 	root.add_child(top_left_vbox)
 
+	# Row 1: Box name (prominent) + modifier badge
+	var box_name_row = HBoxContainer.new()
+	box_name_row.add_theme_constant_override("separation", 6)
+	top_left_vbox.add_child(box_name_row)
+
+	_box_name_label = Label.new()
+	_box_name_label.add_theme_font_size_override("font_size", 22)
+	box_name_row.add_child(_box_name_label)
+
+	_box_mod_hint = Label.new()
+	_box_mod_hint.add_theme_font_size_override("font_size", 18)
+	_box_mod_hint.text = "[!]"
+	_box_mod_hint.add_theme_color_override("font_color", Color(1.0, 0.65, 0.1))
+	_box_mod_hint.mouse_filter = Control.MOUSE_FILTER_STOP
+	_box_mod_hint.visible = false
+	_box_mod_hint.mouse_entered.connect(_on_mod_hint_entered)
+	_box_mod_hint.mouse_exited.connect(_on_mod_hint_exited)
+	box_name_row.add_child(_box_mod_hint)
+
+	# Row 2: Difficulty (small, muted)
+	_tier_label = Label.new()
+	_tier_label.add_theme_font_size_override("font_size", 12)
+	_tier_label.modulate = Color(0.6, 0.6, 0.6)
+	top_left_vbox.add_child(_tier_label)
+
+	# Row 3: Match number (medium)
 	_match_label = Label.new()
-	_match_label.add_theme_font_size_override("font_size", 17)
+	_match_label.add_theme_font_size_override("font_size", 16)
 	top_left_vbox.add_child(_match_label)
 
+	# Row 4: Act (small, muted)
 	_act_label = Label.new()
-	_act_label.add_theme_font_size_override("font_size", 13)
-	_act_label.modulate = Color(0.75, 0.75, 0.75)
+	_act_label.add_theme_font_size_override("font_size", 12)
+	_act_label.modulate = Color(0.6, 0.6, 0.6)
 	top_left_vbox.add_child(_act_label)
 
-	_tier_label = Label.new()
-	_tier_label.add_theme_font_size_override("font_size", 13)
-	_tier_label.modulate = Color(0.75, 0.75, 0.75)
-	top_left_vbox.add_child(_tier_label)
+	# Floating tooltip for the modifier badge — shown on hover, not via built-in tooltip
+	_mod_tooltip = PanelContainer.new()
+	_mod_tooltip.anchor_left = 0.0
+	_mod_tooltip.anchor_top = 0.0
+	_mod_tooltip.offset_left = 8
+	_mod_tooltip.offset_top = 130
+	_mod_tooltip.custom_minimum_size = Vector2(250, 0)
+	_mod_tooltip.visible = false
+	root.add_child(_mod_tooltip)
+
+	var tip_margin = MarginContainer.new()
+	tip_margin.add_theme_constant_override("margin_left", 10)
+	tip_margin.add_theme_constant_override("margin_right", 10)
+	tip_margin.add_theme_constant_override("margin_top", 6)
+	tip_margin.add_theme_constant_override("margin_bottom", 6)
+	_mod_tooltip.add_child(tip_margin)
+
+	_mod_tooltip_label = Label.new()
+	_mod_tooltip_label.add_theme_font_size_override("font_size", 12)
+	_mod_tooltip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip_margin.add_child(_mod_tooltip_label)
 
 	# ── Tabs — full width, below top bar ───────────────────────────────────
 	var tabs_vbox = VBoxContainer.new()
@@ -354,6 +403,25 @@ func _setup_ui() -> void:
 		face_lbl.visible = false
 		btn.add_child(face_lbl)
 		_dice_face_labels.append(face_lbl)
+
+		# Bottom-left modifier tag (e.g. "×2" for high_die_doubles, "+N" for exploding_ones)
+		var mod_lbl = Label.new()
+		mod_lbl.add_theme_font_size_override("font_size", 11)
+		mod_lbl.add_theme_color_override("font_color", Color(1.0, 0.65, 0.1))
+		mod_lbl.anchor_left = 0.0
+		mod_lbl.anchor_right = 0.0
+		mod_lbl.anchor_top = 1.0
+		mod_lbl.anchor_bottom = 1.0
+		mod_lbl.offset_left = 4
+		mod_lbl.offset_right = 36
+		mod_lbl.offset_top = -18
+		mod_lbl.offset_bottom = -3
+		mod_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		mod_lbl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		mod_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mod_lbl.visible = false
+		btn.add_child(mod_lbl)
+		_dice_mod_labels.append(mod_lbl)
 
 	# Roll hint label + single action button (inside dice panel, below dice)
 	_roll_hint_label = Label.new()
@@ -1380,6 +1448,12 @@ func _on_crossroads_whetstone_pressed() -> void:
 	_crossroads_overlay.visible = false
 	_run_manager.handle_crossroads_whetstone()
 
+func _on_mod_hint_entered() -> void:
+	_mod_tooltip.visible = true
+
+func _on_mod_hint_exited() -> void:
+	_mod_tooltip.visible = false
+
 func _on_dev_toggle_pressed() -> void:
 	_dev_overlay.visible = not _dev_overlay.visible
 
@@ -1626,9 +1700,7 @@ func _on_tab_pressed(idx: int) -> void:
 		_status_label.text = "Roll your dice first, then click tabs that sum to your total."
 		return
 
-	var rolled_total := 0
-	for d in rolled:
-		rolled_total += d.value
+	var rolled_total := _round_manager.get_roll_total()
 
 	var tab_value := int(_tab_buttons[idx].text)
 
@@ -1689,9 +1761,7 @@ func _on_ability_pressed(index: int) -> void:
 func _on_end_round_pressed() -> void:
 	var rolled = GameState.dice_hand.filter(func(d): return d.rolled and not d.dropped)
 	if not _selected_tabs.is_empty() and not rolled.is_empty():
-		var rolled_total := 0
-		for d in rolled:
-			rolled_total += d.value
+		var rolled_total := _round_manager.get_roll_total()
 		var tab_sum := 0
 		for i in _selected_tabs:
 			tab_sum += int(_tab_buttons[i].text)
@@ -1755,8 +1825,19 @@ func _refresh_ui() -> void:
 	if GameState.current_box:
 		var tier := GameState.current_box.tier
 		_tier_label.text = "BOSS" if tier == "boss" else tier
+		_box_name_label.text = GameState.current_box.name
+		var box_id := GameState.current_box.id
+		if BoxRollModifiers.has_modifier(box_id):
+			_box_mod_hint.visible = true
+			_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
+		else:
+			_box_mod_hint.visible = false
+			_mod_tooltip.visible = false
 	else:
 		_tier_label.text = ""
+		_box_name_label.text = ""
+		_box_mod_hint.visible = false
+		_mod_tooltip.visible = false
 	if GameState.current_box:
 		var remaining_sum := 0
 		for t in GameState.tabs:
@@ -1820,13 +1901,14 @@ func _refresh_dice_display() -> void:
 	for i in 3:
 		var btn = _dice_buttons[i]
 		var face_lbl = _dice_face_labels[i] if i < _dice_face_labels.size() else null
+		var mod_lbl = _dice_mod_labels[i] if i < _dice_mod_labels.size() else null
 		if i < hand.size():
 			var die = hand[i]
 			if die.dropped:
 				btn.text = "[X] %d" % die.value
 				btn.disabled = true
-				if face_lbl:
-					face_lbl.visible = false
+				if face_lbl: face_lbl.visible = false
+				if mod_lbl:  mod_lbl.visible = false
 			else:
 				btn.text = str(die.value) if die.rolled else "d%d" % die.faces
 				btn.disabled = false
@@ -1836,11 +1918,17 @@ func _refresh_dice_display() -> void:
 						face_lbl.visible = true
 					else:
 						face_lbl.visible = false
+				if mod_lbl:
+					if die.rolled and die.modifier_tag != "":
+						mod_lbl.text = die.modifier_tag
+						mod_lbl.visible = true
+					else:
+						mod_lbl.visible = false
 		else:
 			btn.text = "—"
 			btn.disabled = true
-			if face_lbl:
-				face_lbl.visible = false
+			if face_lbl: face_lbl.visible = false
+			if mod_lbl:  mod_lbl.visible = false
 
 func _refresh_dice_highlight() -> void:
 	var hand = GameState.dice_hand
@@ -1883,10 +1971,7 @@ func _refresh_ability_display() -> void:
 			btn.modulate = Color(0.3, 0.3, 0.3)
 
 func _update_rolled_total() -> void:
-	var total = 0
-	for d in GameState.dice_hand:
-		if d.rolled and not d.dropped:
-			total += d.value
+	var total := _round_manager.get_roll_total()
 	_status_label.text = "Rolled total: %d — click a tab to seal." % total
 
 func _flash_ability_used(idx: int) -> void:

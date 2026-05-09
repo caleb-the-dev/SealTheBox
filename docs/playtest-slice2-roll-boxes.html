@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Slice 2 — ROLL Box Playtest Checklist</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #111;
+    color: #ddd;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 24px;
+  }
+  h1 { color: #fff; font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #777; font-size: 13px; margin-bottom: 20px; }
+  .progress-bar-wrap { background: #222; border-radius: 6px; height: 10px; margin-bottom: 6px; }
+  .progress-bar { background: #7c4dff; border-radius: 6px; height: 10px; transition: width 0.3s; }
+  #progress-text { color: #aaa; font-size: 13px; margin-bottom: 24px; }
+
+  .tier-section { margin-bottom: 32px; }
+  .tier-header {
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 6px 0 6px 4px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 10px;
+  }
+  .tier-medium { color: #ffd54f; }
+  .tier-hard   { color: #ef9a9a; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 8px 8px;
+    white-space: nowrap;
+  }
+  td { padding: 6px 8px; vertical-align: top; }
+  tr { border-bottom: 1px solid #1e1e1e; }
+  tr:hover { background: #1a1a1a; }
+  tr.tested { opacity: 0.55; }
+
+  .check-col { width: 32px; text-align: center; }
+  input[type=checkbox] {
+    width: 18px; height: 18px;
+    cursor: pointer;
+    accent-color: #7c4dff;
+  }
+  .name-col { width: 160px; font-weight: bold; color: #eee; }
+  .mod-badge {
+    display: inline-block;
+    background: #2a2a44;
+    color: #9575cd;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+  .tabs-col { width: 240px; color: #aaa; font-size: 12px; line-height: 1.6; }
+  .stat { color: #888; }
+  .stat strong { color: #ccc; }
+  .modifier-col { width: 220px; font-size: 12px; color: #9575cd; line-height: 1.7; }
+  .modifier-rule { color: #b39ddb; font-style: italic; }
+  .rating-col { width: 130px; }
+  .clarity-col { width: 130px; }
+  select {
+    background: #1e1e1e;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 120px;
+  }
+  select:focus { outline: 1px solid #555; }
+  option { background: #1e1e1e; }
+  .memo-col { width: 36px; text-align: center; }
+  .memo-col input { accent-color: #ffd54f; }
+  .notes-col { min-width: 180px; }
+  textarea {
+    background: #1a1a1a;
+    color: #bbb;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 100%;
+    resize: vertical;
+    padding: 4px 6px;
+    min-height: 30px;
+  }
+  textarea:focus { outline: 1px solid #444; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+  button {
+    background: #222;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button:hover { background: #2a2a2a; border-color: #555; }
+  .btn-danger { color: #ef9a9a; }
+  .btn-danger:hover { border-color: #ef9a9a; }
+
+  .key-questions {
+    background: #161616;
+    border-left: 3px solid #7c4dff;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    border-radius: 0 6px 6px 0;
+  }
+  .key-questions h2 { color: #9575cd; font-size: 13px; letter-spacing: 1px; margin-bottom: 10px; }
+  .key-questions ol { padding-left: 18px; color: #888; line-height: 2; font-size: 13px; }
+  .key-questions li strong { color: #bbb; }
+
+  .how-to {
+    background: #141420;
+    border: 1px solid #2a2a44;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: #888;
+    line-height: 1.8;
+  }
+  .how-to strong { color: #b39ddb; }
+</style>
+</head>
+<body>
+
+<h1>Slice 2 — ROLL Box Playtest Checklist</h1>
+<p class="subtitle">feature/boxes-roll-mods &nbsp;·&nbsp; 7 new ROLL boxes &nbsp;·&nbsp; all boxes have die-roll modifiers</p>
+
+<div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar" style="width:0%"></div></div>
+<div id="progress-text">0 / 7 tested</div>
+
+<div class="controls">
+  <button onclick="clearAll()" class="btn-danger">Clear All</button>
+  <button onclick="copyNotes()">Copy Notes Summary</button>
+</div>
+
+<div class="how-to">
+  <strong>How to test:</strong> In-game, press <strong>T</strong> (or DEV button) → <strong>Go to Box →</strong> → pick the box name. Play 2–3 rounds to feel the modifier, then rate below.<br>
+  <strong>What you're testing:</strong> Each box applies a rule to your dice every roll. The rule is printed in the <strong>Modifier</strong> column. Ask yourself: did I notice it? Did it change my decisions? Was it fun?
+</div>
+
+<div class="key-questions">
+  <h2>KEY QUESTIONS THIS SLICE IS TESTING</h2>
+  <ol>
+    <li><strong>Noticeable?</strong> Did the modifier visibly change what you rolled — or was it subtle to the point of invisible?</li>
+    <li><strong>Strategy-changing?</strong> Did the modifier make you think differently about which tabs to target?</li>
+    <li><strong>Fair?</strong> Did the modifier feel like a rule you could play around, or did it feel arbitrary / out of your hands?</li>
+    <li><strong>Difficulty calibrated?</strong> Medium boxes should feel like Cluster of Twos / Triple Triplets. Hard boxes should feel like High Wall / Exact Evens.</li>
+  </ol>
+</div>
+
+<!-- ── MEDIUM ── -->
+<div class="tier-section">
+<div class="tier-header tier-medium">── MEDIUM (ROLL) ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Threshold &nbsp;·&nbsp; Rounds</th>
+  <th class="modifier-col">Modifier rule</th>
+  <th class="rating-col">Difficulty feel</th>
+  <th class="clarity-col">Modifier clarity</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-heavy_dice">
+  <td class="check-col"><input type="checkbox" data-id="heavy_dice" onchange="toggle(this)"></td>
+  <td class="name-col">Heavy Dice <span class="mod-badge">ROLL</span></td>
+  <td class="tabs-col">
+    2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>44</strong> &nbsp;·&nbsp; ≤<strong>12</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="modifier-col">
+    <span class="modifier-rule">+1 to every die each roll.</span><br>
+    Dice can exceed their face cap.<br>
+    Tab 1 is missing — lowest is 2.
+  </td>
+  <td class="rating-col">
+    <select data-id="heavy_dice-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="heavy_dice-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="heavy_dice-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="heavy_dice-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-doubling_box">
+  <td class="check-col"><input type="checkbox" data-id="doubling_box" onchange="toggle(this)"></td>
+  <td class="name-col">Doubling Box <span class="mod-badge">ROLL</span></td>
+  <td class="tabs-col">
+    4 6 8 10 12 14 16<br>
+    <span class="stat">sum <strong>70</strong> &nbsp;·&nbsp; ≤<strong>20</strong> to win &nbsp;·&nbsp; <strong>6</strong> rounds</span>
+  </td>
+  <td class="modifier-col">
+    <span class="modifier-rule">Total counts double (×2).</span><br>
+    Tabs are even, 4–16.<br>
+    Can seal large even tabs quickly.
+  </td>
+  <td class="rating-col">
+    <select data-id="doubling_box-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="doubling_box-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="doubling_box-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="doubling_box-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-exploding_ones">
+  <td class="check-col"><input type="checkbox" data-id="exploding_ones" onchange="toggle(this)"></td>
+  <td class="name-col">Exploding Ones <span class="mod-badge">ROLL</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>12</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="modifier-col">
+    <span class="modifier-rule">Any die showing 1 rerolls and adds (chains).</span><br>
+    High-variance — 1s can snowball.<br>
+    Chain cap: 10 deep.
+  </td>
+  <td class="rating-col">
+    <select data-id="exploding_ones-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="exploding_ones-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="exploding_ones-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="exploding_ones-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-pair_swallows">
+  <td class="check-col"><input type="checkbox" data-id="pair_swallows" onchange="toggle(this)"></td>
+  <td class="name-col">Pair Swallows <span class="mod-badge">ROLL</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>13</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="modifier-col">
+    <span class="modifier-rule">Matching dice merge: one drops, one doubles.</span><br>
+    Fewer active dice, bigger values.<br>
+    Good for sealing high tabs.
+  </td>
+  <td class="rating-col">
+    <select data-id="pair_swallows-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="pair_swallows-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="pair_swallows-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="pair_swallows-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-high_die_doubles">
+  <td class="check-col"><input type="checkbox" data-id="high_die_doubles" onchange="toggle(this)"></td>
+  <td class="name-col">High Die Doubles <span class="mod-badge">ROLL</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>13</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="modifier-col">
+    <span class="modifier-rule">Highest die counts ×2 toward total.</span><br>
+    One die per roll gets the bonus.<br>
+    Favors d8 / d12 in pool.
+  </td>
+  <td class="rating-col">
+    <select data-id="high_die_doubles-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="high_die_doubles-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="high_die_doubles-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="high_die_doubles-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<!-- ── HARD ── -->
+<div class="tier-section">
+<div class="tier-header tier-hard">── HARD (ROLL) ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Threshold &nbsp;·&nbsp; Rounds</th>
+  <th class="modifier-col">Modifier rule</th>
+  <th class="rating-col">Difficulty feel</th>
+  <th class="clarity-col">Modifier clarity</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-weak_dice">
+  <td class="check-col"><input type="checkbox" data-id="weak_dice" onchange="toggle(this)"></td>
+  <td class="name-col">Weak Dice <span class="mod-badge">ROLL</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; ≤<strong>14</strong> to win &nbsp;·&nbsp; <strong>4</strong> rounds</span>
+  </td>
+  <td class="modifier-col">
+    <span class="modifier-rule">−1 to every die each roll (min 1).</span><br>
+    Low totals — harder to seal big tabs.<br>
+    Threshold is generous to compensate.
+  </td>
+  <td class="rating-col">
+    <select data-id="weak_dice-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="weak_dice-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="weak_dice-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="weak_dice-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-halving_box">
+  <td class="check-col"><input type="checkbox" data-id="halving_box" onchange="toggle(this)"></td>
+  <td class="name-col">Halving Box <span class="mod-badge">ROLL</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6<br>
+    <span class="stat">sum <strong>21</strong> &nbsp;·&nbsp; ≤<strong>6</strong> to win &nbsp;·&nbsp; <strong>3</strong> rounds</span>
+  </td>
+  <td class="modifier-col">
+    <span class="modifier-rule">Total is halved (floor) each roll.</span><br>
+    Need to roll ~2× normal to seal the same.<br>
+    Short tab list but tight round limit.
+  </td>
+  <td class="rating-col">
+    <select data-id="halving_box-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="halving_box-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="halving_box-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="halving_box-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<script>
+const TOTAL = 7;
+const STORAGE_KEY = 'stb_slice2_roll';
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function flush(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function save(el) {
+  const data = load();
+  data[el.dataset.id] = el.type === 'checkbox' ? el.checked : el.value;
+  flush(data);
+  updateProgress();
+}
+
+function toggle(cb) {
+  const row = document.getElementById('row-' + cb.dataset.id);
+  if (cb.checked) row.classList.add('tested');
+  else row.classList.remove('tested');
+  save(cb);
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('input[type=checkbox][data-id]:not([data-id$="-memo"])');
+  const done = [...all].filter(c => c.checked).length;
+  const pct = Math.round(done / TOTAL * 100);
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = done + ' / ' + TOTAL + ' tested';
+}
+
+function clearAll() {
+  if (!confirm('Clear all progress?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function copyNotes() {
+  const ids = ['heavy_dice','doubling_box','exploding_ones','pair_swallows','high_die_doubles','weak_dice','halving_box'];
+  const names = {
+    heavy_dice: 'Heavy Dice',
+    doubling_box: 'Doubling Box',
+    exploding_ones: 'Exploding Ones',
+    pair_swallows: 'Pair Swallows',
+    high_die_doubles: 'High Die Doubles',
+    weak_dice: 'Weak Dice',
+    halving_box: 'Halving Box'
+  };
+  const data = load();
+  let out = 'SLICE 2 — ROLL BOX PLAYTEST NOTES\n\n';
+  for (const id of ids) {
+    const rating  = data[id + '-rating']  || '—';
+    const clarity = data[id + '-clarity'] || '—';
+    const memo    = data[id + '-memo']    ? '★' : '';
+    const notes   = (data[id + '-notes'] || '').trim();
+    const done    = data[id] ? '[x]' : '[ ]';
+    out += `${done} ${names[id]} ${memo}\n`;
+    out += `   Difficulty: ${rating} | Clarity: ${clarity}\n`;
+    if (notes) out += `   Notes: ${notes}\n`;
+    out += '\n';
+  }
+  navigator.clipboard.writeText(out).then(() => alert('Copied to clipboard!'));
+}
+
+// Restore saved state on load
+window.onload = () => {
+  const data = load();
+  for (const [key, val] of Object.entries(data)) {
+    const el = document.querySelector(`[data-id="${key}"]`);
+    if (!el) continue;
+    if (el.type === 'checkbox') {
+      el.checked = val;
+      if (val && !key.endsWith('-memo')) {
+        const rowId = 'row-' + key;
+        const row = document.getElementById(rowId);
+        if (row) row.classList.add('tested');
+      }
+    } else {
+      el.value = val;
+    }
+  }
+  updateProgress();
+};
+</script>
+</body>
+</html>

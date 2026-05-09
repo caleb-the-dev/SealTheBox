@@ -24,6 +24,15 @@ static var _registry: Dictionary = {}
 static var _total_override_ids: Dictionary = {}
 static var _initialized: bool = false
 
+static var _descriptions: Dictionary = {
+	"heavy_dice":       "+1 to every die each roll.",
+	"weak_dice":        "−1 to every die each roll (minimum 1).",
+	"halving_box":      "Your roll total is halved (rounded down) each roll.",
+	"doubling_box":     "Your roll total counts double each roll.",
+	"exploding_ones":   "Any die showing 1 rerolls and adds its result. Chains on consecutive 1s.",
+	"high_die_doubles": "The highest die in your roll counts twice toward the total.",
+}
+
 static func _ensure_init() -> void:
 	if _initialized:
 		return
@@ -34,7 +43,6 @@ static func _ensure_init() -> void:
 		"halving_box":      _mod_halving_box,
 		"doubling_box":     _mod_doubling_box,
 		"exploding_ones":   _mod_exploding_ones,
-		"pair_swallows":    _mod_pair_swallows,
 		"high_die_doubles": _mod_high_die_doubles,
 	}
 	# Total-override modifiers are pure: they read die values and return a total.
@@ -44,6 +52,10 @@ static func _ensure_init() -> void:
 		"doubling_box":     true,
 		"high_die_doubles": true,
 	}
+
+# Returns a human-readable description of the box modifier, or "" if none.
+static func get_description(box_id: String) -> String:
+	return _descriptions.get(box_id, "")
 
 # Returns whether a box has a roll modifier registered.
 static func has_modifier(box_id: String) -> bool:
@@ -79,6 +91,25 @@ static func compute_total(box_id: String, dice: Array) -> int:
 		return -1
 	var fn: Callable = _registry[box_id]
 	return fn.call(dice)
+
+# Tags dice with display annotations after roll resolution.
+# For mutation-type boxes (e.g. exploding_ones), tags are set during mutation itself.
+# For total-override boxes (e.g. high_die_doubles), tags are applied here.
+# Call once per roll from RoundManager after apply_dice_mutation.
+static func apply_display_tags(box_id: String, dice: Array) -> void:
+	_ensure_init()
+	if box_id == "high_die_doubles":
+		var active: Array = []
+		for die in dice:
+			if die.rolled and not die.dropped:
+				active.append(die)
+		if active.is_empty():
+			return
+		var max_die: Die = active[0]
+		for die in active:
+			if die.value > max_die.value:
+				max_die = die
+		max_die.modifier_tag = "×2"
 
 # ---------------------------------------------------------------------------
 # Modifier implementations
@@ -118,11 +149,13 @@ static func _mod_doubling_box(dice: Array) -> int:
 
 # exploding_ones: for each die showing 1, reroll same die type, add result.
 # Chains on consecutive 1s; chain depth capped at EXPLODING_ONES_MAX_DEPTH.
-# Mutates die.value in-place; returns -1 so caller sums normally.
+# Mutates die.value in-place; sets modifier_tag to show the bonus added.
+# Returns -1 so caller sums naturally.
 static func _mod_exploding_ones(dice: Array) -> int:
 	for die in dice:
 		if die.rolled and not die.dropped and die.value == 1:
 			_explode_die(die, 0)
+			die.modifier_tag = "1→%d" % die.value  # "rolled 1, exploded to N"
 	return -1  # use natural sum
 
 static func _explode_die(die: Die, depth: int) -> void:
@@ -132,34 +165,6 @@ static func _explode_die(die: Die, depth: int) -> void:
 	die.value += extra
 	if extra == 1:
 		_explode_die(die, depth + 1)
-
-# pair_swallows: scan rolled dice; for each pair of equal values, remove one
-# die from the active set and add the pair sum to the other.
-# Operates on the dice array in a single pass — earliest pair found wins.
-# Mutates die.value and die.dropped; returns -1.
-static func _mod_pair_swallows(dice: Array) -> int:
-	# Build a list of active (rolled, not dropped) dice.
-	var active: Array = []
-	for die in dice:
-		if die.rolled and not die.dropped:
-			active.append(die)
-
-	# Greedy scan: find first pair, merge, repeat until no pairs remain.
-	var changed := true
-	while changed:
-		changed = false
-		for i in active.size():
-			for j in range(i + 1, active.size()):
-				if active[i].value == active[j].value:
-					# Merge: add j's value to i, drop j.
-					active[i].value += active[j].value
-					active[j].dropped = true
-					active.remove_at(j)
-					changed = true
-					break
-			if changed:
-				break
-	return -1  # use natural sum
 
 # high_die_doubles: the highest die in each roll counts double.
 # Returns a total override = (sum of non-highest dice) + (highest die × 2).
