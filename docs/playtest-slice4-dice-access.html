@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Slice 4 — DICE Access Playtest Checklist</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #111;
+    color: #ddd;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 24px;
+  }
+  h1 { color: #fff; font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #777; font-size: 13px; margin-bottom: 20px; }
+  .progress-bar-wrap { background: #222; border-radius: 6px; height: 10px; margin-bottom: 6px; }
+  .progress-bar { background: #7e57c2; border-radius: 6px; height: 10px; transition: width 0.3s; }
+  #progress-text { color: #aaa; font-size: 13px; margin-bottom: 24px; }
+
+  .tier-section { margin-bottom: 32px; }
+  .tier-header {
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 6px 0 6px 4px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 10px;
+  }
+  .tier-medium { color: #fff176; }
+  .tier-hard   { color: #ef9a9a; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 8px 8px;
+    white-space: nowrap;
+  }
+  td { padding: 6px 8px; vertical-align: top; }
+  tr { border-bottom: 1px solid #1e1e1e; }
+  tr:hover { background: #1a1a1a; }
+  tr.tested { opacity: 0.55; }
+
+  .check-col { width: 32px; text-align: center; }
+  input[type=checkbox] {
+    width: 18px; height: 18px;
+    cursor: pointer;
+    accent-color: #7e57c2;
+  }
+  .name-col { width: 190px; font-weight: bold; color: #eee; }
+  .dice-badge {
+    display: inline-block;
+    background: #1e1a30;
+    color: #b39ddb;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+  .marquee-badge {
+    display: inline-block;
+    background: #2a2010;
+    color: #ffd54f;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+  .tabs-col { width: 200px; color: #aaa; font-size: 12px; line-height: 1.7; }
+  .stat { color: #888; }
+  .stat strong { color: #ccc; }
+  .mechanic-col { width: 250px; font-size: 12px; color: #b39ddb; line-height: 1.7; }
+  .mechanic-rule { color: #ce93d8; font-style: italic; }
+  .mechanic-note { color: #777; }
+  .mechanic-cost { color: #ef9a9a; }
+  .mechanic-reward { color: #a5d6a7; }
+  .rating-col { width: 130px; }
+  .clarity-col { width: 155px; }
+  select {
+    background: #1e1e1e;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 140px;
+  }
+  select:focus { outline: 1px solid #555; }
+  option { background: #1e1e1e; }
+  .memo-col { width: 36px; text-align: center; }
+  .memo-col input { accent-color: #ffd54f; }
+  .notes-col { min-width: 180px; }
+  textarea {
+    background: #1a1a1a;
+    color: #bbb;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 100%;
+    resize: vertical;
+    padding: 4px 6px;
+    min-height: 30px;
+  }
+  textarea:focus { outline: 1px solid #444; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+  button {
+    background: #222;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button:hover { background: #2a2a2a; border-color: #555; }
+  .btn-danger { color: #ef9a9a; }
+  .btn-danger:hover { border-color: #ef9a9a; }
+
+  .key-questions {
+    background: #1a1530;
+    border-left: 3px solid #7e57c2;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    border-radius: 0 6px 6px 0;
+  }
+  .key-questions h2 { color: #b39ddb; font-size: 13px; letter-spacing: 1px; margin-bottom: 10px; }
+  .key-questions ol { padding-left: 18px; color: #888; line-height: 2; font-size: 13px; }
+  .key-questions li strong { color: #bbb; }
+
+  .how-to {
+    background: #161420;
+    border: 1px solid #2a1a50;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: #888;
+    line-height: 1.8;
+  }
+  .how-to strong { color: #b39ddb; }
+  .how-to kbd {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: 12px;
+    color: #ccc;
+  }
+</style>
+</head>
+<body>
+
+<h1>Slice 4 — DICE Access Playtest Checklist</h1>
+<p class="subtitle">feature/boxes-dice-access &nbsp;·&nbsp; 6 DICE boxes &nbsp;·&nbsp; pool restrictions, round-end costs, and a marquee match</p>
+
+<div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar" style="width:0%"></div></div>
+<div id="progress-text">0 / 6 tested</div>
+
+<div class="controls">
+  <button onclick="clearAll()" class="btn-danger">Clear All</button>
+  <button onclick="copyNotes()">Copy Notes Summary</button>
+</div>
+
+<div class="how-to">
+  <strong>How to test:</strong> Press <kbd>T</kbd> (or DEV button) → <strong>Go to Box →</strong> → pick the box name. Play a full match — DICE boxes reveal themselves in how the pool feels round-by-round.<br><br>
+  <strong>Bounty Box tip:</strong> Use DEV → <strong>Force Bounty Box</strong> to jump straight to it. Check that Phoenix Down appears in your powers panel on match entry. Use <strong>Reset Marquee Set</strong> to test the once-per-run trigger again.<br><br>
+  <strong>Tax Per Roll tip:</strong> The -1 HP cost doesn't fire in R1. Start a match and let a couple of rounds pass to feel the pressure ramp.<br><br>
+  <strong>What you're testing:</strong> DICE boxes change <em>what pool you get</em> or <em>what it costs you at round-end</em>. Ask yourself: did the restriction create interesting decisions — or just feel like a handicap?
+</div>
+
+<div class="key-questions">
+  <h2>KEY QUESTIONS THIS SLICE IS TESTING</h2>
+  <ol>
+    <li><strong>Puzzle or frustration?</strong> (Single Die) — One die means one value per round. Does this create a focused sealing puzzle, or is it just arbitrary RNG misery?</li>
+    <li><strong>Do d8 vs d4 feel different?</strong> (Locked d8 / Locked d4) — Removing the big die vs removing the small die. Does each restriction create a noticeably different play feel, or do they blur together?</li>
+    <li><strong>Marquee moment?</strong> (Bounty Box) — Phoenix Down on entry is meant to feel like a gift. Does it land? Does the match feel special, or is the reward just a stat bump you forget about?</li>
+    <li><strong>Urgency or punishment?</strong> (Tax Per Roll) — Losing HP per round should create urgency to seal fast. Does the small tab set (2–6) make that feel achievable, or is the pressure just frustrating?</li>
+    <li><strong>Meaningful decisions?</strong> (Forced Full Commit) — You must account for all pips; leftovers deal damage. Does this create interesting sealing decisions, or does it feel like a gotcha?</li>
+    <li><strong>Did the restriction change your strategy?</strong> — Across all 6 boxes: did knowing the dice constraint push you to play differently?</li>
+  </ol>
+</div>
+
+<!-- ── MEDIUM ── -->
+<div class="tier-section">
+<div class="tier-header tier-medium">── MEDIUM (DICE) ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Rounds</th>
+  <th class="mechanic-col">Dice mechanic</th>
+  <th class="rating-col">Difficulty feel</th>
+  <th class="clarity-col">Restriction clarity</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-locked_d4">
+  <td class="check-col"><input type="checkbox" data-id="locked_d4" onchange="toggle(this)"></td>
+  <td class="name-col">Locked d4 <span class="dice-badge">DICE</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; <strong>4</strong> rounds</span><br>
+    <span class="stat">threshold ≤12</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">d4 removed from pool for this match.</span><br>
+    Roll with 6 dice (d6×4, d8×2).<br>
+    <span class="mechanic-note">Easier restriction — d4 has small range anyway.</span><br>
+    <span class="mechanic-note">Pool restores to 7 after match.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="locked_d4-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="locked_d4-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="locked_d4-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="locked_d4-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-locked_d8">
+  <td class="check-col"><input type="checkbox" data-id="locked_d8" onchange="toggle(this)"></td>
+  <td class="name-col">Locked d8 <span class="dice-badge">DICE</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; <strong>4</strong> rounds</span><br>
+    <span class="stat">threshold ≤13</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">d8s removed from pool for this match.</span><br>
+    Roll with 5 dice (d4×1, d6×4).<br>
+    <span class="mechanic-note">Heavier restriction — d8s are your big numbers.</span><br>
+    <span class="mechanic-note">Pool restores to 7 after match.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="locked_d8-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="locked_d8-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="locked_d8-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="locked_d8-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<!-- ── HARD ── -->
+<div class="tier-section">
+<div class="tier-header tier-hard">── HARD (DICE) ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Rounds</th>
+  <th class="mechanic-col">Dice mechanic</th>
+  <th class="rating-col">Difficulty feel</th>
+  <th class="clarity-col">Restriction clarity</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-single_die">
+  <td class="check-col"><input type="checkbox" data-id="single_die" onchange="toggle(this)"></td>
+  <td class="name-col">Single Die <span class="dice-badge">DICE</span></td>
+  <td class="tabs-col">
+    1 1 2 3 4 4<br>
+    <span class="stat">sum <strong>15</strong> &nbsp;·&nbsp; <strong>2</strong> rounds</span><br>
+    <span class="stat">threshold ≤7</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">Only 1 randomly-chosen die per round.</span><br>
+    Which die changes each round (random draw).<br>
+    <span class="mechanic-note">Tabs are tight: 1 1 2 3 4 4 — designed for low rolls.</span><br>
+    <span class="mechanic-note">2-round limit — very short match.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="single_die-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="single_die-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="single_die-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="single_die-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-bounty_box">
+  <td class="check-col"><input type="checkbox" data-id="bounty_box" onchange="toggle(this)"></td>
+  <td class="name-col">Bounty Box <span class="dice-badge">DICE</span><span class="marquee-badge">MARQUEE</span></td>
+  <td class="tabs-col">
+    2 3 4 5 6 7 8 9 9<br>
+    <span class="stat">sum <strong>53</strong> &nbsp;·&nbsp; <strong>5</strong> rounds</span><br>
+    <span class="stat">threshold ≤13</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">On match entry: grants Phoenix Down.</span><br>
+    <span class="mechanic-reward">Phoenix Down: if run would end (HP=0), survive at HP=1 (once).</span><br>
+    <span class="mechanic-note">Once per run — won't fire again if you've seen it.</span><br>
+    <span class="mechanic-note">Full 7-die pool. Harder tabs (two 9s).</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="bounty_box-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="bounty_box-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="bounty_box-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="bounty_box-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-tax_per_roll">
+  <td class="check-col"><input type="checkbox" data-id="tax_per_roll" onchange="toggle(this)"></td>
+  <td class="name-col">Tax Per Roll <span class="dice-badge">DICE</span></td>
+  <td class="tabs-col">
+    2 3 4 5 6<br>
+    <span class="stat">sum <strong>20</strong> &nbsp;·&nbsp; <strong>3</strong> rounds</span><br>
+    <span class="stat">threshold ≤8</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">-1 HP at the end of every round after R1.</span><br>
+    <span class="mechanic-cost">R2 end: −1 HP. R3 end: −1 HP.</span><br>
+    <span class="mechanic-note">R1 is free — cost kicks in R2 onward.</span><br>
+    <span class="mechanic-note">Small tab set (2–6): sealing fast is achievable.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="tax_per_roll-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="tax_per_roll-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="tax_per_roll-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="tax_per_roll-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-forced_full_commit">
+  <td class="check-col"><input type="checkbox" data-id="forced_full_commit" onchange="toggle(this)"></td>
+  <td class="name-col">Forced Full Commit <span class="dice-badge">DICE</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9<br>
+    <span class="stat">sum <strong>45</strong> &nbsp;·&nbsp; <strong>4</strong> rounds</span><br>
+    <span class="stat">threshold ≤13</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">Must commit all rolled pips — no waste.</span><br>
+    <span class="mechanic-cost">Leftover pips at round-end deal damage.</span><br>
+    <span class="mechanic-note">Roll total must exactly match sealed tab sum.</span><br>
+    <span class="mechanic-note">Standard 1–9 tabs. Full 7-die pool.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="forced_full_commit-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Too Easy</option>
+      <option>Felt Right</option>
+      <option>Too Hard</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="clarity-col">
+    <select data-id="forced_full_commit-clarity" onchange="save(this)">
+      <option value="">— clarity —</option>
+      <option>Obvious immediately</option>
+      <option>Noticed after 1-2 rolls</option>
+      <option>Barely noticeable</option>
+      <option>Confusing</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="forced_full_commit-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="forced_full_commit-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<script>
+const TOTAL = 6;
+const STORAGE_KEY = 'stb_slice4_dice';
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function flush(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function save(el) {
+  const data = load();
+  data[el.dataset.id] = el.type === 'checkbox' ? el.checked : el.value;
+  flush(data);
+  updateProgress();
+}
+
+function toggle(cb) {
+  const row = document.getElementById('row-' + cb.dataset.id);
+  if (cb.checked) row.classList.add('tested');
+  else row.classList.remove('tested');
+  save(cb);
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('input[type=checkbox][data-id]:not([data-id$="-memo"])');
+  const done = [...all].filter(c => c.checked).length;
+  const pct = Math.round(done / TOTAL * 100);
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = done + ' / ' + TOTAL + ' tested';
+}
+
+function clearAll() {
+  if (!confirm('Clear all progress?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function copyNotes() {
+  const ids = ['locked_d4', 'locked_d8', 'single_die', 'bounty_box', 'tax_per_roll', 'forced_full_commit'];
+  const names = {
+    locked_d4: 'Locked d4',
+    locked_d8: 'Locked d8',
+    single_die: 'Single Die',
+    bounty_box: 'Bounty Box',
+    tax_per_roll: 'Tax Per Roll',
+    forced_full_commit: 'Forced Full Commit'
+  };
+  const data = load();
+  let out = 'SLICE 4 — DICE ACCESS PLAYTEST NOTES\n\n';
+  for (const id of ids) {
+    const rating  = data[id + '-rating']  || '—';
+    const clarity = data[id + '-clarity'] || '—';
+    const memo    = data[id + '-memo']    ? '★' : '';
+    const notes   = (data[id + '-notes'] || '').trim();
+    const done    = data[id] ? '[x]' : '[ ]';
+    out += `${done} ${names[id]} ${memo}\n`;
+    out += `   Difficulty: ${rating} | Clarity: ${clarity}\n`;
+    if (notes) out += `   Notes: ${notes}\n`;
+    out += '\n';
+  }
+  navigator.clipboard.writeText(out).then(() => alert('Copied to clipboard!'));
+}
+
+window.onload = () => {
+  const data = load();
+  for (const [key, val] of Object.entries(data)) {
+    const el = document.querySelector(`[data-id="${key}"]`);
+    if (!el) continue;
+    if (el.type === 'checkbox') {
+      el.checked = val;
+      if (val && !key.endsWith('-memo')) {
+        const rowId = 'row-' + key;
+        const row = document.getElementById(rowId);
+        if (row) row.classList.add('tested');
+      }
+    } else {
+      el.value = val;
+    }
+  }
+  updateProgress();
+};
+</script>
+</body>
+</html>
