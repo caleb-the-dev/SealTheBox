@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Slice 5 — ENTRY Effects Playtest Checklist</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #111;
+    color: #ddd;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 24px;
+  }
+  h1 { color: #fff; font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #777; font-size: 13px; margin-bottom: 20px; }
+  .progress-bar-wrap { background: #222; border-radius: 6px; height: 10px; margin-bottom: 6px; }
+  .progress-bar { background: #43a047; border-radius: 6px; height: 10px; transition: width 0.3s; }
+  #progress-text { color: #aaa; font-size: 13px; margin-bottom: 24px; }
+
+  .tier-section { margin-bottom: 32px; }
+  .tier-header {
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 6px 0 6px 4px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 10px;
+  }
+  .tier-medium { color: #fff176; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 8px 8px;
+    white-space: nowrap;
+  }
+  td { padding: 6px 8px; vertical-align: top; }
+  tr { border-bottom: 1px solid #1e1e1e; }
+  tr:hover { background: #1a1a1a; }
+  tr.tested { opacity: 0.55; }
+
+  .check-col { width: 32px; text-align: center; }
+  input[type=checkbox] {
+    width: 18px; height: 18px;
+    cursor: pointer;
+    accent-color: #43a047;
+  }
+  .name-col { width: 210px; font-weight: bold; color: #eee; }
+  .entry-badge {
+    display: inline-block;
+    background: #1a2e1a;
+    color: #a5d6a7;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+  .tabs-col { width: 200px; color: #aaa; font-size: 12px; line-height: 1.7; }
+  .stat { color: #888; }
+  .stat strong { color: #ccc; }
+  .mechanic-col { width: 265px; font-size: 12px; color: #a5d6a7; line-height: 1.7; }
+  .mechanic-rule { color: #81c784; font-style: italic; }
+  .mechanic-note { color: #777; }
+  .mechanic-cost { color: #ef9a9a; }
+  .mechanic-reward { color: #a5d6a7; }
+  .mechanic-gate { color: #fff176; }
+  .rating-col { width: 140px; }
+  .noticed-col { width: 165px; }
+  select {
+    background: #1e1e1e;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 152px;
+  }
+  select:focus { outline: 1px solid #555; }
+  option { background: #1e1e1e; }
+  .memo-col { width: 36px; text-align: center; }
+  .memo-col input { accent-color: #ffd54f; }
+  .notes-col { min-width: 180px; }
+  textarea {
+    background: #1a1a1a;
+    color: #bbb;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 100%;
+    resize: vertical;
+    padding: 4px 6px;
+    min-height: 30px;
+  }
+  textarea:focus { outline: 1px solid #444; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+  button {
+    background: #222;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button:hover { background: #2a2a2a; border-color: #555; }
+  .btn-danger { color: #ef9a9a; }
+  .btn-danger:hover { border-color: #ef9a9a; }
+
+  .key-questions {
+    background: #141f14;
+    border-left: 3px solid #43a047;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    border-radius: 0 6px 6px 0;
+  }
+  .key-questions h2 { color: #a5d6a7; font-size: 13px; letter-spacing: 1px; margin-bottom: 10px; }
+  .key-questions ol { padding-left: 18px; color: #888; line-height: 2; font-size: 13px; }
+  .key-questions li strong { color: #bbb; }
+
+  .how-to {
+    background: #131813;
+    border: 1px solid #1a301a;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: #888;
+    line-height: 1.8;
+  }
+  .how-to strong { color: #a5d6a7; }
+  .how-to kbd {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: 12px;
+    color: #ccc;
+  }
+</style>
+</head>
+<body>
+
+<h1>Slice 5 — ENTRY Effects Playtest Checklist</h1>
+<p class="subtitle">feature/boxes-entry-effects &nbsp;·&nbsp; 3 ENTRY boxes &nbsp;·&nbsp; effects that fire the moment a match begins</p>
+
+<div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar" style="width:0%"></div></div>
+<div id="progress-text">0 / 3 tested</div>
+
+<div class="controls">
+  <button onclick="clearAll()" class="btn-danger">Clear All</button>
+  <button onclick="copyNotes()">Copy Notes Summary</button>
+</div>
+
+<div class="how-to">
+  <strong>How to test:</strong> Press <kbd>T</kbd> (or DEV button) → <strong>Force Storm Box →</strong> / <strong>Force Cleanse Box →</strong> / <strong>Force Borrowed Time →</strong> to jump straight to each ENTRY box. You can also go via <strong>Go to Box →</strong> menu.<br><br>
+  <strong>Exclamation badge [!]:</strong> Each ENTRY box shows a glowing <strong>[!]</strong> badge next to the box name at the top left. Hover it to see the tooltip describing the entry effect before you play. Make sure the tooltip appears and is readable.<br><br>
+  <strong>Status message:</strong> When the match starts, the status bar at the bottom should show a message describing what just happened (e.g. "Storm Box — bonus d6 added to your pool!").<br><br>
+  <strong>What you're testing:</strong> Do these boxes feel different from turn 1? The entry effect should shape your strategy immediately — before you ever roll a die. Ask: did the effect change how you approached the match?
+</div>
+
+<div class="key-questions">
+  <h2>KEY QUESTIONS THIS SLICE IS TESTING</h2>
+  <ol>
+    <li><strong>"Deep breath" beat?</strong> (Cleanse Box) — Refilling all charges feels like a mid-run reset. Does it create a moment of relief, or does it feel like a stat bump you forget about?</li>
+    <li><strong>Fair tradeoff or a tax?</strong> (Borrowed Time) — −1 HP for +1 round. Does the extra round feel like meaningful breathing room, or does it feel like the box is punishing you just for existing?</li>
+    <li><strong>Does the bonus die get noticed?</strong> (Storm Box) — An extra d4/d6/d8 added to your pool. Does it change what you can seal in a round, or does it get lost in the noise of 7→8 dice?</li>
+    <li><strong>Did you know the effect fired?</strong> — Across all 3 boxes: was the entry effect communicated clearly enough (badge tooltip + status message) that you knew what happened?</li>
+    <li><strong>Did it change your turn-1 plan?</strong> — Cleanse = go for a different ability. Storm = more options. Borrowed Time = slightly more HP-conservative. Did any of these actually change how you played?</li>
+  </ol>
+</div>
+
+<!-- ── MEDIUM ── -->
+<div class="tier-section">
+<div class="tier-header tier-medium">── MEDIUM (ENTRY) ──</div>
+<table>
+<thead><tr>
+  <th class="check-col">✓</th>
+  <th class="name-col">Name</th>
+  <th class="tabs-col">Tabs &nbsp;·&nbsp; Sum &nbsp;·&nbsp; Rounds</th>
+  <th class="mechanic-col">Entry effect</th>
+  <th class="rating-col">Effect feel</th>
+  <th class="noticed-col">Effect noticed?</th>
+  <th class="memo-col">★</th>
+  <th class="notes-col">Notes</th>
+</tr></thead>
+<tbody>
+
+<tr id="row-storm_box">
+  <td class="check-col"><input type="checkbox" data-id="storm_box" onchange="toggle(this)"></td>
+  <td class="name-col">Storm Box <span class="entry-badge">ENTRY</span></td>
+  <td class="tabs-col">
+    1 2 3 4 5 6 7 8 9 5<br>
+    <span class="stat">sum <strong>50</strong> &nbsp;·&nbsp; <strong>5</strong> rounds</span><br>
+    <span class="stat">threshold ≤15</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">On match start: add one random bonus die.</span><br>
+    <span class="mechanic-reward">Bonus die is a random d4, d6, or d8.</span><br>
+    <span class="mechanic-note">Pool becomes 8 dice for this match only.</span><br>
+    <span class="mechanic-note">Bonus die is removed at match end.</span><br>
+    <span class="mechanic-note">Two 5s in the tab set — slightly unusual layout.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="storm_box-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Barely noticeable</option>
+      <option>Felt meaningful</option>
+      <option>Overpowered</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="noticed-col">
+    <select data-id="storm_box-noticed" onchange="save(this)">
+      <option value="">— noticed? —</option>
+      <option>Obvious (status + badge)</option>
+      <option>Saw badge, missed status</option>
+      <option>Noticed mid-match</option>
+      <option>Never noticed</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="storm_box-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="storm_box-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-cleanse_box">
+  <td class="check-col"><input type="checkbox" data-id="cleanse_box" onchange="toggle(this)"></td>
+  <td class="name-col">Cleanse Box <span class="entry-badge">ENTRY</span></td>
+  <td class="tabs-col">
+    3 4 5 6 7 8 9 10 11<br>
+    <span class="stat">sum <strong>63</strong> &nbsp;·&nbsp; <strong>6</strong> rounds</span><br>
+    <span class="stat">threshold ≤18</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">On match start: refill all ability charges to max.</span><br>
+    <span class="mechanic-reward">All 3 slots restored to their full charge count.</span><br>
+    <span class="mechanic-note">Harder tabs (3–11) — starts at 3, goes to 11.</span><br>
+    <span class="mechanic-note">6-round limit — most breathing room of the three.</span><br>
+    <span class="mechanic-note">Most impactful if entering with depleted slots.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="cleanse_box-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Barely noticeable</option>
+      <option>Felt meaningful</option>
+      <option>Overpowered</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="noticed-col">
+    <select data-id="cleanse_box-noticed" onchange="save(this)">
+      <option value="">— noticed? —</option>
+      <option>Obvious (status + badge)</option>
+      <option>Saw badge, missed status</option>
+      <option>Noticed mid-match</option>
+      <option>Never noticed</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="cleanse_box-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="cleanse_box-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+<tr id="row-borrowed_time">
+  <td class="check-col"><input type="checkbox" data-id="borrowed_time" onchange="toggle(this)"></td>
+  <td class="name-col">Borrowed Time <span class="entry-badge">ENTRY</span></td>
+  <td class="tabs-col">
+    2 3 4 5 6 7 8 9 9<br>
+    <span class="stat">sum <strong>53</strong> &nbsp;·&nbsp; <strong>5+1</strong> rounds</span><br>
+    <span class="stat">threshold ≤16</span>
+  </td>
+  <td class="mechanic-col">
+    <span class="mechanic-rule">On match start: −1 HP, +1 round limit.</span><br>
+    <span class="mechanic-cost">You enter already hurt.</span><br>
+    <span class="mechanic-reward">But you get 6 rounds instead of 5.</span><br>
+    <span class="mechanic-gate">Only appears in the run when HP ≥ 3.</span><br>
+    <span class="mechanic-note">Two 9s in the tab set — harder end-game seals.</span>
+  </td>
+  <td class="rating-col">
+    <select data-id="borrowed_time-rating" onchange="save(this)">
+      <option value="">— rate —</option>
+      <option>Barely noticeable</option>
+      <option>Felt meaningful</option>
+      <option>Overpowered</option>
+      <option>DNT</option>
+    </select>
+  </td>
+  <td class="noticed-col">
+    <select data-id="borrowed_time-noticed" onchange="save(this)">
+      <option value="">— noticed? —</option>
+      <option>Obvious (status + badge)</option>
+      <option>Saw badge, missed status</option>
+      <option>Noticed mid-match</option>
+      <option>Never noticed</option>
+    </select>
+  </td>
+  <td class="memo-col"><input type="checkbox" data-id="borrowed_time-memo" onchange="save(this)" title="Memorable"></td>
+  <td class="notes-col"><textarea data-id="borrowed_time-notes" oninput="save(this)" placeholder="notes…"></textarea></td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<script>
+const TOTAL = 3;
+const STORAGE_KEY = 'stb_slice5_entry';
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function flush(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function save(el) {
+  const data = load();
+  data[el.dataset.id] = el.type === 'checkbox' ? el.checked : el.value;
+  flush(data);
+  updateProgress();
+}
+
+function toggle(cb) {
+  const row = document.getElementById('row-' + cb.dataset.id);
+  if (cb.checked) row.classList.add('tested');
+  else row.classList.remove('tested');
+  save(cb);
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('input[type=checkbox][data-id]:not([data-id$="-memo"])');
+  const done = [...all].filter(c => c.checked).length;
+  const pct = Math.round(done / TOTAL * 100);
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = done + ' / ' + TOTAL + ' tested';
+}
+
+function clearAll() {
+  if (!confirm('Clear all progress?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function copyNotes() {
+  const ids = ['storm_box', 'cleanse_box', 'borrowed_time'];
+  const names = {
+    storm_box:     'Storm Box',
+    cleanse_box:   'Cleanse Box',
+    borrowed_time: 'Borrowed Time'
+  };
+  const data = load();
+  let out = 'SLICE 5 — ENTRY EFFECTS PLAYTEST NOTES\n\n';
+  for (const id of ids) {
+    const rating  = data[id + '-rating']  || '—';
+    const noticed = data[id + '-noticed'] || '—';
+    const memo    = data[id + '-memo']    ? '★' : '';
+    const notes   = (data[id + '-notes'] || '').trim();
+    const done    = data[id] ? '[x]' : '[ ]';
+    out += `${done} ${names[id]} ${memo}\n`;
+    out += `   Effect Feel: ${rating} | Noticed: ${noticed}\n`;
+    if (notes) out += `   Notes: ${notes}\n`;
+    out += '\n';
+  }
+  navigator.clipboard.writeText(out).then(() => alert('Copied to clipboard!'));
+}
+
+window.onload = () => {
+  const data = load();
+  for (const [key, val] of Object.entries(data)) {
+    const el = document.querySelector(`[data-id="${key}"]`);
+    if (!el) continue;
+    if (el.type === 'checkbox') {
+      el.checked = val;
+      if (val && !key.endsWith('-memo')) {
+        const rowId = 'row-' + key;
+        const row = document.getElementById(rowId);
+        if (row) row.classList.add('tested');
+      }
+    } else {
+      el.value = val;
+    }
+  }
+  updateProgress();
+};
+</script>
+</body>
+</html>
