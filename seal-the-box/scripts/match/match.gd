@@ -52,6 +52,8 @@ var _dev_power_list: VBoxContainer
 var _dev_ability_overlay: Control
 var _dev_ability_list: VBoxContainer
 var _dev_goto_match_overlay: Control
+var _dev_goto_box_overlay: Control
+var _dev_goto_box_list: VBoxContainer
 var _powers_vbox: VBoxContainer
 var _die_swap_overlay: Control
 var _crossroads_overlay: Control
@@ -679,6 +681,13 @@ func _setup_ui() -> void:
 	dev_goto_match_btn.pressed.connect(_on_dev_goto_match_menu_pressed)
 	dev_btns.add_child(dev_goto_match_btn)
 
+	var dev_goto_box_btn = Button.new()
+	dev_goto_box_btn.text = "Go to Box →"
+	dev_goto_box_btn.custom_minimum_size = Vector2(0, 56)
+	dev_goto_box_btn.add_theme_font_size_override("font_size", 17)
+	dev_goto_box_btn.pressed.connect(_on_dev_goto_box_menu_pressed)
+	dev_btns.add_child(dev_goto_box_btn)
+
 	var dev_hp_btn = Button.new()
 	dev_hp_btn.text = "+10 HP (Dev)"
 	dev_hp_btn.custom_minimum_size = Vector2(0, 56)
@@ -846,6 +855,55 @@ func _setup_ui() -> void:
 
 	root.add_child(dev_goto_overlay)
 	_dev_goto_match_overlay = dev_goto_overlay
+
+	# ── Dev go-to-box sub-overlay ──────────────────────────────────────────────
+	var dev_goto_box_overlay = Control.new()
+	dev_goto_box_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_box_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	dev_goto_box_overlay.visible = false
+	var dev_goto_box_bg = ColorRect.new()
+	dev_goto_box_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dev_goto_box_bg.color = Color(0, 0, 0, 1.0)
+	dev_goto_box_overlay.add_child(dev_goto_box_bg)
+
+	var dev_goto_box_panel = VBoxContainer.new()
+	dev_goto_box_panel.anchor_left = 0.25
+	dev_goto_box_panel.anchor_right = 0.75
+	dev_goto_box_panel.anchor_top = 0.05
+	dev_goto_box_panel.anchor_bottom = 0.95
+	dev_goto_box_panel.add_theme_constant_override("separation", 10)
+	dev_goto_box_overlay.add_child(dev_goto_box_panel)
+
+	var dev_goto_box_title = Label.new()
+	dev_goto_box_title.text = "— GO TO BOX —"
+	dev_goto_box_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_box_title.add_theme_font_size_override("font_size", 22)
+	dev_goto_box_panel.add_child(dev_goto_box_title)
+
+	var dev_goto_box_subtitle = Label.new()
+	dev_goto_box_subtitle.text = "Restarts the current match with the selected box."
+	dev_goto_box_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dev_goto_box_subtitle.add_theme_font_size_override("font_size", 13)
+	dev_goto_box_subtitle.modulate = Color(0.6, 0.6, 0.6)
+	dev_goto_box_panel.add_child(dev_goto_box_subtitle)
+
+	var dev_goto_box_scroll = ScrollContainer.new()
+	dev_goto_box_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	dev_goto_box_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_dev_goto_box_list = VBoxContainer.new()
+	_dev_goto_box_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_dev_goto_box_list.add_theme_constant_override("separation", 8)
+	dev_goto_box_scroll.add_child(_dev_goto_box_list)
+	dev_goto_box_panel.add_child(dev_goto_box_scroll)
+
+	var dev_goto_box_back_btn = Button.new()
+	dev_goto_box_back_btn.text = "← Back"
+	dev_goto_box_back_btn.custom_minimum_size = Vector2(0, 44)
+	dev_goto_box_back_btn.pressed.connect(func(): dev_goto_box_overlay.visible = false; _dev_overlay.visible = true)
+	dev_goto_box_panel.add_child(dev_goto_box_back_btn)
+
+	root.add_child(dev_goto_box_overlay)
+	_dev_goto_box_overlay = dev_goto_box_overlay
 
 	# ── Die swap overlay ────────────────────────────────────────────────────────
 	var swap_overlay = Control.new()
@@ -1135,6 +1193,8 @@ func _on_next_match_ready(box: BoxDefinition) -> void:
 		_dev_ability_overlay.visible = false
 	if _dev_goto_match_overlay:
 		_dev_goto_match_overlay.visible = false
+	if _dev_goto_box_overlay:
+		_dev_goto_box_overlay.visible = false
 	if _run_over_overlay:
 		_run_over_overlay.visible = false
 	if _rotation_overlay:
@@ -1416,6 +1476,71 @@ func _on_dev_goto_match_pressed(target: int) -> void:
 		_round_manager.dev_win_match()
 		_run_manager.dev_skip_rotation()
 		_run_manager.dev_skip_crossroads()
+
+func _on_dev_goto_box_menu_pressed() -> void:
+	for child in _dev_goto_box_list.get_children():
+		child.queue_free()
+	var lib = Engine.get_singleton("BoxLibrary") if Engine.has_singleton("BoxLibrary") else BoxLibrary
+	var tier_colors := {"easy": Color.WHITE, "medium": Color(0.7, 1.0, 0.7), "hard": Color(1.0, 0.7, 0.7), "boss": Color(1.0, 0.7, 0.3)}
+	for tier in ["easy", "medium", "hard", "boss"]:
+		var boxes: Array = lib.get_by_tier(tier)
+		if boxes.is_empty():
+			continue
+		var sep_lbl = Label.new()
+		sep_lbl.text = "── %s ──" % tier.to_upper()
+		sep_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sep_lbl.add_theme_font_size_override("font_size", 14)
+		sep_lbl.modulate = tier_colors.get(tier, Color.WHITE)
+		_dev_goto_box_list.add_child(sep_lbl)
+		for box in boxes:
+			var bbtn = Button.new()
+			bbtn.text = "%s  (%d tabs, ≤%d to win)" % [box.name, box.tabs.size(), box.win_threshold]
+			bbtn.custom_minimum_size = Vector2(0, 44)
+			bbtn.add_theme_font_size_override("font_size", 15)
+			bbtn.modulate = tier_colors.get(tier, Color.WHITE)
+			bbtn.pressed.connect(_on_dev_goto_box_pressed.bind(box))
+			_dev_goto_box_list.add_child(bbtn)
+	_dev_overlay.visible = false
+	_dev_goto_box_overlay.visible = true
+
+func _on_dev_goto_box_pressed(box: BoxDefinition) -> void:
+	_dev_goto_box_overlay.visible = false
+	_match_ended = false
+	_selected_dice = []
+	_selected_tabs = []
+	_selected_ability = null
+	_targeting_die = false
+	_continue_button.visible = false
+	_continue_button.scale = Vector2.ONE
+	_continue_button.modulate = Color.WHITE
+	if _power_offer_overlay:
+		_power_offer_overlay.visible = false
+	if _dev_power_overlay:
+		_dev_power_overlay.visible = false
+	if _dev_ability_overlay:
+		_dev_ability_overlay.visible = false
+	if _dev_goto_match_overlay:
+		_dev_goto_match_overlay.visible = false
+	if _run_over_overlay:
+		_run_over_overlay.visible = false
+	if _rotation_overlay:
+		_rotation_overlay.visible = false
+	if _die_swap_overlay:
+		_die_swap_overlay.visible = false
+	if _run_won_overlay:
+		_run_won_overlay.visible = false
+	if _crossroads_overlay:
+		_crossroads_overlay.visible = false
+	_action_button.disabled = false
+	for btn in _dice_buttons + _ability_buttons:
+		btn.disabled = false
+	_dev_box_label.text = "Box: %s [DEV]" % box.name
+	_round_manager.start_match(box)
+	_rebuild_tab_buttons()
+	_update_tabs_header_widths()
+	for btn in _tab_buttons:
+		btn.disabled = false
+	_refresh_powers_panel()
 
 func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
