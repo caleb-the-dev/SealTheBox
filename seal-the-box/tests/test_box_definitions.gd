@@ -62,7 +62,7 @@ func _test_no_duplicate_ids() -> void:
 func _test_all_new_boxes_have_valid_tier() -> void:
 	var valid_tiers = ["easy", "medium", "hard", "boss"]
 	var new_ids = [
-		"cluster_of_fours", "five_nines", "high_wall", "exact_evens",
+		"cluster_of_twos", "five_nines", "high_wall", "exact_evens",
 		"lopsided_giant", "easy_starter", "triple_triplets", "mirror_ladder",
 		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
 		"ten_pillars", "den_of_sevens"
@@ -78,7 +78,7 @@ func _test_all_new_boxes_have_valid_tier() -> void:
 
 func _test_new_boxes_present() -> void:
 	var new_ids = [
-		"cluster_of_fours", "five_nines", "high_wall", "exact_evens",
+		"cluster_of_twos", "five_nines", "high_wall", "exact_evens",
 		"lopsided_giant", "easy_starter", "triple_triplets", "mirror_ladder",
 		"prime_pyramid", "crowded_low", "the_long_count", "avalanche",
 		"ten_pillars", "den_of_sevens"
