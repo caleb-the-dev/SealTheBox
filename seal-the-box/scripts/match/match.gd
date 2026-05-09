@@ -1782,11 +1782,22 @@ func _rebuild_tab_buttons() -> void:
 		child.queue_free()
 	_tab_buttons.clear()
 	_sealed_button_indices = []
-	for i in GameState.tabs.size():
+	var tab_count := GameState.tabs.size()
+	var btn_w: int; var btn_h: int; var font_sz: int; var sep: int
+	if tab_count <= 9:
+		btn_w = 62; btn_h = 88; font_sz = 0; sep = 8
+	elif tab_count <= 12:
+		btn_w = 52; btn_h = 80; font_sz = 18; sep = 6
+	else:
+		btn_w = 36; btn_h = 66; font_sz = 14; sep = 4
+	_tab_row.add_theme_constant_override("separation", sep)
+	for i in tab_count:
 		var tab_val = GameState.tabs[i]
 		var btn = Button.new()
 		btn.text = str(tab_val)
-		btn.custom_minimum_size = Vector2(62, 88)
+		btn.custom_minimum_size = Vector2(btn_w, btn_h)
+		if font_sz > 0:
+			btn.add_theme_font_size_override("font_size", font_sz)
 		btn.pressed.connect(_on_tab_pressed.bind(i))
 		_tab_row.add_child(btn)
 		_tab_buttons.append(btn)
