@@ -27,8 +27,8 @@ func _init() -> void:
 
 func _test_box_count() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
-	# 5 original + 3 boss + 13 comp + 6 ROLL + 2 WIN + 3 DICE + 3 ENTRY = 35 boxes.
-	assert(all.size() == 35, "BoxLibrary should have 35 boxes, got %d" % all.size())
+	# 35 (slices 1-5) + 9 BHV (slice 6) = 44 boxes.
+	assert(all.size() == 44, "BoxLibrary should have 44 boxes, got %d" % all.size())
 
 func _test_all_tab_sums_positive() -> void:
 	var all = Engine.get_singleton("BoxLibrary").get_all()
