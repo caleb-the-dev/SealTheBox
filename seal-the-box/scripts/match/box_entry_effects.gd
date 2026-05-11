@@ -19,8 +19,8 @@ extends RefCounted
 #   (persistent_pool + delta) to DicePool.setup(). This is a single-match
 #   read — the persistent dice_pool is never modified.
 
-# Die face options available as the storm_box bonus die.
-const STORM_DIE_FACES: Array[int] = [4, 6, 8]
+# Fixed die faces granted by storm_box.
+const STORM_DIE_FACES: Array[int] = [2, 10]
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -44,8 +44,8 @@ static func has_entry_effect(box_id: String) -> bool:
 # Returns a human-readable description for the [!] badge tooltip, or "" if not an ENTRY box.
 static func get_description(box_id: String) -> String:
 	match box_id:
-		"storm_box":     return "ENTRY: A random bonus die (d4, d6, or d8) is added to your pool for this match only."
-		"cleanse_box":   return "ENTRY: All ability charges are refilled to max when the match begins."
+		"storm_box":     return "ENTRY: A d2 and d10 are added to your pool for this match. Round limit reduced by 1."
+		"cleanse_box":   return "ENTRY: All ability charges are refilled to max when the match begins. Round limit reduced by 2."
 		"borrowed_time": return "ENTRY: You lose 1 HP but gain an extra round. Only appears when HP ≥ 3."
 	return ""
 
@@ -53,18 +53,20 @@ static func get_description(box_id: String) -> String:
 # Effect implementations
 # ---------------------------------------------------------------------------
 
-# storm_box: add one random die to match_pool_delta for this match only.
+# storm_box: add a fixed d2 and d10 to match_pool_delta; tighten round limit by 1.
 static func _apply_storm_box(gs: Node) -> void:
-	var faces := STORM_DIE_FACES[randi() % STORM_DIE_FACES.size()]
-	var bonus_die := Die.new(faces)
-	bonus_die.storm_temp = true   # label so UI can identify it (optional)
-	gs.match_pool_delta.append(bonus_die)
+	for faces in STORM_DIE_FACES:
+		var bonus_die := Die.new(faces)
+		bonus_die.storm_temp = true
+		gs.match_pool_delta.append(bonus_die)
+	gs.round_limit -= 1
 
-# cleanse_box: restore all ability charges to max.
+# cleanse_box: restore all ability charges to max; tighten round limit by 2.
 static func _apply_cleanse_box(gs: Node) -> void:
 	for ability in gs.ability_hand:
 		if ability != null:
 			ability.charges = ability.max_charges
+	gs.round_limit -= 2
 
 # borrowed_time: take 1 HP; gain +1 round limit.
 # HP gate (hp >= 3) is enforced upstream in CaseManager.get_box_for_match —

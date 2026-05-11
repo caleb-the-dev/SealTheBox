@@ -59,6 +59,10 @@ func _init() -> void:
 	_test_borrowed_time_increases_round_limit(gs)
 	_test_borrowed_time_hp_gate_in_case_manager()
 
+	# ── round_limit side-effects ────────────────────────────────────────────
+	_test_storm_box_decreases_round_limit(gs)
+	_test_cleanse_box_decreases_round_limit(gs)
+
 	# ── RoundManager start_match integration ────────────────────────────────
 	_test_round_manager_fires_storm_entry(gs)
 	_test_round_manager_fires_cleanse_entry(gs)
@@ -122,28 +126,34 @@ func _test_no_entry_effect_for_empty_string() -> void:
 
 func _test_storm_box_adds_one_die_to_delta(gs: Node) -> void:
 	gs.reset_run()
+	gs.round_limit = 4
 	assert(gs.match_pool_delta.is_empty(),
 		"match_pool_delta should be empty after reset_run()")
 	BEE.on_box_entry("storm_box", gs)
-	assert(gs.match_pool_delta.size() == 1,
-		"storm_box should add exactly 1 die to match_pool_delta, got %d" % gs.match_pool_delta.size())
+	assert(gs.match_pool_delta.size() == 2,
+		"storm_box should add exactly 2 dice to match_pool_delta, got %d" % gs.match_pool_delta.size())
 
 func _test_storm_box_die_faces_is_valid(gs: Node) -> void:
 	gs.reset_run()
+	gs.round_limit = 4
 	BEE.on_box_entry("storm_box", gs)
-	var die: Die = gs.match_pool_delta[0]
-	assert(die.faces in [4, 6, 8],
-		"storm_box bonus die faces should be 4, 6, or 8 — got %d" % die.faces)
+	assert(gs.match_pool_delta[0].faces == 2,
+		"storm_box first bonus die should be d2, got d%d" % gs.match_pool_delta[0].faces)
+	assert(gs.match_pool_delta[1].faces == 10,
+		"storm_box second bonus die should be d10, got d%d" % gs.match_pool_delta[1].faces)
 
 func _test_storm_box_die_is_storm_temp(gs: Node) -> void:
 	gs.reset_run()
+	gs.round_limit = 4
 	BEE.on_box_entry("storm_box", gs)
-	var die: Die = gs.match_pool_delta[0]
-	assert(die.storm_temp,
-		"storm_box bonus die should have storm_temp == true")
+	assert(gs.match_pool_delta[0].storm_temp,
+		"storm_box d2 bonus die should have storm_temp == true")
+	assert(gs.match_pool_delta[1].storm_temp,
+		"storm_box d10 bonus die should have storm_temp == true")
 
 func _test_storm_box_does_not_modify_persistent_pool(gs: Node) -> void:
 	gs.reset_run()
+	gs.round_limit = 4
 	var pool_before: int = gs.dice_pool.size()
 	BEE.on_box_entry("storm_box", gs)
 	assert(gs.dice_pool.size() == pool_before,
@@ -157,10 +167,9 @@ func _test_storm_box_pool_has_extra_die_in_match(gs: Node) -> void:
 	var rm := RoundManager.new()
 	rm.start_match(box)
 	# DicePool is internal to rm, so we verify via match_pool_delta presence.
-	# delta should have been populated (then reset_match clears it next match).
-	# After start_match, match_pool_delta still has the die until reset_match.
-	assert(gs.match_pool_delta.size() == 1,
-		"After start_match(storm_box), match_pool_delta should have 1 die; got %d" % gs.match_pool_delta.size())
+	# After start_match, match_pool_delta still has the dice until reset_match.
+	assert(gs.match_pool_delta.size() == 2,
+		"After start_match(storm_box), match_pool_delta should have 2 dice; got %d" % gs.match_pool_delta.size())
 	assert(gs.dice_pool.size() == persistent_size,
 		"Persistent pool unchanged after storm_box match; expected %d got %d" % [persistent_size, gs.dice_pool.size()])
 
@@ -256,6 +265,24 @@ func _test_borrowed_time_hp_gate_in_case_manager() -> void:
 	cm.queue_free()
 
 # ---------------------------------------------------------------------------
+# Round limit side-effects
+# ---------------------------------------------------------------------------
+
+func _test_storm_box_decreases_round_limit(gs: Node) -> void:
+	gs.reset_run()
+	gs.round_limit = 4
+	BEE.on_box_entry("storm_box", gs)
+	assert(gs.round_limit == 3,
+		"storm_box: round_limit should decrease by 1 (expected 3, got %d)" % gs.round_limit)
+
+func _test_cleanse_box_decreases_round_limit(gs: Node) -> void:
+	gs.reset_run()
+	gs.round_limit = 6
+	BEE.on_box_entry("cleanse_box", gs)
+	assert(gs.round_limit == 4,
+		"cleanse_box: round_limit should decrease by 2 (expected 4, got %d)" % gs.round_limit)
+
+# ---------------------------------------------------------------------------
 # RoundManager.start_match integration
 # ---------------------------------------------------------------------------
 
@@ -265,8 +292,10 @@ func _test_round_manager_fires_storm_entry(gs: Node) -> void:
 	assert(box != null, "storm_box must exist in BoxLibrary")
 	var rm := RoundManager.new()
 	rm.start_match(box)
-	assert(gs.match_pool_delta.size() == 1,
-		"RoundManager.start_match(storm_box): match_pool_delta should have 1 die, got %d" % gs.match_pool_delta.size())
+	assert(gs.match_pool_delta.size() == 2,
+		"RoundManager.start_match(storm_box): match_pool_delta should have 2 dice, got %d" % gs.match_pool_delta.size())
+	assert(gs.round_limit == box.round_limit - 1,
+		"RoundManager.start_match(storm_box): round_limit should be %d, got %d" % [box.round_limit - 1, gs.round_limit])
 
 func _test_round_manager_fires_cleanse_entry(gs: Node) -> void:
 	gs.reset_run()
@@ -284,6 +313,8 @@ func _test_round_manager_fires_cleanse_entry(gs: Node) -> void:
 		if a != null:
 			assert(a.charges == a.max_charges,
 				"After start_match(cleanse_box): slot %d charges should be max (%d), got %d" % [i, a.max_charges, a.charges])
+	assert(gs.round_limit == box.round_limit - 2,
+		"After start_match(cleanse_box): round_limit should be %d, got %d" % [box.round_limit - 2, gs.round_limit])
 
 func _test_round_manager_fires_borrowed_time_entry(gs: Node) -> void:
 	gs.reset_run()
@@ -310,8 +341,8 @@ func _test_match_pool_delta_cleared_between_matches(gs: Node) -> void:
 	assert(storm_box != null, "storm_box must exist in BoxLibrary")
 	var rm := RoundManager.new()
 	rm.start_match(storm_box)
-	assert(gs.match_pool_delta.size() == 1,
-		"After storm_box match: delta should have 1 die, got %d" % gs.match_pool_delta.size())
+	assert(gs.match_pool_delta.size() == 2,
+		"After storm_box match: delta should have 2 dice, got %d" % gs.match_pool_delta.size())
 	# Start a different match — delta should be cleared.
 	var classic_box = Engine.get_singleton("BoxLibrary").get_box("classic")
 	assert(classic_box != null, "classic must exist in BoxLibrary")

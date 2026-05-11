@@ -66,11 +66,7 @@ func start_match(box: BoxDefinition) -> void:
 func _entry_effect_message(box_id: String) -> String:
 	match box_id:
 		"storm_box":
-			var delta = GameState.match_pool_delta
-			if delta.is_empty():
-				return "Storm Box — entry effect fired."
-			var die = delta[-1]
-			return "Storm Box — bonus d%d added to your pool for this match!" % die.faces
+			return "Storm Box — bonus d2 and d10 added to your pool! Round limit -1."
 		"cleanse_box":
 			return "Cleanse Box — all ability charges refilled!"
 		"borrowed_time":
