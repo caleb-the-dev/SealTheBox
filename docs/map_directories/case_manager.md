@@ -19,12 +19,17 @@ signal run_won    # emitted by notify_run_won() — no arguments; match.gd liste
 func reset_run() -> void
     # Builds (or rebuilds) the 27-match list:
     #   Matches  1–8  → 8 random draws (with replacement) from easy-tier boxes
-    #   Match    9    → boss-tier box (act 1 finale)
+    #   Match    9    → mid-boss slot 0 (the Pact or the Anchor, randomly)
     #   Matches 10–20 → 11 random draws from medium-tier boxes
-    #   Match   21    → boss-tier box (act 2 finale)
+    #   Match   21    → mid-boss slot 1 (the other of the Pact / Anchor)
     #   Matches 22–26 → 5 random draws from hard-tier boxes
-    #   Match   27    → boss-tier box (act 3 finale / source)
-    # Boss pool is shuffled once so all 3 boss matches get a DIFFERENT box.
+    #   Match   27    → ALWAYS Den of Sevens (source_for == "final")
+    # Boss pool is split: boxes with source_for == "final" go to match 27;
+    # the rest (mid-boss pool) are shuffled and assigned to matches 9 and 21.
+    # After building the list, runs a marquee-dedup pass: walks the list and replaces
+    # any second occurrence of a "marquee" box (currently: ["bounty_box"]) with a
+    # fresh random draw from the same tier — ensures once-per-run boxes appear at most once.
+    # No active box is in the marquee_ids list as of 2026-05-09 (bounty_box dropped from CSV).
     # Called by RunManager.start_run() after GameState.reset_run().
 
 func get_box_for_match(idx: int) -> BoxDefinition
@@ -76,7 +81,8 @@ RunManager._start_next_match()
 ## Gotchas
 - **`reset_run()` must be called before `get_box_for_match()`.** Calling `get_box_for_match()` before `reset_run()` returns null/errors for all indices because `_case_list` is empty.
 - **Box draws within an act are with replacement.** The same easy/medium/hard box can appear multiple times within that act's range. With only 1 regular hard-tier box (Compressed), matches 22–26 always use Compressed. High repetition acknowledged — more boxes deferred.
-- **Boss matches (9, 21, 27) each get a DIFFERENT box.** The boss pool is shuffled once at the top of `reset_run()` and assigned in order: boss[0]→9, boss[1]→21, boss[2]→27. This guarantees no boss repeat within a run.
+- **Match 27 is always Den of Sevens (source_for == "final").** `reset_run()` partitions the boss pool: any box with `source_for == "final"` is extracted as `final_boss` and fixed to slot 27. The remaining boxes (`mid_boss`) are shuffled for slots 9 and 21. Currently: the Pact and the Anchor fill mid_boss; Den of Sevens is final_boss. If no final boss is found, `push_error` fires and the first boss box is used as fallback.
+- **Mid-boss pool must have exactly 2 boxes.** Currently satisfied: the Pact + the Anchor. Adding a third mid-boss box would cause `mid_boss[2]` to never be used; removing one would cause an index-out-of-range crash at `mid_boss[1]`.
 - **`run_won` fires AFTER the rotation pick, not immediately on match win.** RunManager completes the full power-offer → rotation flow before calling `notify_run_won()`. This is intentional.
 - **`get_act_for_match()` is stateless** — it derives purely from the index, no _case_list needed. Safe to call any time.
 - **No class_name declaration.** Adding class_name CaseManager would cause "hides an autoload singleton" parse error. Access via `Engine.get_singleton("CaseManager")`.
@@ -84,6 +90,8 @@ RunManager._start_next_match()
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-09 | slice-boxes-4: marquee-dedup pass added to reset_run(). Walks the built list; any second occurrence of a marquee box (currently only "bounty_box" in the ids list) is replaced with a tier-matched non-marquee draw. bounty_box was then dropped from boxes.csv, so the pass is effectively a no-op today but the infrastructure is intact. |
+| 2026-05-08 | Slice 1 playtest: final boss separation. Boss pool split into `final_boss` (source_for=="final", always match 27) and `mid_boss` (shuffled, matches 9 and 21). Den of Sevens (all 7s) is the fixed final boss. |
 | 2026-05-08 | Playtest refactor: dropped entity selection and get_location_name(). New difficulty structure: 8 easy → boss@9 → 11 medium → boss@21 → 5 hard → boss@27. Boss pool (tier="boss") shuffled once per run; each boss match gets a unique box. EntityLibrary dependency removed. |
 | 2026-05-07 | feature/source-boxes: match 27 forced to entity's Source box via BoxLibrary.get_source(). |
 | 2026-05-07 | feature/entity-types: reset_run() picked random entity; get_location_name(act) added. |
