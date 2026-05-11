@@ -27,11 +27,19 @@ func start_match(box: BoxDefinition) -> void
     # Sets GameState.current_box, win_threshold, tabs from box.
     # Sets GameState.round_limit = BoxWinConditions.get_round_limit(box.id, box.round_limit)
     #   — routes through BoxWinConditions so boxes like crit_only/single_die/quick_seal can override.
-    # Calls BoxDiceAccess.get_active_pool(box.id, GameState.dice_pool) to get the match pool
-    #   — pool overrides (single_die, locked_d8, locked_d4) return a filtered copy; persistent pool untouched.
+    # Calls GameState.reset_match() (clears match_pool_delta, round, dice_hand).
+    # Fires BoxEntryEffects.on_box_entry(box.id, GameState) if the box has a registered effect:
+    #   storm_box: appends d2+d10 to match_pool_delta; round_limit -= 1.
+    #   cleanse_box: refills all ability charges; round_limit -= 2.
+    #   borrowed_time: hp -= 1; round_limit += 1.
+    #   Entry effects fire AFTER reset_match() (so delta starts empty) and AFTER round_limit is set
+    #   (so -1/-2/+1 adjustments are always relative to the BoxWinConditions-adjusted base).
+    # Calls BoxDiceAccess.get_active_pool(box.id, GameState.dice_pool), then appends
+    #   GameState.match_pool_delta — combines DICE-axis overrides with ENTRY-axis bonus dice.
+    #   Persistent pool untouched.
     # If BoxDiceAccess.has_entry_power(box.id) and box not in GameState.marquee_seen:
     #   marks box as seen, calls _grant_bounty_box_power() (no active box currently triggers this).
-    # Then calls GameState.reset_match(), resets TabBoard and DicePool, calls start_round().
+    # Then sets up DicePool and calls start_round().
 
 func start_round() -> void
     # Increments GameState.round. If round > round_limit: deduct 1 HP (overtime).
@@ -152,6 +160,11 @@ var GameState: Node: get: return Engine.get_singleton("GameState")
 
 ## Key Internal Methods
 ```gdscript
+func _entry_effect_message(box_id: String) -> String
+    # Returns a short human-readable status string for the entry effect that just fired.
+    # Emitted via status_updated signal after on_box_entry() returns.
+    # Each ENTRY box id has a hardcoded one-liner (e.g. "Storm Box — bonus d2 and d10 added...").
+
 func _grant_bounty_box_power() -> void
     # Grants the power named in BoxDiceAccess.BOUNTY_BOX_POWER_ID ("phoenix_down") to the player.
     # Uses PowerManager.add_power() if available; falls back to direct GameState.owned_powers.append().
@@ -183,6 +196,7 @@ func _compute_roll_total(hand: Array) -> int
 - `BoxRollModifiers` — called in commit_roll() for mutation + display tags; called in _compute_roll_total() for override totals
 - `BoxWinConditions` — called in start_match() for round_limit override; called in start_round() for per-round threshold update; called in _check_win() for win override evaluation
 - `BoxDiceAccess` — called in start_match() for pool override and entry power check; called in end_round() for tax and forced-commit hooks
+- `BoxEntryEffects` — called in start_match() for ENTRY-axis on-match-start effects (storm_box, cleanse_box, borrowed_time)
 
 ## Gotchas
 - **All PowerManager calls use `Engine.has_singleton("PowerManager")` guard.** If PowerManager is not registered (e.g., headless tests without it), power effects are silently skipped. All existing tests still pass.
@@ -209,6 +223,8 @@ func _compute_roll_total(hand: Array) -> int
 | Date | Change |
 |------|--------|
 | 2026-05-09 | slice-boxes-4 playtest: forced_full_commit and tax_per_roll hooks now have no active boxes (both dropped/renamed in CSV). Infrastructure retained. single_die and quick_seal round_limit overrides added via BoxWinConditions._round_limit_overrides. |
+| 2026-05-11 | slice-boxes-5 playtest tuning: storm_box bonus dice changed from one random die (d4/d6/d8) to fixed d2+d10; storm_box round_limit -= 1; cleanse_box round_limit -= 2. _entry_effect_message() updated for storm_box. |
+| 2026-05-10 | slice-boxes-5: BoxEntryEffects integrated. start_match() now fires BoxEntryEffects.on_box_entry() after reset_match() and before BoxDiceAccess pool build. match_pool_delta (from entry effects) appended to get_active_pool() result. _entry_effect_message() added. BoxEntryEffects added to Dependencies. |
 | 2026-05-09 | slice-boxes-4: BoxDiceAccess integrated. start_match() now calls BoxDiceAccess.get_active_pool() for DICE-axis pool overrides (single_die, locked_d8, locked_d4) and checks has_entry_power() + GameState.marquee_seen for once-per-run bounty power. _grant_bounty_box_power() added. end_round() now checks has_forced_commit() (leftover pip damage) and has_tax() (-1 HP after R1). _tabs_sum_sealed_this_round field added; reset in start_round(), incremented in attempt_seal() for primary seals only. BoxDiceAccess and PowerLibrary added to Dependencies. |
 | 2026-05-09 | slice-boxes-3: BoxWinConditions integrated. start_match() now sets round_limit via BoxWinConditions.get_round_limit() instead of box.round_limit. _apply_win_condition_threshold_update() added — called in start_round() to update GameState.win_threshold each round for escalating_threshold. _check_win() now consults BoxWinConditions before default checks; interprets bool true (override win), bool false (suppress threshold path), int (threshold override), null (no override). BoxWinConditions added to Dependencies. |
 | 2026-05-08 | slice-boxes-2: commit_roll() now clears die.modifier_tag on all hand dice, calls BoxRollModifiers.apply_dice_mutation() and apply_display_tags() after rolling. get_roll_total() public method added — match.gd _on_tab_pressed(), _on_end_round_pressed(), and _update_rolled_total() now route through it so total-override modifiers (doubling_box, halving_box, high_die_doubles) apply correctly everywhere. _compute_roll_total() now dependency of BoxRollModifiers (was pure internal). |

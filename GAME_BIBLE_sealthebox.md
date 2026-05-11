@@ -171,3 +171,14 @@ See `docs/superpowers/specs/2026-05-06-game-flow-design.md` for the Case meta-fl
 | 3 — Within-act texture (silent/vignette/event roller, VignetteLibrary, EventLibrary) | feature/within-act-texture | ✅ Merged → ⏸ Cut for prototyping 2026-05-08 |
 | 4 — Entity types (Diabolic/Cosmic/Ethereal; per-entity content pools) | feature/entity-types | ✅ Merged → ⏸ Cut for prototyping 2026-05-08 |
 | 5 — Source boxes (boss tier; 3 boxes shuffled across matches 9/21/27) | feature/source-boxes | ✅ Merged + redesigned 2026-05-08 |
+
+**Box-axis slices (box pool expansion):**
+
+| Slice | Branch | Status |
+|-------|--------|--------|
+| boxes-1 — Composition (14 new COMP boxes, pool tuning) | feature/boxes-composition | ✅ Merged 2026-05-08 |
+| boxes-2 — Roll modifiers (6 ROLL boxes: heavy_dice, weak_dice, halving, doubling, exploding_ones, high_die_doubles) | feature/boxes-roll-mods | ✅ Merged 2026-05-08 |
+| boxes-3 — Win conditions (2 WIN boxes: crit_only, escalating_threshold) | feature/boxes-win-conditions | ✅ Merged 2026-05-09 |
+| boxes-4 — Dice access (3 DICE boxes: single_die, locked_d8, locked_d4) | feature/boxes-dice-access | ✅ Merged 2026-05-09 |
+| boxes-5 — Entry effects (3 ENTRY boxes: storm_box d2+d10/rl-1, cleanse_box rl-2, borrowed_time hp-1/rl+1) | feature/boxes-entry-effects | 🔄 In playtest 2026-05-11 |
+| boxes-6 — Tab behavior (feature/boxes-tab-behavior) | feature/boxes-tab-behavior | 🔄 Pending |

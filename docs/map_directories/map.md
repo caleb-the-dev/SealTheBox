@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 19 |
+| Sessions since groom | 20 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -41,6 +41,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Box Roll Modifiers (static) | [box_roll_modifiers.md](box_roll_modifiers.md) | Active |
 | Box Win Conditions (static) | [box_win_conditions.md](box_win_conditions.md) | Active |
 | Box Dice Access (static) | [box_dice_access.md](box_dice_access.md) | Active |
+| Box Entry Effects (static) | [box_entry_effects.md](box_entry_effects.md) | Active |
 | Match Scene + HUD | [match_scene.md](match_scene.md) | Active |
 | HUD detail | [hud.md](hud.md) | Active |
 | Ability Hand (UI) | [ability_hand.md](ability_hand.md) | Active |
@@ -55,7 +56,7 @@ seal-the-box/
   project.godot
   data/
     abilities.csv          # ability definitions (22 abilities; 14 in rotation pool with charges 1–3)
-    boxes.csv              # box definitions (32 boxes: 9 easy / 9 medium / 11 hard / 3 boss; ROLL + WIN + DICE modifiers distributed across tiers)
+    boxes.csv              # box definitions (35 boxes: 9 easy / 12 medium / 11 hard / 3 boss; ROLL + WIN + DICE + ENTRY modifiers distributed across tiers)
     powers.csv             # power definitions (11 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor, tax_collector, diabolic_pact, tab_counter)
   resources/
     ability_data.gd        # AbilityData Resource subclass
@@ -72,10 +73,11 @@ seal-the-box/
       round_manager.gd     # Match-level orchestration + power effect hooks
       tab_board.gd         # Tab sealing logic
       dice_pool.gd         # Dice draw/roll/discard
-      die.gd               # Die class (class_name Die) — single die object with faces, value, rolled, dropped, modifier_tag
+      die.gd               # Die class (class_name Die) — single die object with faces, value, rolled, dropped, modifier_tag, storm_temp
       box_roll_modifiers.gd # Static class — 6 roll modifier callables; apply_dice_mutation, compute_total, apply_display_tags, get_description
       box_win_conditions.gd # Static class — 2 win-condition override callables; evaluate, has_override, get_description, get_round_limit, get_escalating_threshold
       box_dice_access.gd    # Static class — pool overrides (single_die, locked_d8, locked_d4); round-end hooks (has_tax, has_forced_commit); entry power hook (has_entry_power); [!] descriptions
+      box_entry_effects.gd  # Static class — ENTRY-axis effects (storm_box, cleanse_box, borrowed_time); on_box_entry, has_entry_effect, get_description
     run/
       case_manager.gd      # Autoload: CaseManager — 27-match Case sequence, run_won signal
       run_manager.gd       # Series sequencing; power offer + rotation after each match; crossroads at act boundaries
@@ -89,10 +91,11 @@ seal-the-box/
     test_run_manager.gd    # Tests for GameState + RunManager + PowerLibrary (headless) — 46 tests
     test_power_effects.gd  # Tests for all 8 power effects via PowerManager (headless) — 30 tests
     test_box_definition.gd # Tests for BoxDefinition formulas (headless)
-    test_box_definitions.gd # Validates full 32-box pool: counts, tab sums, thresholds, tier validity, no duplicate ids, DICE registry coverage (headless)
+    test_box_definitions.gd # Validates full 35-box pool: counts, tab sums, thresholds, tier validity, no duplicate ids, DICE registry coverage (headless)
     test_box_roll_modifiers.gd # Tests BoxRollModifiers registry + all 6 modifiers + RoundManager integration (headless)
     test_box_win_conditions.gd # Tests BoxWinConditions registry + crit_only + escalating_threshold + round_limit override + RoundManager integration (headless) — 18 tests
     test_dice_access.gd    # Tests BoxDiceAccess registry, pool overrides (single_die/locked_d8/locked_d4), pool immutability, round-end hooks, entry power, CaseManager marquee dedup (headless)
+    test_entry_effects.gd  # Tests BoxEntryEffects registry, storm_box delta (d2+d10, round_limit-1), cleanse_box charges+round_limit-2, borrowed_time HP gate, RoundManager integration, delta cleared between matches (headless) — 23 tests
     test_case_manager.gd   # Tests for CaseManager (headless) — 15 tests (new difficulty structure: boss@9/21/27, no repeats)
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap (headless) — 8 tests
     test_entity.gd         # Stub — entity system removed 2026-05-08
@@ -121,6 +124,7 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-11 | Slice 5 (feature/boxes-entry-effects) implemented and playtest-tuned. BoxEntryEffects static class added (on_box_entry, has_entry_effect, get_description). 3 ENTRY-axis boxes: storm_box (fixed d2+d10 added to match_pool_delta; round_limit -1), cleanse_box (refills ability charges; round_limit -2), borrowed_time (hp -1; round_limit +1; HP ≥ 3 gate in CaseManager). [!] badge priority extended: ROLL → WIN → DICE → ENTRY. GameState.match_pool_delta field added (cleared by reset_match, appended by storm_box, read by RoundManager). Pool now 35 boxes (9 easy / 12 medium / 11 hard / 3 boss). box_entry_effects.md created. test_entry_effects.gd added (23 tests). |
 | 2026-05-09 | Slice 4 (feature/boxes-dice-access) merged to master after playtest feedback. BoxDiceAccess static class added (pool overrides: single_die picks 1 random die; locked_d8/locked_d4 filter out those faces; round-end hooks: has_tax -1 HP/round, has_forced_commit leftover pip damage; entry power: has_entry_power grants phoenix_down once per run). [!] badge extended to DICE boxes (lowest priority after ROLL → WIN). Tab alignment fixed: sealed-sum label right-aligns, threshold label left-aligns. Playtest drops: bounty_box and forced_full_commit removed from CSV (infrastructure retained); tax_per_roll renamed to quick_seal (plain box, mechanic stripped, round_limit=1 override). Tuning: locked_d4 tabs swapped 1→10; single_die round_limit 2→3. Pool now 32 boxes (9 easy / 9 medium / 11 hard / 3 boss). test_dice_access.gd added. CaseManager: marquee-dedup pass added to reset_run(). GameState: marquee_seen dict added. |
 | 2026-05-09 | Slice 3 (feature/boxes-win-conditions) merged to master. BoxWinConditions static class added (2 WIN boxes: crit_only, escalating_threshold). crit_only: suppresses threshold path entirely — only a full seal wins; 5-round override via get_round_limit(). escalating_threshold: per-round threshold int R1=25→R2=20→R3=15→R4+=5; GameState.win_threshold updated each round start via _apply_win_condition_threshold_update(). [!] badge extended to WIN boxes with slowly cycling hue animation (_mod_hint_time accumulator + _process delta loop). Playtest tuning: crit_only round_limit 4→5; escalating_threshold curve tightened (R1 25, R4 5). Pool now 28 boxes. test_box_win_conditions.gd added (18 tests including RoundManager integration). Playtest checklist: docs/playtest-slice3-win-conditions.html. |
 | 2026-05-08 | Slice 2 (feature/boxes-roll-mods) merged to master. BoxRollModifiers static class added (6 ROLL modifier boxes: heavy_dice, weak_dice, halving_box, doubling_box, exploding_ones, high_die_doubles). pair_swallows added and immediately dropped on playtest. Die.modifier_tag field added — shown bottom-left on die buttons in orange after rolling (e.g. "1→7", "×2"). Doubling-box validation bug fixed: tab selection now routes through RoundManager.get_roll_total() everywhere. Top-left HUD reordered: box name (large, prominent) → difficulty → match → act; [!] badge with floating hover tooltip for ROLL boxes. Playtest tuning: heavy_dice/exploding_ones→easy, high_die_doubles tabs→3–13 odds, weak_dice threshold→10. Pool now 26 boxes (9 easy / 7 medium / 7 hard / 3 boss). test_box_roll_modifiers.gd added (covers registry + all 6 modifiers + RoundManager integration). |
