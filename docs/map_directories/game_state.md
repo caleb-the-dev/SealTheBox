@@ -62,10 +62,18 @@ var run_won: bool = false
     # Set to true by RunManager.handle_match_won() when the completed match was #27.
     # Checked by RunManager._start_next_match() — if true, emits CaseManager.notify_run_won() instead of starting match 28.
     # Reset to false by reset_run().
+var match_pool_delta: Array = []
+    # Transient extra Die objects added by ENTRY-axis box effects for the current match only.
+    # Written by BoxEntryEffects._apply_storm_box() (appends Die.new(2) and Die.new(10)).
+    # Read by RoundManager.start_match(): appended to BoxDiceAccess.get_active_pool() result
+    #   before DicePool.setup() — persistent dice_pool is never modified.
+    # Cleared by reset_match() at the start of every match (before entry effects fire).
+    # Also cleared by reset_run(). Not written by anything else.
+
 var marquee_seen: Dictionary = {}
-    # Tracks which once-per-run box ids have already fired their entry effect (e.g. bounty_box).
+    # Tracks which once-per-run box ids have already fired their bounty-power entry effect.
     # Dictionary used as a set: key = box_id (String), value = true.
-    # Written by RoundManager.start_match() when has_entry_power() fires; never written elsewhere.
+    # Written by RoundManager.start_match() when BoxDiceAccess.has_entry_power() fires.
     # Cleared by reset_run(). Not touched by reset_match().
     # Currently no active box uses this (bounty_box dropped from CSV 2026-05-09), but the
     # infrastructure is intact for when once-per-run boxes return.
@@ -81,13 +89,13 @@ var location_index: int:  # alias for act
 ```gdscript
 func reset_run() -> void
     # Resets hp=MAX_HP, owned_powers=[], power_counters={}, pending_threshold_bonus=0,
-    # case_match_index=1, run_won=false,
-    # rebuilds dice_pool (1d4+4d6+2d8 = 7 dice), calls reset_match(),
+    # case_match_index=1, run_won=false, marquee_seen={},
+    # rebuilds dice_pool (1d4+4d6+2d8 = 7 dice), calls reset_match() (which clears match_pool_delta),
     # then always calls _setup_ability_hand() (no is_empty guard).
     # Does NOT set tabs/round_limit/win_threshold — those come from start_match(box).
 
 func reset_match() -> void
-    # Resets round=0, dice_hand=[]. Resets all dice in pool to value=0/rolled=false.
+    # Resets round=0, dice_hand=[], match_pool_delta=[]. Resets all dice in pool to value=0/rolled=false.
     # Does NOT touch tabs, round_limit, win_threshold, ability_hand, dice_pool size,
     # owned_powers, or pending_threshold_bonus.
 
@@ -118,6 +126,7 @@ func _setup_ability_hand() -> void
 - **`power_counters` follows the same lifecycle as `owned_powers`.** reset_match() does not clear it (counters survive match transitions within a run); reset_run() clears it entirely. Individual counter values are reset to 0 at match end via PowerManager.on_match_end().
 - **`pending_threshold_bonus` is a one-shot buffer.** RunManager.handle_match_won(critical=true) adds to it via PowerManager.apply_box_shutter(). RoundManager.start_match() reads and resets it to 0. It survives between matches in the same run but is cleared by reset_run().
 - **`ability_hand` is always exactly 3 elements.** Slots can be null (empty). Never use `ability_hand.append()` or `ability_hand.erase()` — slots must be assigned by index. RunManager owns all mutations post-setup.
+- **`match_pool_delta` is cleared by `reset_match()`, not `reset_run()` alone.** Every `start_match()` call triggers `reset_match()` first, so entry effects always start from an empty delta.
 - **`reset_match()` does NOT reset tabs, round_limit, or win_threshold.** Those are set by `RoundManager.start_match(box)` before `reset_match()` is called.
 - **Charges persist across matches.** An ability with 1 charge left in match 1 enters match 2 with 1 charge. Charges only reset if the ability is discarded and a fresh duplicate is picked in rotation.
 - **`ABILITY_POOL_IDS` is the single source of truth for the rotation pool.** RunManager reads it via `gs.ABILITY_POOL_IDS` rather than maintaining its own copy.
@@ -126,6 +135,7 @@ func _setup_ability_hand() -> void
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-11 | Added match_pool_delta: Array = [] field (was missing from this doc). reset_match() clears it; reset_run() clears it via reset_match(). Written by BoxEntryEffects (storm_box appends d2+d10). Read by RoundManager.start_match() and appended to BoxDiceAccess.get_active_pool() before DicePool.setup(). |
 | 2026-05-09 | slice-boxes-4: added marquee_seen: Dictionary = {} field. reset_run() now clears it. Not touched by reset_match(). Written by RoundManager.start_match() for once-per-run entry-power boxes. |
 | 2026-05-08 | Playtest refactor: removed entity_id field entirely. location_index comment simplified (no longer references CaseManager.get_location_name). |
 | 2026-05-07 | feature/entity-types: Added entity_id (removed 2026-05-08). |

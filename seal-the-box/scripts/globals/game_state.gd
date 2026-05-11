@@ -23,8 +23,11 @@ var pending_threshold_bonus: int = 0
 var power_counters: Dictionary = {}
 var case_match_index: int = 1
 var run_won: bool = false
-# Tracks which marquee box ids have already been seen this run (used by CaseManager
-# to ensure once-per-run boxes like bounty_box appear at most once).
+# Per-match pool delta: extra Die objects added by entry effects (e.g. storm_box).
+# Cleared at start of each match before entry effects fire, then appended to the
+# active pool for that match only. Persistent dice_pool is never modified.
+var match_pool_delta: Array = []
+# Tracks which once-per-run marquee box ids have fired their entry effect.
 # Dictionary used as a set: key = box_id, value = true.
 var marquee_seen: Dictionary = {}
 
@@ -44,6 +47,7 @@ func reset_run() -> void:
 	power_counters = {}
 	case_match_index = 1
 	run_won = false
+	match_pool_delta = []
 	marquee_seen = {}
 	_setup_dice_pool()
 	reset_match()
@@ -52,6 +56,7 @@ func reset_run() -> void:
 func reset_match() -> void:
 	round = 0
 	dice_hand = []
+	match_pool_delta = []
 	for die in dice_pool:
 		die.value = 0
 		die.rolled = false

@@ -1,6 +1,11 @@
 class_name RoundManager
 extends Node
 
+# Preload ENTRY-axis registry so it compiles in both full-project and
+# headless --script test modes (global class_name lookup isn't available
+# in --script mode without a project import).
+const _BoxEntryEffects = preload("res://scripts/match/box_entry_effects.gd")
+
 signal phase_changed(phase: String)
 signal round_ended(round_num: int)
 signal match_won(critical: bool)
@@ -40,14 +45,33 @@ func start_match(box: BoxDefinition) -> void:
 	_threshold_notified = false
 	GameState.reset_match()
 	_tab_board.reset(GameState.tabs.duplicate())
-	# Use BoxDiceAccess to get the active pool so DICE-axis boxes (single_die,
-	# locked_d8, locked_d4) can override the pool without touching the persistent pool.
-	_dice_pool.setup(BoxDiceAccess.get_active_pool(box.id, GameState.dice_pool))
-	# Apply bounty_box entry effect: grant phoenix_down once per run.
+	# Fire ENTRY-axis effects before building pool so storm_box can populate
+	# match_pool_delta before DicePool.setup() reads it.
+	if _BoxEntryEffects.has_entry_effect(box.id):
+		_BoxEntryEffects.on_box_entry(box.id, GameState)
+		status_updated.emit(_entry_effect_message(box.id))
+	# Use BoxDiceAccess for DICE-axis overrides (single_die, locked_d8, locked_d4),
+	# then append match_pool_delta so storm_box bonus die is included.
+	var active_pool: Array = BoxDiceAccess.get_active_pool(box.id, GameState.dice_pool)
+	active_pool.append_array(GameState.match_pool_delta)
+	_dice_pool.setup(active_pool)
+	# Apply bounty_box entry effect: grant phoenix_down once per run (dead code —
+	# bounty_box removed from CSV, but infrastructure retained for future use).
 	if BoxDiceAccess.has_entry_power(box.id) and not GameState.marquee_seen.has(box.id):
 		GameState.marquee_seen[box.id] = true
 		_grant_bounty_box_power()
 	start_round()
+
+# Returns a short status message describing the entry effect for box_id.
+func _entry_effect_message(box_id: String) -> String:
+	match box_id:
+		"storm_box":
+			return "Storm Box — bonus d2 and d10 added to your pool! Round limit -1."
+		"cleanse_box":
+			return "Cleanse Box — all ability charges refilled!"
+		"borrowed_time":
+			return "Borrowed Time — took 1 damage; round limit +1."
+	return ""
 
 func start_round() -> void:
 	GameState.round += 1

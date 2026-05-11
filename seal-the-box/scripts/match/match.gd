@@ -766,6 +766,27 @@ func _setup_ui() -> void:
 	dev_hp_btn.pressed.connect(_on_dev_give_hp_pressed)
 	dev_btns.add_child(dev_hp_btn)
 
+	var dev_storm_btn = Button.new()
+	dev_storm_btn.text = "Force Storm Box →"
+	dev_storm_btn.custom_minimum_size = Vector2(0, 56)
+	dev_storm_btn.add_theme_font_size_override("font_size", 17)
+	dev_storm_btn.pressed.connect(_on_dev_force_entry_box_pressed.bind("storm_box"))
+	dev_btns.add_child(dev_storm_btn)
+
+	var dev_cleanse_btn = Button.new()
+	dev_cleanse_btn.text = "Force Cleanse Box →"
+	dev_cleanse_btn.custom_minimum_size = Vector2(0, 56)
+	dev_cleanse_btn.add_theme_font_size_override("font_size", 17)
+	dev_cleanse_btn.pressed.connect(_on_dev_force_entry_box_pressed.bind("cleanse_box"))
+	dev_btns.add_child(dev_cleanse_btn)
+
+	var dev_borrowed_btn = Button.new()
+	dev_borrowed_btn.text = "Force Borrowed Time →"
+	dev_borrowed_btn.custom_minimum_size = Vector2(0, 56)
+	dev_borrowed_btn.add_theme_font_size_override("font_size", 17)
+	dev_borrowed_btn.pressed.connect(_on_dev_force_entry_box_pressed.bind("borrowed_time"))
+	dev_btns.add_child(dev_borrowed_btn)
+
 	var dev_force_round_btn = Button.new()
 	dev_force_round_btn.text = "Force Round → (escalating)"
 	dev_force_round_btn.custom_minimum_size = Vector2(0, 56)
@@ -1685,7 +1706,25 @@ func _on_dev_give_hp_pressed() -> void:
 	GameState.hp += 10
 	_refresh_ui()
 
-
+func _on_dev_force_entry_box_pressed(box_id: String) -> void:
+	_dev_overlay.visible = false
+	var box_lib = Engine.get_singleton("BoxLibrary") if Engine.has_singleton("BoxLibrary") else null
+	if box_lib == null:
+		push_warning("Dev: BoxLibrary not available")
+		return
+	var box = box_lib.get_box(box_id)
+	if box == null:
+		push_warning("Dev: '%s' not found in BoxLibrary" % box_id)
+		return
+	if not _match_ended:
+		_round_manager.dev_win_match()
+	_round_manager.start_match(box)
+	_rebuild_tab_buttons()
+	_update_tabs_header_widths()
+	for btn in _tab_buttons:
+		btn.disabled = false
+	_refresh_ui()
+	_refresh_powers_panel()
 
 func _on_dev_force_round_menu_pressed() -> void:
 	_dev_overlay.visible = false
@@ -1919,14 +1958,17 @@ func _refresh_ui() -> void:
 		var has_roll_mod := BoxRollModifiers.has_modifier(box_id)
 		var has_win_mod := BoxWinConditions.has_override(box_id)
 		var has_dice_mod := BoxDiceAccess.has_description(box_id)
-		if has_roll_mod or has_win_mod or has_dice_mod:
+		var has_entry_eff := BoxEntryEffects.has_entry_effect(box_id)
+		if has_roll_mod or has_win_mod or has_dice_mod or has_entry_eff:
 			_box_mod_hint.visible = true
 			if has_roll_mod:
 				_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
 			elif has_win_mod:
 				_mod_tooltip_label.text = BoxWinConditions.get_description(box_id)
-			else:
+			elif has_dice_mod:
 				_mod_tooltip_label.text = BoxDiceAccess.get_description(box_id)
+			else:
+				_mod_tooltip_label.text = BoxEntryEffects.get_description(box_id)
 		else:
 			_box_mod_hint.visible = false
 			_mod_tooltip.visible = false

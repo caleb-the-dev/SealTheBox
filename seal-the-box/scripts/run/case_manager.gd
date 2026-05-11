@@ -73,7 +73,20 @@ func get_box_for_match(idx: int) -> BoxDefinition:
 	if idx < 1 or idx > _case_list.size():
 		push_error("CaseManager: match index %d out of range" % idx)
 		return null
-	return _case_list[idx - 1]
+	var box: BoxDefinition = _case_list[idx - 1]
+	# borrowed_time HP gate: if HP < 3, replace with another medium-tier box.
+	# This is a lazy replacement — the run list is pre-built at reset_run(), but
+	# we can't know HP at that point. Checked here, just before the match starts.
+	if box.id == "borrowed_time":
+		var gs: Node = Engine.get_singleton("GameState") if Engine.has_singleton("GameState") else null
+		if gs != null and gs.hp < 3:
+			var box_lib = Engine.get_singleton("BoxLibrary")
+			var tier_pool: Array = box_lib.get_by_tier(box.tier)
+			var safe := tier_pool.filter(func(b: BoxDefinition) -> bool:
+				return b.id != "borrowed_time")
+			if not safe.is_empty():
+				box = safe[randi() % safe.size()]
+	return box
 
 func get_act_for_match(idx: int) -> int:
 	if idx <= ACT1_SIZE:
