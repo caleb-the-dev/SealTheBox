@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playtest — Slice 6: Tab Behavior</title>
+<style>
+  :root {
+    --accent: #3b82f6;
+    --accent-dark: #1d4ed8;
+    --accent-dim: #1e3a5f;
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --orange: #f0883e;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --yellow: #e3b341;
+    --teal: #39d353;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.5; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .meta-item { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; color: var(--muted); }
+  .meta-item span { color: var(--text); font-weight: 600; }
+
+  /* Progress bar */
+  .progress-bar-wrap { margin-bottom: 24px; }
+  .progress-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+
+  /* Section header */
+  .section-header { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 700; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--accent-dim); }
+
+  /* Box cards */
+  .box-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+  .box-card.tested { border-color: var(--accent-dim); }
+  .box-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  .box-header:hover { background: var(--surface2); }
+  .check-cell { display: flex; align-items: center; }
+  .check-cell input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .box-title { font-weight: 700; font-size: 15px; flex: 1; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: .05em; }
+  .badge-bhv { background: #1a4a7a; color: #60a5fa; border: 1px solid #2563eb; }
+  .badge-easy { background: #14532d; color: #86efac; }
+  .badge-medium { background: #78350f; color: #fcd34d; }
+  .badge-hard { background: #7f1d1d; color: #fca5a5; }
+  .badge-boss { background: #4c1d95; color: #c4b5fd; }
+  .hook-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
+  .hook-round-start { background: #1a3a1a; color: #6ee77a; border: 1px solid #166534; }
+  .hook-round-end { background: #3a1a1a; color: #f87171; border: 1px solid #991b1b; }
+  .hook-no-seal { background: #2a2a0a; color: #fde047; border: 1px solid #a16207; }
+  .hook-on-seal { background: #2a1a3a; color: #c084fc; border: 1px solid #7e22ce; }
+  .box-chevron { color: var(--muted); font-size: 12px; }
+
+  .box-body { padding: 14px; display: none; }
+  .box-body.open { display: block; }
+
+  /* Rule summary */
+  .rule-box { background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; color: var(--text); }
+  .rule-box em { color: var(--muted); font-style: normal; }
+
+  /* Tabs info */
+  .tabs-info { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .info-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 4px 10px; font-size: 12px; }
+  .info-chip label { color: var(--muted); margin-right: 4px; }
+
+  /* Rating row */
+  .rating-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .rating-group { display: flex; flex-direction: column; gap: 4px; }
+  .rating-group label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  select { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 5px 8px; font-size: 12px; cursor: pointer; }
+  select:focus { outline: none; border-color: var(--accent); }
+
+  /* Stars */
+  .stars { display: flex; gap: 4px; margin-top: 2px; }
+  .star { font-size: 18px; cursor: pointer; color: var(--border); transition: color .15s; }
+  .star.lit { color: var(--yellow); }
+
+  /* Notes */
+  .notes-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; display: block; }
+  textarea { width: 100%; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  /* Questions */
+  .questions { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-top: 28px; }
+  .questions h2 { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .question-item { margin-bottom: 14px; }
+  .question-item p { font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  .question-item p strong { color: var(--text); }
+
+  /* Tips */
+  .tips { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 16px; }
+  .tips h2 { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .06em; }
+  .tips ul { padding-left: 18px; }
+  .tips li { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .tips li strong { color: var(--text); }
+
+  /* Buttons */
+  .action-row { display: flex; gap: 10px; margin-top: 24px; }
+  button { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: background .15s; }
+  button:hover { background: var(--surface2); }
+  button.primary { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-dark); }
+
+  .summary-area { display: none; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-top: 12px; }
+  .summary-area pre { font-family: inherit; font-size: 12px; white-space: pre-wrap; color: var(--text); }
+</style>
+</head>
+<body>
+
+<h1>Slice 6 — Tab Behavior (BHV Axis)</h1>
+<p class="subtitle">9 boxes whose tabs mutate mid-match. Core question: strategic depth or chaos?</p>
+
+<div class="meta">
+  <div class="meta-item">Branch: <span>feature/boxes-tab-behavior</span></div>
+  <div class="meta-item">Pool: <span>44 boxes (35 + 9 BHV)</span></div>
+  <div class="meta-item">Hooks: <span>on_round_start, on_round_end, on_round_end_no_seal, on_seal</span></div>
+  <div class="meta-item">New system: <span>BoxTabBehavior + TabBoard.TabData</span></div>
+</div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-label" id="progress-label">Tested: 0 / 9</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+</div>
+
+<!-- ROUND START HOOKS -->
+<div class="section-header">Round-Start Hooks — tab state changes when a round begins</div>
+
+<!-- regrowing -->
+<div class="box-card" id="card-regrowing">
+  <div class="box-header" onclick="toggle('regrowing')">
+    <div class="check-cell"><input type="checkbox" id="cb-regrowing" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Regrowing</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-medium">medium</span>
+    <span class="hook-badge hook-round-start">round start</span>
+    <span class="box-chevron" id="chev-regrowing">▼</span>
+  </div>
+  <div class="box-body" id="body-regrowing">
+    <div class="rule-box">At the start of each round (R2+): the lowest-value tab you already sealed <em>returns to the board</em>.</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Tabs:</label>1 2 3 4 5 6 7 8 9</div>
+      <div class="info-chip"><label>Sum:</label>45</div>
+      <div class="info-chip"><label>Threshold:</label>11</div>
+      <div class="info-chip"><label>Tier:</label>medium</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-regrowing" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-regrowing" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-regrowing">
+          <span class="star" onclick="setStar('regrowing',1)">★</span>
+          <span class="star" onclick="setStar('regrowing',2)">★</span>
+          <span class="star" onclick="setStar('regrowing',3)">★</span>
+          <span class="star" onclick="setStar('regrowing',4)">★</span>
+          <span class="star" onclick="setStar('regrowing',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-regrowing" placeholder="Does returning tabs change your priority order? Does the threat of return make you seal low numbers first?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- shuffler -->
+<div class="box-card" id="card-shuffler">
+  <div class="box-header" onclick="toggle('shuffler')">
+    <div class="check-cell"><input type="checkbox" id="cb-shuffler" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Shuffler</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-medium">medium</span>
+    <span class="hook-badge hook-round-start">round start</span>
+    <span class="box-chevron" id="chev-shuffler">▼</span>
+  </div>
+  <div class="box-body" id="body-shuffler">
+    <div class="rule-box">At the start of every round: every unsealed tab is <em>randomly reassigned a new value 1–9</em>. Status message: "Shuffler — tab values redrawn!"</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Tabs:</label>1 2 3 4 5 6 7 8 9</div>
+      <div class="info-chip"><label>Sum:</label>45 (changes each round)</div>
+      <div class="info-chip"><label>Threshold:</label>11</div>
+      <div class="info-chip"><label>Tier:</label>medium</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-shuffler" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-shuffler" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-shuffler">
+          <span class="star" onclick="setStar('shuffler',1)">★</span>
+          <span class="star" onclick="setStar('shuffler',2)">★</span>
+          <span class="star" onclick="setStar('shuffler',3)">★</span>
+          <span class="star" onclick="setStar('shuffler',4)">★</span>
+          <span class="star" onclick="setStar('shuffler',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-shuffler" placeholder="Does the randomization feel chaotic or exciting? Do you have any meaningful agency, or is it just riding luck?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- moving_targets -->
+<div class="box-card" id="card-moving_targets">
+  <div class="box-header" onclick="toggle('moving_targets')">
+    <div class="check-cell"><input type="checkbox" id="cb-moving_targets" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Moving Targets</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-boss">boss</span>
+    <span class="hook-badge hook-round-start">round start</span>
+    <span class="box-chevron" id="chev-moving_targets">▼</span>
+  </div>
+  <div class="box-body" id="body-moving_targets">
+    <div class="rule-box">Tabs are 6 tiles that <em>shift up by 1 each round</em>: R1 = 1–6, R2 = 2–7, R3 = 3–8, R4+ = 4–9. You cannot seal a tab that has already shifted away.</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>R1 Tabs:</label>1 2 3 4 5 6 (sum 21)</div>
+      <div class="info-chip"><label>R2:</label>2–7 (sum 27)</div>
+      <div class="info-chip"><label>R3:</label>3–8 (sum 33)</div>
+      <div class="info-chip"><label>R4+:</label>4–9 (sum 39)</div>
+      <div class="info-chip"><label>Threshold:</label>8</div>
+      <div class="info-chip"><label>Tier:</label>boss</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-moving_targets" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-moving_targets" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-moving_targets">
+          <span class="star" onclick="setStar('moving_targets',1)">★</span>
+          <span class="star" onclick="setStar('moving_targets',2)">★</span>
+          <span class="star" onclick="setStar('moving_targets',3)">★</span>
+          <span class="star" onclick="setStar('moving_targets',4)">★</span>
+          <span class="star" onclick="setStar('moving_targets',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-moving_targets" placeholder="Does sealing low tabs early feel urgent? Do later rounds feel harder to manage? Is the shifting visible enough?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- fading_decoys -->
+<div class="box-card" id="card-fading_decoys">
+  <div class="box-header" onclick="toggle('fading_decoys')">
+    <div class="check-cell"><input type="checkbox" id="cb-fading_decoys" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Fading Decoys</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-medium">medium</span>
+    <span class="hook-badge hook-round-start">round start (R3)</span>
+    <span class="box-chevron" id="chev-fading_decoys">▼</span>
+  </div>
+  <div class="box-body" id="body-fading_decoys">
+    <div class="rule-box">R1–2: board shows 9 real tabs + <em>3 hidden phantom tabs (3, 5, 7)</em> — the phantoms are visually indistinguishable from real tabs. At the start of R3: phantoms vanish. "Fading Decoys — the phantoms (3, 5, 7) vanished!" Status message shown.</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Real tabs:</label>1 2 3 4 5 6 7 8 9</div>
+      <div class="info-chip"><label>Hidden decoys R1-2:</label>3 5 7</div>
+      <div class="info-chip"><label>Threshold:</label>11</div>
+      <div class="info-chip"><label>Tier:</label>medium</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-fading_decoys" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-fading_decoys" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-fading_decoys">
+          <span class="star" onclick="setStar('fading_decoys',1)">★</span>
+          <span class="star" onclick="setStar('fading_decoys',2)">★</span>
+          <span class="star" onclick="setStar('fading_decoys',3)">★</span>
+          <span class="star" onclick="setStar('fading_decoys',4)">★</span>
+          <span class="star" onclick="setStar('fading_decoys',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-fading_decoys" placeholder="Did you try to seal tabs that weren't there? Did the phantom vanish feel like a relief or a gotcha? Was it legible without being told?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- ROUND END HOOKS -->
+<div class="section-header">Round-End Hooks — tab values change after you end a round</div>
+
+<!-- rising_tide -->
+<div class="box-card" id="card-rising_tide">
+  <div class="box-header" onclick="toggle('rising_tide')">
+    <div class="check-cell"><input type="checkbox" id="cb-rising_tide" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Rising Tide</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-hard">hard</span>
+    <span class="hook-badge hook-round-end">round end</span>
+    <span class="box-chevron" id="chev-rising_tide">▼</span>
+  </div>
+  <div class="box-body" id="body-rising_tide">
+    <div class="rule-box">At the end of every round: <em>every unsealed tab +1</em> (ceiling 13). "Rising Tide — all tabs +1."</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Start:</label>1 2 3 4 5 6 7 (sum 28)</div>
+      <div class="info-chip"><label>After R1:</label>2 3 4 5 6 7 8 (sum 35)</div>
+      <div class="info-chip"><label>Ceiling:</label>13</div>
+      <div class="info-chip"><label>Threshold:</label>8</div>
+      <div class="info-chip"><label>Tier:</label>hard</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-rising_tide" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-rising_tide" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-rising_tide">
+          <span class="star" onclick="setStar('rising_tide',1)">★</span>
+          <span class="star" onclick="setStar('rising_tide',2)">★</span>
+          <span class="star" onclick="setStar('rising_tide',3)">★</span>
+          <span class="star" onclick="setStar('rising_tide',4)">★</span>
+          <span class="star" onclick="setStar('rising_tide',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-rising_tide" placeholder="Does the rising pressure feel urgent or just punishing? Do you change your sealing priority because of it?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- growing_pillars -->
+<div class="box-card" id="card-growing_pillars">
+  <div class="box-header" onclick="toggle('growing_pillars')">
+    <div class="check-cell"><input type="checkbox" id="cb-growing_pillars" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Growing Pillars</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-hard">hard</span>
+    <span class="hook-badge hook-round-end">round end</span>
+    <span class="box-chevron" id="chev-growing_pillars">▼</span>
+  </div>
+  <div class="box-body" id="body-growing_pillars">
+    <div class="rule-box">Same rule as Rising Tide — all tabs +1 per round, ceiling 13 — but with <em>7 identical tabs of value 2</em> as the starting state. "Growing Pillars — all tabs +1."</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Start:</label>2 2 2 2 2 2 2 (sum 14)</div>
+      <div class="info-chip"><label>After R1:</label>3 3 3 3 3 3 3 (sum 21)</div>
+      <div class="info-chip"><label>Ceiling:</label>13</div>
+      <div class="info-chip"><label>Threshold:</label>6</div>
+      <div class="info-chip"><label>Tier:</label>hard</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-growing_pillars" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-growing_pillars" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-growing_pillars">
+          <span class="star" onclick="setStar('growing_pillars',1)">★</span>
+          <span class="star" onclick="setStar('growing_pillars',2)">★</span>
+          <span class="star" onclick="setStar('growing_pillars',3)">★</span>
+          <span class="star" onclick="setStar('growing_pillars',4)">★</span>
+          <span class="star" onclick="setStar('growing_pillars',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-growing_pillars" placeholder="How does the uniform starting value feel vs Rising Tide's variety? Does same-value tabs create any interesting combos?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- clock_tabs -->
+<div class="box-card" id="card-clock_tabs">
+  <div class="box-header" onclick="toggle('clock_tabs')">
+    <div class="check-cell"><input type="checkbox" id="cb-clock_tabs" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Clock Tabs</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-hard">hard</span>
+    <span class="hook-badge hook-round-end">round end</span>
+    <span class="box-chevron" id="chev-clock_tabs">▼</span>
+  </div>
+  <div class="box-body" id="body-clock_tabs">
+    <div class="rule-box">At the end of every round: one <em>random unsealed tab ticks down by 1</em>. If it hits 0: <em>tab removed + you lose 1 HP</em>. "Clock Tabs — tab ticked down to N." / "tab ticked to 0! You took 1 damage."</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Tabs:</label>2 3 4 5 6 7 8 9 (sum 44)</div>
+      <div class="info-chip"><label>Threshold:</label>10</div>
+      <div class="info-chip"><label>Tier:</label>hard</div>
+      <div class="info-chip"><label>HP risk:</label>tab reaching 0</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-clock_tabs" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-clock_tabs" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-clock_tabs">
+          <span class="star" onclick="setStar('clock_tabs',1)">★</span>
+          <span class="star" onclick="setStar('clock_tabs',2)">★</span>
+          <span class="star" onclick="setStar('clock_tabs',3)">★</span>
+          <span class="star" onclick="setStar('clock_tabs',4)">★</span>
+          <span class="star" onclick="setStar('clock_tabs',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-clock_tabs" placeholder="Does the HP loss for a tab reaching 0 feel fair? Do you feel tension watching low-value tabs tick? Is the randomness of which tab ticks frustrating?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- NO-SEAL HOOK -->
+<div class="section-header">No-Seal Hook — fires at round end only if you sealed nothing</div>
+
+<!-- revenant_tabs -->
+<div class="box-card" id="card-revenant_tabs">
+  <div class="box-header" onclick="toggle('revenant_tabs')">
+    <div class="check-cell"><input type="checkbox" id="cb-revenant_tabs" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Revenant Tabs</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-medium">medium</span>
+    <span class="hook-badge hook-no-seal">no-seal</span>
+    <span class="box-chevron" id="chev-revenant_tabs">▼</span>
+  </div>
+  <div class="box-body" id="body-revenant_tabs">
+    <div class="rule-box">At the end of a round where you <em>sealed nothing</em>: the lowest sealed tab <em>returns to the board</em>. "Revenant Tabs — the N returned!" Only fires if you end a round with zero seals.</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Tabs:</label>1 2 3 4 5 6 7 8 9 (sum 45)</div>
+      <div class="info-chip"><label>Threshold:</label>11</div>
+      <div class="info-chip"><label>Tier:</label>medium</div>
+      <div class="info-chip"><label>Trigger:</label>0 seals this round</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-revenant_tabs" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-revenant_tabs" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-revenant_tabs">
+          <span class="star" onclick="setStar('revenant_tabs',1)">★</span>
+          <span class="star" onclick="setStar('revenant_tabs',2)">★</span>
+          <span class="star" onclick="setStar('revenant_tabs',3)">★</span>
+          <span class="star" onclick="setStar('revenant_tabs',4)">★</span>
+          <span class="star" onclick="setStar('revenant_tabs',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-revenant_tabs" placeholder="Does the punishment for wasting a round feel proportionate? Did it make you feel like you HAD to seal something even if you shouldn't? Did it trigger at bad times?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- ON-SEAL HOOK -->
+<div class="section-header">On-Seal Hook — fires immediately when a tab is sealed</div>
+
+<!-- mitosis -->
+<div class="box-card" id="card-mitosis">
+  <div class="box-header" onclick="toggle('mitosis')">
+    <div class="check-cell"><input type="checkbox" id="cb-mitosis" onchange="updateProgress(); saveAll()"></div>
+    <div class="box-title">Mitosis</div>
+    <span class="badge badge-bhv">BHV</span>
+    <span class="badge badge-boss">boss</span>
+    <span class="hook-badge hook-on-seal">on seal</span>
+    <span class="box-chevron" id="chev-mitosis">▼</span>
+  </div>
+  <div class="box-body" id="body-mitosis">
+    <div class="rule-box">When you seal a tab with value ≥ 6: a new tab of <em>floor(value ÷ 2)</em> is immediately added to the board. Chain: 12 → spawns 6 → spawns 3 (value &lt; 6, chain ends). Cap depth: 5. "Mitosis — sealed N spawned M."</div>
+    <div class="tabs-info">
+      <div class="info-chip"><label>Tabs:</label>4 6 8 10 12</div>
+      <div class="info-chip"><label>Sum:</label>40</div>
+      <div class="info-chip"><label>Threshold:</label>8</div>
+      <div class="info-chip"><label>Tier:</label>boss</div>
+      <div class="info-chip"><label>Spawn rule:</label>tab ≥ 6 → floor(v/2)</div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-group">
+        <label>Effect Feel</label>
+        <select id="feel-mitosis" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Barely noticeable</option>
+          <option>Felt meaningful</option>
+          <option>Overpowered</option>
+          <option>Too punishing</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Strategic Depth</label>
+        <select id="depth-mitosis" onchange="saveAll()">
+          <option value="">— rate —</option>
+          <option>Created interesting decisions</option>
+          <option>Neutral</option>
+          <option>Felt random</option>
+          <option>Chaotic / frustrating</option>
+          <option>DNT</option>
+        </select>
+      </div>
+      <div class="rating-group">
+        <label>Stars</label>
+        <div class="stars" id="stars-mitosis">
+          <span class="star" onclick="setStar('mitosis',1)">★</span>
+          <span class="star" onclick="setStar('mitosis',2)">★</span>
+          <span class="star" onclick="setStar('mitosis',3)">★</span>
+          <span class="star" onclick="setStar('mitosis',4)">★</span>
+          <span class="star" onclick="setStar('mitosis',5)">★</span>
+        </div>
+      </div>
+    </div>
+    <label class="notes-label">Notes</label>
+    <textarea id="notes-mitosis" placeholder="Is the chain-spawning fun to discover or confusing? Does it feel punishing or satisfying? Did it cause wins or losses in unexpected ways?" oninput="saveAll()"></textarea>
+  </div>
+</div>
+
+<!-- KEY QUESTIONS -->
+<div class="questions">
+  <h2>Key Questions — The Big Picture</h2>
+
+  <div class="question-item">
+    <p><strong>Q1.</strong> Overall: does mid-match tab mutation feel like <em>strategic depth</em> (I need to plan around it) or <em>chaos</em> (it just happens to me)?</p>
+    <textarea id="q1" placeholder="General impression across all boxes tested..." oninput="saveAll()" style="margin-top:5px"></textarea>
+  </div>
+
+  <div class="question-item">
+    <p><strong>Q2.</strong> Which 2–3 boxes felt <em>best</em>? What made them work?</p>
+    <textarea id="q2" placeholder="e.g. rising_tide felt good because..." oninput="saveAll()" style="margin-top:5px"></textarea>
+  </div>
+
+  <div class="question-item">
+    <p><strong>Q3.</strong> Which boxes felt like <em>noise</em> — barely noticeable, or just frustrating with no interesting decisions?</p>
+    <textarea id="q3" placeholder="e.g. shuffler felt like pure chaos with no agency..." oninput="saveAll()" style="margin-top:5px"></textarea>
+  </div>
+
+  <div class="question-item">
+    <p><strong>Q4.</strong> Is <strong>Mitosis</strong> fun or frustrating? (This is the litmus test for high-cognitive-load boxes.)</p>
+    <textarea id="q4" placeholder="Does the chain-spawn feel exciting to figure out or annoying?" oninput="saveAll()" style="margin-top:5px"></textarea>
+  </div>
+
+  <div class="question-item">
+    <p><strong>Q5.</strong> Did Fading Decoys' phantom tabs feel <em>fair</em> on first discovery, or like a cheap surprise?</p>
+    <textarea id="q5" placeholder="Was it surprising in a good way or just confusing?" oninput="saveAll()" style="margin-top:5px"></textarea>
+  </div>
+
+  <div class="question-item">
+    <p><strong>Q6.</strong> Any boxes you'd cut immediately? Any you'd want to buff/nerf before merging?</p>
+    <textarea id="q6" placeholder="Cut list and tuning notes..." oninput="saveAll()" style="margin-top:5px"></textarea>
+  </div>
+</div>
+
+<!-- HOW TO TEST -->
+<div class="tips">
+  <h2>How to Test</h2>
+  <ul>
+    <li><strong>Reach BHV boxes quickly:</strong> Press <strong>T</strong> (or DEV button) → "Win Current Match" repeatedly to advance to medium/hard/boss tiers where BHV boxes appear.</li>
+    <li><strong>Or use "Win Entire Series"</strong> in the dev menu to jump to act 2/3 matches where harder boxes show up.</li>
+    <li><strong>Watch for the status bar messages</strong> — each BHV hook prints a message when it fires (e.g. "Rising Tide — all tabs +1").</li>
+    <li><strong>Fading Decoys:</strong> decoy tabs (3, 5, 7 phantom values) look identical to real tabs on R1–2. Vanish at R3 start.</li>
+    <li><strong>Mitosis:</strong> sealing a 12 immediately adds a 6; sealing the spawned 6 adds a 3; the 3 is sealable (value &lt; 6) and doesn't spawn further.</li>
+    <li><strong>Revenant:</strong> end a round without sealing any tab to trigger it — the lowest tab you already sealed comes back.</li>
+  </ul>
+</div>
+
+<div class="action-row">
+  <button class="primary" onclick="copySummary()">Copy Notes Summary</button>
+  <button onclick="clearAll()">Clear All</button>
+</div>
+<div class="summary-area" id="summary-area"><pre id="summary-text"></pre></div>
+
+<script>
+const BOXES = [
+  'regrowing','shuffler','moving_targets','fading_decoys',
+  'rising_tide','growing_pillars','clock_tabs',
+  'revenant_tabs','mitosis'
+];
+const QUESTIONS = ['q1','q2','q3','q4','q5','q6'];
+const STORE_KEY = 'slice6_bhv_playtest';
+
+function toggle(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  const isOpen = body.classList.toggle('open');
+  chev.textContent = isOpen ? '▲' : '▼';
+}
+
+function setStar(id, n) {
+  const container = document.getElementById('stars-' + id);
+  const stars = container.querySelectorAll('.star');
+  stars.forEach((s, i) => s.classList.toggle('lit', i < n));
+  container.dataset.value = n;
+  saveAll();
+}
+
+function updateProgress() {
+  const checked = BOXES.filter(id => document.getElementById('cb-' + id).checked).length;
+  document.getElementById('progress-label').textContent = `Tested: ${checked} / ${BOXES.length}`;
+  document.getElementById('progress-fill').style.width = (checked / BOXES.length * 100) + '%';
+  BOXES.forEach(id => {
+    const card = document.getElementById('card-' + id);
+    const cb = document.getElementById('cb-' + id);
+    card.classList.toggle('tested', cb.checked);
+  });
+}
+
+function saveAll() {
+  const data = {};
+  BOXES.forEach(id => {
+    data['cb_' + id] = document.getElementById('cb-' + id).checked;
+    data['feel_' + id] = document.getElementById('feel-' + id).value;
+    data['depth_' + id] = document.getElementById('depth-' + id).value;
+    data['stars_' + id] = document.getElementById('stars-' + id).dataset.value || '0';
+    data['notes_' + id] = document.getElementById('notes-' + id).value;
+  });
+  QUESTIONS.forEach(q => { data[q] = document.getElementById(q).value; });
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+function loadAll() {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (!raw) return;
+  const data = JSON.parse(raw);
+  BOXES.forEach(id => {
+    if (data['cb_' + id]) document.getElementById('cb-' + id).checked = true;
+    const feel = document.getElementById('feel-' + id);
+    const depth = document.getElementById('depth-' + id);
+    if (data['feel_' + id]) feel.value = data['feel_' + id];
+    if (data['depth_' + id]) depth.value = data['depth_' + id];
+    const sv = parseInt(data['stars_' + id] || '0');
+    if (sv > 0) setStar(id, sv);
+    document.getElementById('notes-' + id).value = data['notes_' + id] || '';
+  });
+  QUESTIONS.forEach(q => { document.getElementById(q).value = data[q] || ''; });
+  updateProgress();
+}
+
+function copySummary() {
+  let lines = ['=== Slice 6 BHV Playtest Notes ===', ''];
+  BOXES.forEach(id => {
+    const cb = document.getElementById('cb-' + id).checked;
+    const feel = document.getElementById('feel-' + id).value;
+    const depth = document.getElementById('depth-' + id).value;
+    const stars = document.getElementById('stars-' + id).dataset.value || '0';
+    const notes = document.getElementById('notes-' + id).value.trim();
+    lines.push(`[${cb ? 'x' : ' '}] ${id}`);
+    if (feel) lines.push(`  Feel: ${feel}`);
+    if (depth) lines.push(`  Depth: ${depth}`);
+    if (stars !== '0') lines.push(`  Stars: ${'★'.repeat(parseInt(stars))}${'☆'.repeat(5-parseInt(stars))}`);
+    if (notes) lines.push(`  Notes: ${notes}`);
+    lines.push('');
+  });
+  lines.push('--- Key Questions ---');
+  QUESTIONS.forEach((q, i) => {
+    const val = document.getElementById(q).value.trim();
+    if (val) lines.push(`Q${i+1}: ${val}`, '');
+  });
+  const text = lines.join('\n');
+  document.getElementById('summary-text').textContent = text;
+  document.getElementById('summary-area').style.display = 'block';
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+function clearAll() {
+  if (!confirm('Clear all playtest notes?')) return;
+  localStorage.removeItem(STORE_KEY);
+  BOXES.forEach(id => {
+    document.getElementById('cb-' + id).checked = false;
+    document.getElementById('feel-' + id).value = '';
+    document.getElementById('depth-' + id).value = '';
+    const stars = document.getElementById('stars-' + id);
+    stars.querySelectorAll('.star').forEach(s => s.classList.remove('lit'));
+    stars.dataset.value = '0';
+    document.getElementById('notes-' + id).value = '';
+  });
+  QUESTIONS.forEach(q => { document.getElementById(q).value = ''; });
+  updateProgress();
+}
+
+loadAll();
+</script>
+</body>
+</html>
