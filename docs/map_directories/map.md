@@ -10,7 +10,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Field | Value |
 |-------|-------|
 | Last groomed | 2026-05-02 |
-| Sessions since groom | 20 |
+| Sessions since groom | 22 |
 | Groom trigger | 10 sessions |
 
 ---
@@ -42,6 +42,7 @@ A living index of every system in the codebase. Each bucket file documents one s
 | Box Win Conditions (static) | [box_win_conditions.md](box_win_conditions.md) | Active |
 | Box Dice Access (static) | [box_dice_access.md](box_dice_access.md) | Active |
 | Box Entry Effects (static) | [box_entry_effects.md](box_entry_effects.md) | Active |
+| Box Tab Behavior (static) | [box_tab_behavior.md](box_tab_behavior.md) | Active |
 | Match Scene + HUD | [match_scene.md](match_scene.md) | Active |
 | HUD detail | [hud.md](hud.md) | Active |
 | Ability Hand (UI) | [ability_hand.md](ability_hand.md) | Active |
@@ -56,7 +57,7 @@ seal-the-box/
   project.godot
   data/
     abilities.csv          # ability definitions (22 abilities; 14 in rotation pool with charges 1–3)
-    boxes.csv              # box definitions (35 boxes: 9 easy / 12 medium / 11 hard / 3 boss; ROLL + WIN + DICE + ENTRY modifiers distributed across tiers)
+    boxes.csv              # box definitions (44 boxes: 9 easy / 15 medium / 16 hard / 4 boss; ROLL + WIN + DICE + ENTRY + BHV modifiers distributed across tiers)
     powers.csv             # power definitions (11 powers: lighter_box, eager, tab_9_bounty, bonus_seal, box_shutter, phoenix_down, coffee_break, survivor, tax_collector, diabolic_pact, tab_counter)
   resources/
     ability_data.gd        # AbilityData Resource subclass
@@ -78,6 +79,7 @@ seal-the-box/
       box_win_conditions.gd # Static class — 2 win-condition override callables; evaluate, has_override, get_description, get_round_limit, get_escalating_threshold
       box_dice_access.gd    # Static class — pool overrides (single_die, locked_d8, locked_d4); round-end hooks (has_tax, has_forced_commit); entry power hook (has_entry_power); [!] descriptions
       box_entry_effects.gd  # Static class — ENTRY-axis effects (storm_box, cleanse_box, borrowed_time); on_box_entry, has_entry_effect, get_description
+      box_tab_behavior.gd   # Static class — BHV-axis effects (9 boxes); on_round_start, on_round_end, on_round_end_no_seal, on_seal, has_behavior, get_description
     run/
       case_manager.gd      # Autoload: CaseManager — 27-match Case sequence, run_won signal
       run_manager.gd       # Series sequencing; power offer + rotation after each match; crossroads at act boundaries
@@ -96,6 +98,7 @@ seal-the-box/
     test_box_win_conditions.gd # Tests BoxWinConditions registry + crit_only + escalating_threshold + round_limit override + RoundManager integration (headless) — 18 tests
     test_dice_access.gd    # Tests BoxDiceAccess registry, pool overrides (single_die/locked_d8/locked_d4), pool immutability, round-end hooks, entry power, CaseManager marquee dedup (headless)
     test_entry_effects.gd  # Tests BoxEntryEffects registry, storm_box delta (d2+d10, round_limit-1), cleanse_box charges+round_limit-2, borrowed_time HP gate, RoundManager integration, delta cleared between matches (headless) — 23 tests
+    test_tab_behavior.gd   # Tests BoxTabBehavior: all 9 BHV boxes, round_start/end/seal hooks, clock_tabs -2 rule, moving_targets 7-tab range, mitosis recursion, fading_decoys, revenant_tabs, regrowing (headless)
     test_case_manager.gd   # Tests for CaseManager (headless) — 15 tests (new difficulty structure: boss@9/21/27, no repeats)
     test_crossroads.gd     # Tests for crossroads signal timing, HP cap, Whetstone die-swap (headless) — 8 tests
     test_entity.gd         # Stub — entity system removed 2026-05-08
@@ -124,6 +127,7 @@ Same pattern for BoxLibrary, GameState, PowerLibrary. PowerManager needs no `_re
 ## Session Log
 | Date | Summary |
 |------|---------|
+| 2026-05-12 | Slice 6 (feature/boxes-tab-behavior) implemented and playtest-tuned. BoxTabBehavior static class added (on_round_start, on_round_end, on_round_end_no_seal, on_seal, has_behavior, get_description). 9 BHV-axis boxes: regrowing (hard), shuffler (medium), moving_targets (hard), fading_decoys (medium), rising_tide (hard), growing_pillars (hard), clock_tabs (hard), revenant_tabs (medium), mitosis (boss). TabBoard major overhaul: TabData inner class (value+is_decoy), tabs_changed signal, new mutation API (add_tab, remove_tab, change_tab_value_at, replace_all_tabs, reveal_and_vanish_decoys), new read API (get_real_remaining, get_tab_data, get_real_sum, has_decoys), reset_with_decoys for fading_decoys. RoundManager: tab_behavior_changed signal added; BHV hooks wired in start_round/end_round/attempt_seal; GameState.tabs sync-before-emit ordering fixed (was the root cause of Rising Tide display and Revenant Tabs bugs). match.gd: [!] badge priority extended to ROLL→WIN→DICE→ENTRY→BHV; greyed sealed tabs restored (_sealed_button_indices in-place approach); _bhv_rebuilt_since_select flag added for mitosis edge case; Continue button hidden on BHV mutation when sum > threshold. Playtest tuning: regrowing medium→hard; moving_targets boss→hard, 7 tabs (1-7/2-8/3-9/4-10); growing_pillars tabs 2;3;2;3;2;3;2;3; clock_tabs changed from random-tab -1 to lowest-tab -2. Pool now 44 boxes (9 easy / 15 medium / 16 hard / 4 boss). box_tab_behavior.md created. test_tab_behavior.gd added. |
 | 2026-05-11 | Slice 5 (feature/boxes-entry-effects) implemented and playtest-tuned. BoxEntryEffects static class added (on_box_entry, has_entry_effect, get_description). 3 ENTRY-axis boxes: storm_box (fixed d2+d10 added to match_pool_delta; round_limit -1), cleanse_box (refills ability charges; round_limit -2), borrowed_time (hp -1; round_limit +1; HP ≥ 3 gate in CaseManager). [!] badge priority extended: ROLL → WIN → DICE → ENTRY. GameState.match_pool_delta field added (cleared by reset_match, appended by storm_box, read by RoundManager). Pool now 35 boxes (9 easy / 12 medium / 11 hard / 3 boss). box_entry_effects.md created. test_entry_effects.gd added (23 tests). |
 | 2026-05-09 | Slice 4 (feature/boxes-dice-access) merged to master after playtest feedback. BoxDiceAccess static class added (pool overrides: single_die picks 1 random die; locked_d8/locked_d4 filter out those faces; round-end hooks: has_tax -1 HP/round, has_forced_commit leftover pip damage; entry power: has_entry_power grants phoenix_down once per run). [!] badge extended to DICE boxes (lowest priority after ROLL → WIN). Tab alignment fixed: sealed-sum label right-aligns, threshold label left-aligns. Playtest drops: bounty_box and forced_full_commit removed from CSV (infrastructure retained); tax_per_roll renamed to quick_seal (plain box, mechanic stripped, round_limit=1 override). Tuning: locked_d4 tabs swapped 1→10; single_die round_limit 2→3. Pool now 32 boxes (9 easy / 9 medium / 11 hard / 3 boss). test_dice_access.gd added. CaseManager: marquee-dedup pass added to reset_run(). GameState: marquee_seen dict added. |
 | 2026-05-09 | Slice 3 (feature/boxes-win-conditions) merged to master. BoxWinConditions static class added (2 WIN boxes: crit_only, escalating_threshold). crit_only: suppresses threshold path entirely — only a full seal wins; 5-round override via get_round_limit(). escalating_threshold: per-round threshold int R1=25→R2=20→R3=15→R4+=5; GameState.win_threshold updated each round start via _apply_win_condition_threshold_update(). [!] badge extended to WIN boxes with slowly cycling hue animation (_mod_hint_time accumulator + _process delta loop). Playtest tuning: crit_only round_limit 4→5; escalating_threshold curve tightened (R1 25, R4 5). Pool now 28 boxes. test_box_win_conditions.gd added (18 tests including RoundManager integration). Playtest checklist: docs/playtest-slice3-win-conditions.html. |

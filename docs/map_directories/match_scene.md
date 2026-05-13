@@ -19,7 +19,7 @@ match.tscn  (Node3D, script: match.gd)
       top_left_vbox (VBoxContainer) — anchored top-left (offset_right=240, offset_bottom=120)
         box_name_row (HBoxContainer)
           _box_name_label        — box display name (font 22, white)
-          _box_mod_hint          — "[!]" badge (font 18); visible for ROLL (BoxRollModifiers), WIN (BoxWinConditions), and DICE (BoxDiceAccess) boxes; priority: ROLL → WIN → DICE for tooltip text; hue cycles slowly via _process() delta accumulator; mouse_entered/exited show/hide _mod_tooltip
+          _box_mod_hint          — "[!]" badge (font 18); visible for ROLL (BoxRollModifiers), WIN (BoxWinConditions), DICE (BoxDiceAccess), ENTRY (BoxEntryEffects), and BHV (BoxTabBehavior) boxes; priority: ROLL → WIN → DICE → ENTRY → BHV for tooltip text; hue cycles slowly via _process() delta accumulator; mouse_entered/exited show/hide _mod_tooltip
         _tier_label              — difficulty: "easy" / "medium" / "hard" / "BOSS" (font 12, muted)
         _match_label             — "Match N / 27" (font 16)
         _act_label               — "Act N" (font 12, muted)
@@ -147,8 +147,12 @@ Tab buttons are dynamic. `_rebuild_tab_buttons()` clears `_tab_row` children and
 
 - `_on_tab_pressed(idx: int)` — toggles `idx` in `_selected_tabs`; derives displayed value from `_tab_buttons[idx].text`
 - `_refresh_tab_display()` — highlights based on `i in _selected_tabs`; dims based on `i in _sealed_button_indices`; no longer reads `GameState.tabs` for display (avoids value-count ambiguity)
-- `_on_tabs_sealed(sealed_values: Array)` — for each sealed value, finds the first unsealed button with that value and marks its index in `_sealed_button_indices`
+- `_on_tabs_sealed(sealed_values: Array)` — in-place greying: if `_bhv_rebuilt_since_select` is false, appends `_selected_tabs` indices to `_sealed_button_indices`; always clears `_selected_tabs` and resets the flag
+- `_on_tab_behavior_changed(message: String)` — sets `_bhv_rebuilt_since_select = true`; calls `_rebuild_tab_buttons()` (full rebuild from GameState.tabs); hides `_continue_button` if remaining sum > win_threshold (prevents shuffler early-Continue bug)
 - `_on_end_round_pressed()` — converts `_selected_tabs` (indices) to a values array before calling `attempt_seal()`
+
+**BHV rebuild flag:**
+`_bhv_rebuilt_since_select: bool` — set true by `_on_tab_behavior_changed`. When a BHV on_seal hook fires (e.g. mitosis) and triggers a full tab rebuild BEFORE `tabs_sealed` fires, the original `_selected_tabs` indices would be stale. The flag tells `_on_tabs_sealed` to skip in-place greying for that action — the rebuild already showed the correct state.
 
 **Dynamic button sizing:** `_rebuild_tab_buttons()` sets size and font based on tab count to prevent overflow:
 | Tab count | Button size | Font size | Gap |
@@ -226,6 +230,8 @@ All game systems: RoundManager, RunManager, GameState, AbilityLibrary, BoxLibrar
 ## Recent Changes
 | Date | Change |
 |------|--------|
+| 2026-05-12 | slice-boxes-6 playtest: [!] badge priority extended to ENTRY (BoxEntryEffects) and BHV (BoxTabBehavior) — full chain now ROLL → WIN → DICE → ENTRY → BHV. Dev menu: "Force Storm Box →", "Force Cleanse Box →", "Force Borrowed Time →" buttons added. Greyed sealed tabs restored: _on_tabs_sealed switched back to in-place index approach (was calling _rebuild_tab_buttons, which lost greyed state). _bhv_rebuilt_since_select flag added to handle mitosis edge case (BHV rebuild fires before tabs_sealed). _on_tab_behavior_changed now hides _continue_button when remaining sum > threshold (fixes shuffler early-Continue bug). |
+| 2026-05-12 | slice-boxes-6: tab_behavior_changed signal wired — _on_tab_behavior_changed handler added. |
 | 2026-05-09 | slice-boxes-4 playtest: [!] badge extended to DICE boxes (BoxDiceAccess.has_description()); tooltip routing is now ROLL → WIN → DICE priority. Dev menu: removed "Force Bounty Box →" and "Reset Marquee Set" buttons (bounty_box dropped). "Force Round → (escalating)" button retained. Tab alignment fix: _sealed_total_label now right-aligned, _threshold_label now left-aligned; _update_tabs_header_widths() now uses correct per-tier button widths (62/52/36). |
 | 2026-05-09 | slice-boxes-3: [!] badge extended to WIN boxes (BoxWinConditions.has_override()). Badge hue now cycles slowly via _process(delta) using a `_mod_hint_time: float` accumulator — `Color.from_hsv(fmod(time*0.15, 1.0), 0.85, 1.0)`. Tooltip text routes to BoxWinConditions.get_description() for WIN boxes (was ROLL-only). New member var: _mod_hint_time. |
 | 2026-05-08 | slice-boxes-2: Top-left HUD reordered — box name (font 22) now first and prominent, then difficulty (font 12), match (font 16), act (font 12). [!] badge (_box_mod_hint) added next to box name for ROLL boxes; hover shows floating _mod_tooltip panel (not Godot built-in tooltip). _dice_mod_labels array added — each die button gains a bottom-left orange label showing modifier_tag (e.g. "1→7", "×2"). _on_tab_pressed(), _on_end_round_pressed(), _update_rolled_total() now route through _round_manager.get_roll_total() instead of raw die sum — fixes doubling_box validation bug where tab selection used unmodified total. New member vars: _box_name_label, _box_mod_hint, _mod_tooltip, _mod_tooltip_label, _dice_mod_labels. New handlers: _on_mod_hint_entered(), _on_mod_hint_exited(). |

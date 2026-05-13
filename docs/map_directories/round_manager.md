@@ -10,13 +10,14 @@ Apply power effects at the right moments. Emit signals for match.gd to react to.
 
 ## Signals
 ```gdscript
-signal phase_changed(phase: String)   # "roll" or "act"
+signal phase_changed(phase: String)        # "roll" or "act"
 signal round_ended(round_num: int)
-signal match_won(critical: bool)      # true = shut the box; false = player clicked Continue
+signal match_won(critical: bool)           # true = shut the box; false = player clicked Continue
 signal match_lost()
-signal tabs_sealed(tabs: Array)       # fired after a successful multi-tab seal (includes bonus-sealed tabs)
-signal status_updated(text: String)   # narrative status line for the player
-signal threshold_reached()            # fires once per match when remaining sum first hits ≤ win_threshold
+signal tabs_sealed(tabs: Array)            # fired after a successful multi-tab seal (includes bonus-sealed tabs)
+signal status_updated(text: String)        # narrative status line for the player
+signal threshold_reached()                 # fires once per match when remaining sum first hits ≤ win_threshold
+signal tab_behavior_changed(message: String)  # fired when a BHV hook mutates the tab board mid-round
 ```
 
 ## Public API
@@ -67,7 +68,10 @@ func attempt_seal(dice: Array, tabs: Array) -> bool
     #   seals bonus tabs and resets counter. No cascade — called once on primary seals only.
     # Calls PowerManager.apply_tab9_bounty(all_sealed) — grants HP if 9 was sealed.
     # Calls PowerManager.on_tabs_sealed(all_sealed.size()) — ticks Tab Counter (fires at 5 total seals).
-    # Updates GameState.tabs, emits tabs_sealed(all_sealed), checks win condition.
+    # Updates GameState.tabs BEFORE calling BHV on_seal (critical ordering — see Gotchas).
+    # Calls BoxTabBehavior.on_seal() if the active box has BHV; emits tab_behavior_changed if msg non-empty.
+    # Updates GameState.tabs AGAIN after BHV (mitosis may have added tabs).
+    # Emits tabs_sealed(all_sealed), checks win condition.
     # Returns false if invalid.
 
 func use_ability(ability: AbilityData, target_die: Die) -> bool
@@ -96,6 +100,8 @@ func end_round() -> void
     # tax_per_roll hook: if current box has_tax and round > 1 → GameState.hp -= 1.
     #   (No active box triggers this as of 2026-05-09; mechanic stripped from quick_seal.)
     # Calls PowerManager.on_round_end() (increments bonus_seal counter, if owned and below target).
+    # BHV on_round_end: updates GameState.tabs BEFORE emitting tab_behavior_changed.
+    # BHV on_round_end_no_seal: fires if _sealed_this_round==false; also updates GameState.tabs before emit.
     # Emits round_ended(round_num). Calls start_round() OR emits match_lost if HP=0 after damage.
     # PowerManager.on_match_end() is called before match_lost.emit() on the losing path.
 
@@ -147,6 +153,8 @@ Win logic is mediated by `BoxWinConditions.evaluate()` before any default check 
 ## Key Internal State
 ```gdscript
 var _threshold_notified: bool          # true once threshold_reached emitted this match; reset in start_match()
+var _sealed_this_round: bool           # true if any tabs were sealed this round; reset in start_round().
+                                       # Drives the on_round_end_no_seal hook for revenant_tabs.
 var _tabs_sum_sealed_this_round: int   # running sum of tab values sealed via attempt_seal() this round.
                                        # Reset to 0 at start_round(). Used by has_forced_commit hook in end_round().
                                        # Only primary seals count — bonus seals are not tracked here.
@@ -197,6 +205,7 @@ func _compute_roll_total(hand: Array) -> int
 - `BoxWinConditions` — called in start_match() for round_limit override; called in start_round() for per-round threshold update; called in _check_win() for win override evaluation
 - `BoxDiceAccess` — called in start_match() for pool override and entry power check; called in end_round() for tax and forced-commit hooks
 - `BoxEntryEffects` — called in start_match() for ENTRY-axis on-match-start effects (storm_box, cleanse_box, borrowed_time)
+- `BoxTabBehavior` — called in start_round() (on_round_start), end_round() (on_round_end + on_round_end_no_seal), and attempt_seal() / auto-seal ability paths (on_seal)
 
 ## Gotchas
 - **All PowerManager calls use `Engine.has_singleton("PowerManager")` guard.** If PowerManager is not registered (e.g., headless tests without it), power effects are silently skipped. All existing tests still pass.
@@ -223,6 +232,8 @@ func _compute_roll_total(hand: Array) -> int
 | Date | Change |
 |------|--------|
 | 2026-05-09 | slice-boxes-4 playtest: forced_full_commit and tax_per_roll hooks now have no active boxes (both dropped/renamed in CSV). Infrastructure retained. single_die and quick_seal round_limit overrides added via BoxWinConditions._round_limit_overrides. |
+| 2026-05-12 | slice-boxes-6 playtest: GameState.tabs now synced BEFORE tab_behavior_changed emits in both attempt_seal and end_round (fixes Rising Tide display bug and Revenant Tabs return bug — previously the emit fired before the board state was written). _sealed_this_round field added; reset in start_round, set true in attempt_seal and auto-seal paths. on_seal BHV hook also called from put_down_highest and auto_seal_lowest use_ability paths. |
+| 2026-05-12 | slice-boxes-6: BoxTabBehavior integrated. start_round() calls on_round_start; reads bhv_fading_decoys_revealed meta and emits per-box tab_behavior_changed messages. end_round() calls on_round_end and on_round_end_no_seal (guarded by _sealed_this_round). attempt_seal() calls on_seal after primary+bonus seals. tab_behavior_changed signal added. BoxTabBehavior added to Dependencies. |
 | 2026-05-11 | slice-boxes-5 playtest tuning: storm_box bonus dice changed from one random die (d4/d6/d8) to fixed d2+d10; storm_box round_limit -= 1; cleanse_box round_limit -= 2. _entry_effect_message() updated for storm_box. |
 | 2026-05-10 | slice-boxes-5: BoxEntryEffects integrated. start_match() now fires BoxEntryEffects.on_box_entry() after reset_match() and before BoxDiceAccess pool build. match_pool_delta (from entry effects) appended to get_active_pool() result. _entry_effect_message() added. BoxEntryEffects added to Dependencies. |
 | 2026-05-09 | slice-boxes-4: BoxDiceAccess integrated. start_match() now calls BoxDiceAccess.get_active_pool() for DICE-axis pool overrides (single_die, locked_d8, locked_d4) and checks has_entry_power() + GameState.marquee_seen for once-per-run bounty power. _grant_bounty_box_power() added. end_round() now checks has_forced_commit() (leftover pip damage) and has_tax() (-1 HP after R1). _tabs_sum_sealed_this_round field added; reset in start_round(), incremented in attempt_seal() for primary seals only. BoxDiceAccess and PowerLibrary added to Dependencies. |
