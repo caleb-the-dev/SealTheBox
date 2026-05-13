@@ -297,21 +297,21 @@ func _test_shuffler_replaces_values() -> void:
 # ---------------------------------------------------------------------------
 
 func _test_clock_tabs_decrements_one_tab() -> void:
-	# All tabs start at 5 so no tab hits 0.
+	# All tabs start at 5; lowest is 5, ticks down by 2 to 3.
 	var gs := _make_gs_with_round(1)
 	var b := _board_from([5, 5, 5])
 	_BoxTabBehavior.on_round_end("clock_tabs", b, gs)
 	var r := b.get_remaining()
-	# One tab should be 4, the rest 5.
-	var fours := r.filter(func(v): return v == 4)
+	var threes := r.filter(func(v): return v == 3)
 	var fives := r.filter(func(v): return v == 5)
-	assert(fours.size() == 1, "clock_tabs: exactly one tab should tick to 4, got %d" % fours.size())
+	assert(threes.size() == 1, "clock_tabs: lowest tab should tick to 3, got %d threes" % threes.size())
 	assert(fives.size() == 2, "clock_tabs: two tabs should remain at 5")
 	assert(gs.hp == 6, "clock_tabs: no HP loss when tab > 0")
 
 func _test_clock_tabs_removes_tab_at_zero() -> void:
+	# Tab at 1 ticks down by 2 (1-2 = -1 ≤ 0) — removed, 1 HP damage.
 	var gs := _make_gs_with_round(1)
-	var b := _board_from([1])  # Single tab that will tick to 0
+	var b := _board_from([1])
 	_BoxTabBehavior.on_round_end("clock_tabs", b, gs)
 	assert(b.get_remaining().is_empty(), "clock_tabs: tab at 1 should vanish on tick")
 	assert(gs.hp == 5, "clock_tabs: HP should decrease by 1 when tab hits 0")
@@ -412,19 +412,19 @@ func _test_mitosis_recursion_cap() -> void:
 
 func _test_moving_targets_round_1_range() -> void:
 	var gs := _make_gs_with_round(1)
-	var b := _board_from([1, 2, 3, 4, 5, 6])
+	var b := _board_from([1, 2, 3, 4, 5, 6, 7])
 	_BoxTabBehavior.on_round_start("moving_targets", b, gs)
 	var r := b.get_remaining()
-	assert(r.size() == 6, "moving_targets R1: should have 6 tabs")
-	for v in [1, 2, 3, 4, 5, 6]:
+	assert(r.size() == 7, "moving_targets R1: should have 7 tabs")
+	for v in [1, 2, 3, 4, 5, 6, 7]:
 		assert(v in r, "moving_targets R1: should contain tab %d" % v)
 
 func _test_moving_targets_round_4_range() -> void:
 	var gs := _make_gs_with_round(4)
-	var b := _board_from([1, 2, 3, 4, 5, 6])
+	var b := _board_from([1, 2, 3, 4, 5, 6, 7])
 	_BoxTabBehavior.on_round_start("moving_targets", b, gs)
 	var r := b.get_remaining()
-	assert(r.size() == 6, "moving_targets R4: should have 6 tabs")
-	for v in [4, 5, 6, 7, 8, 9]:
+	assert(r.size() == 7, "moving_targets R4: should have 7 tabs")
+	for v in [4, 5, 6, 7, 8, 9, 10]:
 		assert(v in r, "moving_targets R4: should contain tab %d" % v)
 	assert(not (1 in r), "moving_targets R4: tab 1 should be gone")

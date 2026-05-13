@@ -158,14 +158,16 @@ func attempt_seal(dice: Array, tabs: Array) -> bool:
 		power_mgr.apply_tab9_bounty(all_sealed)
 		power_mgr.on_tabs_sealed(all_sealed.size())
 	# BHV: fire on_seal hook (e.g. mitosis spawning).
+	# Update GameState.tabs before emitting so _rebuild_tab_buttons sees correct state.
+	GameState.tabs = _tab_board.get_remaining()
 	if GameState.current_box and _BoxTabBehavior.has_behavior(GameState.current_box.id):
 		var bhv_msg := _BoxTabBehavior.on_seal(GameState.current_box.id, all_sealed, _tab_board, GameState, 0)
 		if not bhv_msg.is_empty():
 			tab_behavior_changed.emit(bhv_msg)
+		GameState.tabs = _tab_board.get_remaining()
 	# Track primary seals (not bonus seals) for forced_full_commit accounting.
 	for t in tabs:
 		_tabs_sum_sealed_this_round += t
-	GameState.tabs = _tab_board.get_remaining()
 	tabs_sealed.emit(all_sealed)
 	_check_win()
 	return true
@@ -303,13 +305,16 @@ func end_round() -> void:
 	if power_mgr:
 		power_mgr.on_round_end()
 	# BHV: fire round-end hooks before emitting round_ended.
+	# Update GameState.tabs before each emit so _rebuild_tab_buttons sees new values.
 	if GameState.current_box and _BoxTabBehavior.has_behavior(GameState.current_box.id):
 		var bhv_msg := _BoxTabBehavior.on_round_end(GameState.current_box.id, _tab_board, GameState)
+		GameState.tabs = _tab_board.get_remaining()
 		if not bhv_msg.is_empty():
 			tab_behavior_changed.emit(bhv_msg)
 		# No-seal hook: fires only if player sealed nothing this round.
 		if not _sealed_this_round:
 			var no_seal_msg := _BoxTabBehavior.on_round_end_no_seal(GameState.current_box.id, _tab_board, GameState)
+			GameState.tabs = _tab_board.get_remaining()
 			if not no_seal_msg.is_empty():
 				tab_behavior_changed.emit(no_seal_msg)
 		GameState.tabs = _tab_board.get_remaining()

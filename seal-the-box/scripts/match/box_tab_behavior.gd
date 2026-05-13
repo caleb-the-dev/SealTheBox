@@ -38,6 +38,20 @@ static func has_behavior(box_id: String) -> bool:
 		"mitosis", "moving_targets"
 	]
 
+# Returns a short rule description for the [!] badge tooltip.
+static func get_description(box_id: String) -> String:
+	match box_id:
+		"regrowing":      return "Regrowing — at round start, the lowest sealed tab returns."
+		"rising_tide":    return "Rising Tide — every unsealed tab +1 each round end (ceiling 13)."
+		"shuffler":       return "Shuffler — all tabs get random values 1–9 each round start."
+		"clock_tabs":     return "Clock Tabs — lowest tab ticks -2 each round; hits 0 → take 1 HP."
+		"growing_pillars": return "Growing Pillars — all tabs +1 each round end (ceiling 13)."
+		"revenant_tabs":  return "Revenant Tabs — if you seal nothing, the lowest sealed tab returns."
+		"fading_decoys":  return "Fading Decoys — 3 phantom tabs hide in the box; they vanish at round 3."
+		"mitosis":        return "Mitosis — sealing a tab ≥ 6 spawns a new tab of half its value."
+		"moving_targets": return "Moving Targets — tabs shift up each round: R1 1–6, R2 2–7, R3 3–8, R4+ 4–9."
+	return ""
+
 # Called at the start of each round (before roll phase).
 # tab_board: the active TabBoard
 # gs: GameState node
@@ -127,8 +141,8 @@ static func _moving_targets_on_round_start(tab_board: TabBoard, gs: Node) -> voi
 	var round_num: int = gs.round
 	var base: int = clampi(round_num - 1, 0, 3)  # 0, 1, 2, 3
 	var new_tabs: Array[int] = []
-	for i in 6:
-		new_tabs.append(base + 1 + i)   # R1: 1-6, R2: 2-7, etc.
+	for i in 7:
+		new_tabs.append(base + 1 + i)   # R1: 1-7, R2: 2-8, R3: 3-9, R4+: 4-10
 	tab_board.replace_all_tabs(new_tabs)
 
 # ---------------------------------------------------------------------------
@@ -182,25 +196,24 @@ static func _growing_pillars_on_round_end(tab_board: TabBoard) -> String:
 
 static func _clock_tabs_on_round_end(tab_board: TabBoard, gs: Node) -> String:
 	var tab_data: Array = tab_board.get_tab_data()
-	# Collect indices of real (non-decoy) tabs.
-	var real_indices: Array[int] = []
+	# Find the lowest-value real (non-decoy) tab.
+	var lowest_idx: int = -1
+	var lowest_val: int = 9999
 	for i in tab_data.size():
 		var td_check: TabBoard.TabData = tab_data[i]
-		if not td_check.is_decoy:
-			real_indices.append(i)
-	if real_indices.is_empty():
+		if not td_check.is_decoy and td_check.value < lowest_val:
+			lowest_val = td_check.value
+			lowest_idx = i
+	if lowest_idx == -1:
 		return ""
-	var chosen_idx: int = real_indices[randi() % real_indices.size()]
-	var td: TabBoard.TabData = tab_data[chosen_idx]
-	var new_val: int = td.value - 1
+	var new_val: int = lowest_val - 2
 	if new_val <= 0:
-		# Tab reaches 0 — remove it AND deal 1 HP damage.
-		tab_board.remove_tab(td.value, false)
+		tab_board.remove_tab(lowest_val, false)
 		gs.hp -= 1
-		return "Clock Tabs — tab ticked to 0! You took 1 damage."
+		return "Clock Tabs — lowest tab ticked to 0! You took 1 damage."
 	else:
-		tab_board.change_tab_value_at(chosen_idx, new_val)
-		return "Clock Tabs — tab ticked down to %d." % new_val
+		tab_board.change_tab_value_at(lowest_idx, new_val)
+		return "Clock Tabs — lowest tab ticked down by 2, now %d." % new_val
 
 # ---------------------------------------------------------------------------
 # revenant_tabs — round-end-no-seal: lowest sealed tab returns

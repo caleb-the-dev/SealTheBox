@@ -6,6 +6,7 @@ var _run_manager: RunManager
 var _selected_dice: Array = []
 var _selected_tabs: Array[int] = []      # stores button indices, not values
 var _sealed_button_indices: Array[int] = []  # which tab buttons are sealed this match
+var _bhv_rebuilt_since_select: bool = false  # true when BHV triggered a full rebuild before tabs_sealed fires
 var _selected_ability: AbilityData = null
 var _targeting_die: bool = false
 var _match_ended: bool = false
@@ -1764,10 +1765,13 @@ func _on_run_won_new_case_pressed() -> void:
 	_run_manager.start_run()
 
 func _on_tabs_sealed(sealed_values: Array) -> void:
+	if not _bhv_rebuilt_since_select:
+		# Normal path: grey out the sealed buttons in-place so they stay visible.
+		for i in _selected_tabs:
+			_sealed_button_indices.append(i)
+	_bhv_rebuilt_since_select = false
 	_selected_tabs = []
 	_selected_dice = []
-	# Rebuild tab buttons to reflect current board state (handles BHV tab mutations).
-	_rebuild_tab_buttons()
 	_update_tabs_header_widths()
 	_refresh_ui()
 
@@ -1777,8 +1781,15 @@ func _on_status_updated(text: String) -> void:
 # BHV tab mutation: rebuild the tab display and show message in status.
 func _on_tab_behavior_changed(message: String) -> void:
 	_selected_tabs = []
+	_bhv_rebuilt_since_select = true
 	_rebuild_tab_buttons()
 	_update_tabs_header_widths()
+	# Hide Continue if the tab mutation pushed remaining sum back above threshold.
+	var remaining_sum := 0
+	for t in GameState.tabs:
+		remaining_sum += t
+	if remaining_sum > GameState.win_threshold:
+		_continue_button.visible = false
 	_refresh_ui()
 	if not message.is_empty():
 		_status_label.text = message
@@ -1960,7 +1971,8 @@ func _refresh_ui() -> void:
 		var has_win_mod := BoxWinConditions.has_override(box_id)
 		var has_dice_mod := BoxDiceAccess.has_description(box_id)
 		var has_entry_eff := BoxEntryEffects.has_entry_effect(box_id)
-		if has_roll_mod or has_win_mod or has_dice_mod or has_entry_eff:
+		var has_tab_bhv := BoxTabBehavior.has_behavior(box_id)
+		if has_roll_mod or has_win_mod or has_dice_mod or has_entry_eff or has_tab_bhv:
 			_box_mod_hint.visible = true
 			if has_roll_mod:
 				_mod_tooltip_label.text = BoxRollModifiers.get_description(box_id)
@@ -1968,8 +1980,10 @@ func _refresh_ui() -> void:
 				_mod_tooltip_label.text = BoxWinConditions.get_description(box_id)
 			elif has_dice_mod:
 				_mod_tooltip_label.text = BoxDiceAccess.get_description(box_id)
-			else:
+			elif has_entry_eff:
 				_mod_tooltip_label.text = BoxEntryEffects.get_description(box_id)
+			else:
+				_mod_tooltip_label.text = BoxTabBehavior.get_description(box_id)
 		else:
 			_box_mod_hint.visible = false
 			_mod_tooltip.visible = false
